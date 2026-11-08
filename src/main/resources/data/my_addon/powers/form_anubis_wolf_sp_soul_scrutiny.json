@@ -1,0 +1,103 @@
+{
+    "type": "apoli:multiple",
+    "soul_glow": {
+        "type": "apoli:entity_glow",
+        "bientity_condition": {
+            "type": "apoli:and",
+            "conditions": [
+                {
+                    "type": "apoli:distance",
+                    "comparison": "<=",
+                    "compare_to": 16
+                },
+                {
+                    "type": "apoli:actor_condition",
+                    "condition": {
+                        "type": "shape-shifter-curse:can_render_gui"
+                    }
+                },
+                {
+                    "type": "apoli:target_condition",
+                    "condition": {
+                        "type": "apoli:living"
+                    }
+                },
+                {
+                    "type": "apoli:target_condition",
+                    "condition": {
+                        "type": "apoli:relative_health",
+                        "comparison": "<=",
+                        "compare_to": 0.2
+                    }
+                }
+            ]
+        },
+        "use_teams": false,
+        "red": 0.2,
+        "green": 0.85,
+        "blue": 0.9
+    },
+    "soul_particle_hint": {
+        "type": "apoli:action_over_time",
+        "interval": 20,
+        "condition": {
+            "type": "ssc_addon:skill_disabled",
+            "form": "anubis_wolf",
+            "skill": "soul_scrutiny"
+        },
+        "entity_action": {
+            "type": "apoli:area_of_effect",
+            "radius": 16,
+            "bientity_action": {
+                "type": "apoli:target_action",
+                "action": {
+                    "type": "apoli:spawn_particles",
+                    "particle": "minecraft:soul",
+                    "count": 6,
+                    "speed": 0.02,
+                    "force": true,
+                    "spread": {
+                        "x": 0.45,
+                        "y": 0.9,
+                        "z": 0.45
+                    }
+                }
+            },
+            "bientity_condition": {
+                "type": "apoli:and",
+                "conditions": [
+                    {
+                        "type": "apoli:distance",
+                        "comparison": "<=",
+                        "compare_to": 16
+                    },
+                    {
+                        "type": "apoli:distance",
+                        "comparison": ">",
+                        "compare_to": 0.1
+                    },
+                    {
+                        "type": "apoli:actor_condition",
+                        "condition": {
+                            "type": "shape-shifter-curse:can_render_gui"
+                        }
+                    },
+                    {
+                        "type": "apoli:target_condition",
+                        "condition": {
+                            "type": "apoli:living"
+                        }
+                    },
+                    {
+                        "type": "apoli:target_condition",
+                        "condition": {
+                            "type": "apoli:relative_health",
+                            "comparison": "<=",
+                            "compare_to": 0.2
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

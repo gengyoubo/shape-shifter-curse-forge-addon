@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "github.com.gengyoubo.sscfa.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "ssc_addon.refmap.json",
+  "mixins": [],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

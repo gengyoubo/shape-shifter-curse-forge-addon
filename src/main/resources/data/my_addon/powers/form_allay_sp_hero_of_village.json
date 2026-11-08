@@ -1,0 +1,24 @@
+{
+    "type": "apoli:action_on_entity_use",
+    "bientity_condition": {
+        "type": "apoli:target_condition",
+        "condition": {
+            "type": "apoli:entity_type",
+            "entity_type": "minecraft:villager"
+        }
+    },
+    "bientity_action": {
+        "type": "apoli:actor_action",
+        "action": {
+            "type": "apoli:apply_effect",
+            "effect": {
+                "effect": "minecraft:hero_of_the_village",
+                "duration": 10,
+                "amplifier": 1,
+                "is_ambient": true,
+                "show_particles": false,
+                "show_icon": false
+            }
+        }
+    }
+}

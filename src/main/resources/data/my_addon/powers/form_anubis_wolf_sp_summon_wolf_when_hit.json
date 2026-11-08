@@ -1,0 +1,10 @@
+{
+  "type": "apoli:action_when_hit",
+  "bientity_action": {
+    "type": "ssc_addon:anubis_wolf_sp_passive_summon",
+    "reverse": true
+  },
+  "damage_condition": {
+    "type": "apoli:attacker"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "type": "apoli:action_on_hit",
+  "bientity_action": {
+    "type": "ssc_addon:anubis_wolf_sp_passive_summon"
+  }
+}

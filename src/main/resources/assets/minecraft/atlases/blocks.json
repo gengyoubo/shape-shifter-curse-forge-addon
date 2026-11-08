@@ -1,0 +1,5 @@
+{
+  "sources": [
+    { "type": "single", "resource": "ssc_addon:block/energy_liquid" }
+  ]
+}

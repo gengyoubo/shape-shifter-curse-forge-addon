@@ -1,0 +1,18 @@
+{
+    "type": "apoli:conditioned_attribute",
+    "modifier": {
+        "attribute": "reach-entity-attributes:attack_range",
+        "operation": "multiply_total",
+        "value": 0.2,
+        "name": "Mancianima Bare Hand Attack Range Up"
+    },
+    "tick_rate": 5,
+    "condition": {
+        "type": "apoli:equipped_item",
+        "equipment_slot": "mainhand",
+        "item_condition": {
+            "type": "apoli:empty"
+        },
+        "inverted": true
+    }
+}

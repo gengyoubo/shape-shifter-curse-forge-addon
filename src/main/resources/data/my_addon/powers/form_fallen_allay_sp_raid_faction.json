@@ -1,0 +1,97 @@
+{
+    "type": "apoli:multiple",
+    "raid_friend_tag": {
+        "type": "apoli:action_on_callback",
+        "entity_action_joined": {
+            "type": "apoli:execute_command",
+            "command": "tag @s add ssc_raid_friend"
+        },
+        "entity_action_removed": {
+            "type": "apoli:execute_command",
+            "command": "tag @s remove ssc_raid_friend"
+        }
+    },
+    "prevent_damage_to_raid": {
+        "type": "apoli:modify_damage_dealt",
+        "bientity_condition": {
+            "type": "apoli:target_condition",
+            "condition": {
+                "type": "apoli:or",
+                "conditions": [
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:pillager"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:vindicator"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:evoker"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:ravager"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:witch"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:illusioner"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:vex"}
+                ]
+            }
+        },
+        "modifier": {
+            "operation": "multiply_total",
+            "value": -1.0
+        }
+    },
+    "prevent_attack_raid_mobs": {
+        "type": "apoli:prevent_entity_use",
+        "bientity_condition": {
+            "type": "apoli:target_condition",
+            "condition": {
+                "type": "apoli:or",
+                "conditions": [
+                    {
+                        "type": "apoli:entity_type",
+                        "entity_type": "minecraft:pillager"
+                    },
+                    {
+                        "type": "apoli:entity_type",
+                        "entity_type": "minecraft:vindicator"
+                    },
+                    {
+                        "type": "apoli:entity_type",
+                        "entity_type": "minecraft:evoker"
+                    },
+                    {
+                        "type": "apoli:entity_type",
+                        "entity_type": "minecraft:ravager"
+                    },
+                    {
+                        "type": "apoli:entity_type",
+                        "entity_type": "minecraft:witch"
+                    },
+                    {
+                        "type": "apoli:entity_type",
+                        "entity_type": "minecraft:illusioner"
+                    },
+                    {
+                        "type": "apoli:entity_type",
+                        "entity_type": "minecraft:vex"
+                    }
+                ]
+            }
+        }
+    },
+    "immune_raid_damage": {
+        "type": "apoli:modify_damage_taken",
+        "bientity_condition": {
+            "type": "apoli:target_condition",
+            "condition": {
+                "type": "apoli:or",
+                "conditions": [
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:pillager"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:vindicator"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:evoker"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:ravager"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:witch"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:illusioner"},
+                    {"type": "apoli:entity_type", "entity_type": "minecraft:vex"}
+                ]
+            }
+        },
+        "modifier": {
+            "operation": "multiply_total",
+            "value": -1.0
+        }
+    }
+}

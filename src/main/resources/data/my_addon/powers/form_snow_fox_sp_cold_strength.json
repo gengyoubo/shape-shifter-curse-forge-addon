@@ -1,0 +1,119 @@
+{
+    "type": "apoli:multiple",
+    "health": {
+        "type": "shape-shifter-curse:delay_attribute",
+        "modifier": {
+            "name": "SP Snow Fox Cold Buff Health",
+            "attribute": "minecraft:generic.max_health",
+            "value": 4.0,
+            "operation": "addition"
+        },
+        "tick_rate": 20,
+        "updateHealth": true,
+        "delay": 5,
+        "condition": {
+            "type": "apoli:or",
+            "conditions": [
+                {
+                    "type": "apoli:and",
+                    "conditions": [
+                        {
+                            "type": "apoli:biome",
+                            "condition": {
+                                "type": "apoli:temperature",
+                                "comparison": "<",
+                                "compare_to": 0.15
+                            }
+                        },
+                        {
+                            "type": "ssc_addon:has_reverse_thermometer",
+                            "inverted": true
+                        }
+                    ]
+                },
+                {
+                    "type": "apoli:and",
+                    "conditions": [
+                        {
+                            "type": "apoli:or",
+                            "conditions": [
+                                {
+                                    "type": "apoli:biome",
+                                    "condition": {
+                                        "type": "apoli:temperature",
+                                        "comparison": ">=",
+                                        "compare_to": 1.0
+                                    }
+                                },
+                                {
+                                    "type": "apoli:dimension",
+                                    "dimension": "minecraft:the_nether"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ssc_addon:has_reverse_thermometer"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "speed": {
+        "type": "apoli:conditioned_attribute",
+        "modifier": {
+            "name": "SP Snow Fox Cold Buff Speed",
+            "attribute": "minecraft:generic.movement_speed",
+            "value": 0.15,
+            "operation": "multiply_total"
+        },
+        "tick_rate": 20,
+        "condition": {
+            "type": "apoli:or",
+            "conditions": [
+                {
+                    "type": "apoli:and",
+                    "conditions": [
+                        {
+                            "type": "apoli:biome",
+                            "condition": {
+                                "type": "apoli:temperature",
+                                "comparison": "<",
+                                "compare_to": 0.15
+                            }
+                        },
+                        {
+                            "type": "ssc_addon:has_reverse_thermometer",
+                            "inverted": true
+                        }
+                    ]
+                },
+                {
+                    "type": "apoli:and",
+                    "conditions": [
+                        {
+                            "type": "apoli:or",
+                            "conditions": [
+                                {
+                                    "type": "apoli:biome",
+                                    "condition": {
+                                        "type": "apoli:temperature",
+                                        "comparison": ">=",
+                                        "compare_to": 1.0
+                                    }
+                                },
+                                {
+                                    "type": "apoli:dimension",
+                                    "dimension": "minecraft:the_nether"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ssc_addon:has_reverse_thermometer"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

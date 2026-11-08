@@ -1,0 +1,36 @@
+{
+  "allay_heal_music": {
+    "sounds": [
+      {
+        "name": "ssc_addon:allay_heal_music",
+        "stream": true
+      }
+    ]
+  },
+  "allay_speed_music": {
+    "sounds": [
+      {
+        "name": "ssc_addon:allay_speed_music",
+        "stream": true
+      }
+    ]
+  },
+  "shape_shifters_dream": {
+    "category": "record",
+    "sounds": [
+      {
+        "name": "ssc_addon:shape_shifters_dream",
+        "stream": true
+      }
+    ]
+  },
+  "explosion_theme": {
+    "category": "players",
+    "sounds": [
+      {
+        "name": "ssc_addon:explosion_theme",
+        "stream": true
+      }
+    ]
+  }
+}
