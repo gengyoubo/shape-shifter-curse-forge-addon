@@ -128,6 +128,7 @@
   "message.ssc_addon.evolution.fail.both": "形态的根基过于浅薄，诅咒的甘霖亦未降下。在这双重的贫瘠中，进化的苗裔无可挽回地枯死了。",
   "message.ssc_addon.evolution.fail.already_sp": "你试图与月光建立更深链接的行为，引发了一场致命的共鸣。你的形态不仅拒绝了进化，更将那股诅咒的力量如数奉还——在剧烈的能量反噬中，你化作了这诅咒之月下，一声短暂而凄厉的回响。",
   "message.ssc_addon.evolution.fail.branches_locked": "当前进化路线的分支尚未全部觉醒。请先解锁这条路线的全部分支，再使用进化石或月髓十字环继续进化。",
+  "message.ssc_addon.evolution.fail.form_unavailable": "月光回应了你的召唤，却找不到可以栖身的形态——这条进化之路尚未在此世界显现。月髓环完好无损。",
   "death.attack.cursed_erosion": "%1$s 被诅咒之月的力量侵蚀而死",
   "death.attack.cursed_burst": "%1$s 被诅咒之月的力量撑爆了",
   "death.attack.tether_sacrifice": "%1$s 为守护同伴，替其分担致命伤害而牺牲",

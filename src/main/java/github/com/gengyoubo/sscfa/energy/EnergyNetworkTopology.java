@@ -10,6 +10,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 /** 发现已加载节点，并在网络拓扑改变时失效缓存。 */
 public final class EnergyNetworkTopology {
@@ -55,20 +56,29 @@ public final class EnergyNetworkTopology {
 	}
 
 	/**
-	 * 从 {@code start} 沿六个方向收集已加载的导通节点，最多收集 {@link #MAX_NETWORK} 个。
-	 * 起点没有已加载的导通节点时返回空列表，不主动加载区块。
+	 * 从 {@code start} 沿六个方向收集已加载的导通节点，不主动加载区块。
+	 * 起点无导通节点或网络超过 {@link #MAX_NETWORK} 个节点时返回空列表，避免操作不完整的网络。
 	 */
 	public static List<IEnergyNode> collect(Level world, BlockPos start) {
+		if (world == null) return List.of();
+		return collect(start, pos -> {
+			BlockEntity be = getLoadedBlockEntity(world, pos);
+			return be instanceof IEnergyNode node && !be.isRemoved() ? node : null;
+		});
+	}
+
+	/** 使用可注入的节点查询，便于验证拓扑发现规则。 */
+	static List<IEnergyNode> collect(BlockPos start, Function<BlockPos, IEnergyNode> lookup) {
 		List<IEnergyNode> members = new ArrayList<>();
-		if (world == null) return members;
 		Set<BlockPos> visited = new HashSet<>();
 		Deque<BlockPos> queue = new ArrayDeque<>();
 		queue.add(start.immutable());
 		visited.add(start.immutable());
-		while (!queue.isEmpty() && members.size() < MAX_NETWORK) {
+		while (!queue.isEmpty()) {
 			BlockPos p = queue.poll();
-			BlockEntity be = getLoadedBlockEntity(world, p);
-			if (be instanceof IEnergyNode member && member.conductsEnergy() && !be.isRemoved()) {
+			IEnergyNode member = lookup.apply(p);
+			if (member != null && member.conductsEnergy()) {
+				if (members.size() == MAX_NETWORK) return List.of();
 				members.add(member);
 				for (Direction dir : Direction.values()) {
 					BlockPos np = p.relative(dir);

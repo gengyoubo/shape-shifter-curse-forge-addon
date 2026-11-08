@@ -132,6 +132,7 @@
   "message.ssc_addon.evolution.fail.both": "The foundation is too shallow, and the cursed rain has not fallen. In this double barrenness, the seedling of evolution has withered irretrievably.",
   "message.ssc_addon.evolution.fail.already_sp": "Your attempt to establish a deeper link with the moonlight triggered a fatal resonance. Your form rejected evolution and returned the power of the curse—in the violent backlash, you became a brief, shrill echo under this cursed moon.",
   "message.ssc_addon.evolution.fail.branches_locked": "The branches of your current evolution path have not all awakened. Unlock every branch of this path before using an Evolution Stone or Moon Marrow Cross Ring to evolve further.",
+  "message.ssc_addon.evolution.fail.form_unavailable": "The moonlight answers your call, yet finds no form to settle into—this path of evolution has not yet manifested in this world. The ring remains intact.",
   "death.attack.cursed_erosion": "%1$s was eroded by the power of the Cursed Moon",
   "death.attack.cursed_burst": "%1$s was burst by the power of the Cursed Moon",
   "death.attack.tether_sacrifice": "%1$s sacrificed themselves sharing an ally's fatal damage",
