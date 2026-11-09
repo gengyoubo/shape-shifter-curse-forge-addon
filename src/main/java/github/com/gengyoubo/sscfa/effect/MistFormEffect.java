@@ -4,14 +4,14 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 
 /**
- * 幽雾化形 - 雾化状态标记效果。
- * 作为吸血蝙蝠形态核心技能的状态标记：拥有此效果时玩家化为一团雾，
- * 由数据驱动的 apoli:invulnerability（排除虚空伤害）提供免伤，
- * 由 MistFormAbilityPower 负责粒子、隐身与计时逻辑。
- * 本身不附带任何属性修改，仅作纯粹的状态标记。
+ * 幽雾化???- 雾化状态标记效果?
+ * 作为吸血蝙蝠形态核心技能的状态标记：拥有此效果时玩家化为一团雾??
+ * 由数据驱动???apoli:invulnerability（排除虚空伤害）提供免伤??
+ * ??MistFormAbilityPower 负责粒子、隐身与计时逻辑??
+ * 本身不附带任何属性修改，仅作纯粹的状态标记??
  */
 public class MistFormEffect extends MobEffect {
 	public MistFormEffect() {
-		super(MobEffectCategory.BENEFICIAL, 0xB0B8C0); // 雾灰色
+		super(MobEffectCategory.BENEFICIAL, 0xB0B8C0); // 闂傚棗澧芥导鍡涙嚌?
 	}
 }

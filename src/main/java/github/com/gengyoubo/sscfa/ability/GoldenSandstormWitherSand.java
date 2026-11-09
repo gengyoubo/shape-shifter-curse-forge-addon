@@ -23,58 +23,58 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 闁叉垶鐭欏畝姝婸 - 閸戝娴傞柌鎴炵煓閿涘牅瀵岄崝銊㈡喖閿涘矁鎼崝娑樼€烽敍?
+ * 金沙岚SP - 凋零金沙（主动①，蓄力型?
  *
- * 閹稿绗呴幎鈧懗浠嬫暛瀵偓婵鎼崝娑崇礄1缁夋帪绱氶敍宀冨殰闊偄鍣洪柅?0%閵?
- * 閽冨嫬濮忕€瑰本鍨氶崥搴ㄥ櫞閺€?5閺嶇硛oE闁叉垶鐭欐搴㈡瘹閿?
- * - 鐎电瀵栭崶鏉戝敶闂堢偟娅ч崥宥呭礋閻㈢喓澧块弬钘夊閼峰娲搁弫鍫熺亯閿?缁夋帪绱?
- * - 缂佹瑨瀵栭崶鏉戝敶閻╊喗鐖ｉ崥鍕綌閸?鐏炲倷闀滈摀鈧悜娆忓祪
- * - 婢堆囧櫤濞屾瑥鐨圭划鎺戠摍閺佸牊鐏?
+ * 按下技能键开始蓄力（1秒），自身减?0%??
+ * 蓄力完成后释?5格AoE金沙风暴??
+ * - 对范围内非白名单生物施加致盲效果??秒??
+ * - 给范围内目标各叠??层侵蚀烙印
+ * - 大量沙尘粒子效??
  *
- * 閽冨嫬濮忛張鐔兼？閸欐鍩屾导銈咁唺閸掓瑦澧﹂弬顓ㄧ窗閸欐牗绉烽幎鈧懗鏂ょ礉鏉╂稑鍙?缁夋墫D閵?
- * 濮濓絽鐖堕柌濠冩杹CD: 26缁夋帪绱?20tick閿?
+ * 蓄力期间受到伤害则打断：取消技能，进??秒CD??
+ * 正常释放CD: 26秒??20tick??
  */
 public class GoldenSandstormWitherSand {
 
-	// ==================== 鐢悂鍣?====================
-	// 娴犮儰绗呯敮鎼佸櫤閸у洣璐熸妯款吇閸婄》绱辨潻鎰攽閺冩湹绮?balance 韫囶偆鍙庣拠璇插絿閿涘澃cope閿涙瓫bilities.golden_sandstorm_wither_sand閿?
-	/** AoE閸楀﹤绶?*/
+	// ==================== 常??====================
+	// 以下常量均为默认值；运行时??balance 快照读取（scope：abilities.golden_sandstorm_wither_sand??
+	/** AoE半??*/
 	private static final double RADIUS = 15.0;
-	/** 閼峰娲搁幐浣虹敾閺冨爼妫块敍鍧眎ck閿?*/
+	/** 致盲持续时间（tick??*/
 	private static final int BLIND_DURATION = 60; // 3缁?
-	/** 閽冨嫬濮忛弮鍫曟？閿涘澅ick閿?*/
+	/** 蓄力时间（tick??*/
 	private static final int CHARGE_TICKS = 20; // 1缁?
-	// 濮濓絽鐖?閹垫挻鏌?CD 瀹歌尙鏁辩紒鐔剁閸愬嘲宓堥張宥呭 SkillCooldowns + power JSON 闁板秶鐤嗙粻锛勬倞閿涘苯甯敮鎼佸櫤瀹告彃鍨?
-	/** 閽冨嫬濮忛崙蹇涒偓鐔舵叏濮濓絽娅扷UID */
+	// 正??打??CD 已由统一冷却服务 SkillCooldowns + power JSON 配置管理，原常量已??
+	/** 蓄力减速修正器UUID */
 	private static final UUID CHARGE_SLOW_UUID = UUID.fromString("b8c9d0e1-f2a3-4b5c-8d6e-7f8901234567");
 	private static final String CHARGE_SLOW_NAME = "Wither Sand Charge Slow";
 
-	// ==================== 閻樿埖鈧浇鎷烽煪?====================
-	/** 濮濓絽婀拑鍕閻ㄥ嫮甯虹€硅绱癠UID -> 閽冨嫬濮忛悩鑸碘偓?*/
+	// ==================== 状态追?====================
+	/** 正在蓄力的玩家：UUID -> 蓄力状?*/
 	private static final ConcurrentHashMap<UUID, ChargeState> CHARGING_PLAYERS = new ConcurrentHashMap<>();
 
-	// 闂冭埖顔?5閿涙碍婀囬崝锛勵伂閺夊啫鈻夎箛顐ゅ弾鐠囪褰囬敍鍫濇彥閻撗勬弓閸掓繂顫愰崠鏍ф礀闁偓姒涙顓荤敮鎼佸櫤閿?
+	// 阶??5：服务端权威快照读取（快照未初始化回退默认常量??
 	private static final BalanceReader BAL = new BalanceReader("abilities.golden_sandstorm_wither_sand");
-	/** 缂佺喍绔撮崘宄板祱閺堝秴濮熼惃鍕旂€规碍濡ч懗?ID閿? power 濞夈劌鍞界捄顖氱窞閿涘鈧?*/
+	/** 统一冷却服务的稳定技?ID?? power 注册路径）??*/
 	private static final String SKILL_ID = "my_addon:form_golden_sandstorm_sp_wither_sand";
 
 	private GoldenSandstormWitherSand() {
 	}
 
 	/**
-	 * 閻溾晛顔嶉幐澶夌瑓閹垛偓閼充粙鏁?- 瀵偓婵鎼崝?
+	 * 玩家按下技能??- 开始蓄?
 	 */
 	public static boolean execute(ServerPlayer player) {
 		if (!FormUtils.isGoldenSandstormSP(player)) return false;
 		if (github.com.gengyoubo.sscfa.util.AbilityUseGuard.blocked(player)) return false;
-		// 瀹歌尙绮￠崷銊ㄦ惈閸旀稐鑵戦崚娆忔嫹閻ｃ儻绱機D 闂傘劎顩﹀鑼暠 power 鐏?begin 缂佺喍绔撮幏锔藉焻閿涘奔鎱?P1-1閿?
+		// 已经在蓄力中则忽略（CD 门禁已由 power ??begin 统一拦截，??P1-1??
 		if (CHARGING_PLAYERS.containsKey(player.getUUID())) return false;
 
 		if (!(player.level() instanceof ServerLevel serverWorld)) return false;
 
         var spec = github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.spec(player, SKILL_ID);
         if (spec == null || !github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.begin(player, SKILL_ID)) return false;
-		// 瀵偓婵鎼崝?
+		// 开始蓄?
 		ChargeState state = new ChargeState();
 		state.startTick = serverWorld.getGameTime();
 		state.healthAtStart = player.getHealth();
@@ -84,10 +84,10 @@ public class GoldenSandstormWitherSand {
 		github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.retune(player, SKILL_ID, state.castId,
 				GoldenSandstormPerks.normalCooldown(spec.cooldown(), GoldenSandstormPerks.responseRank(player)));
 
-		// 閺傝棄濮為崙蹇涒偓?0%
+		// 施加减?0%
 		applyChargeSlow(player);
 
-		// 閽冨嫬濮忓鈧慨瀣叾閺?
+		// 蓄力开始音??
 		serverWorld.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.SAND_BREAK, SoundSource.PLAYERS, 1.0f, 0.5f);
 
@@ -95,8 +95,8 @@ public class GoldenSandstormWitherSand {
 	}
 
 	/**
-	 * 濮ｅ紨ick閺囧瓨鏌婇拑鍕閻樿埖鈧?
-	 * 闂団偓鐟曚礁婀?SscAddon 閻?tick handler 娑擃叀鐨熼悽?
+	 * 每tick更新蓄力状??
+	 * 需要??SscAddon ??tick handler 中调?
 	 */
 	public static void tick(ServerPlayer player) {
 		ChargeState state = CHARGING_PLAYERS.get(player.getUUID());
@@ -114,9 +114,9 @@ public class GoldenSandstormWitherSand {
 		long currentTick = serverWorld.getGameTime();
 		long elapsed = currentTick - state.startTick;
 
-		// 濡偓閺屻儲妲搁崥锕侇潶閹垫挻鏌囬敍鍫㈡晸閸涜棄鈧棿绗呴梽?= 閸欐鍩屾导銈咁唺閿?
+		// 检查是否被打断（生命值下?= 受到伤害??
 		if (player.getHealth() < state.healthAtStart) {
-			// 鐞氼偅澧﹂弬顓ㄧ窗閹?fail_cooldown 缂佹挾鐣婚敍鍫㈢埠娑撯偓閺堝秴濮熼敍? 閹垫挻鏌囬棅铏櫏
+			// 被打断：??fail_cooldown 结算（统一服务? 打断音效
 			cancelCharge(player, true);
 			github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.failed(player, SKILL_ID, state.castId);
 
@@ -125,7 +125,7 @@ public class GoldenSandstormWitherSand {
 			return;
 		}
 
-		// 閽冨嫬濮忛張鐔兼？缁帒鐡欓敍鍫ｅ殰闊偄鎳嗛崶瀛樻鏉烆剚鐭欑亸姗堢礆
+		// 蓄力期间粒子（自身周围旋转沙尘）
 		if (elapsed % 4 == 0) {
 			double angle = (elapsed * 0.3) % (Math.PI * 2);
 			double px = player.getX() + Math.cos(angle) * 1.5;
@@ -135,7 +135,7 @@ public class GoldenSandstormWitherSand {
 					px, player.getY() + 1.0, pz, 3, 0.1, 0.3, 0.1, 0);
 		}
 
-		// 閽冨嫬濮忕€瑰本鍨?
+		// 蓄力完??
 		if (elapsed >= BAL.i("charge_ticks", CHARGE_TICKS)) {
 			removeChargeSlow(player);
 			CHARGING_PLAYERS.remove(player.getUUID());
@@ -144,19 +144,19 @@ public class GoldenSandstormWitherSand {
 	}
 
 	/**
-	 * 闁插﹥鏂侀幎鈧懗?- 15閺嶇硛oE
+	 * 释放技?- 15格AoE
 	 */
 	private static void releaseSkill(ServerPlayer player, ServerLevel serverWorld, long castId, int brandStacks) {
 		github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.completed(player, SKILL_ID, castId);
 		double radius = BAL.d("radius", RADIUS);
 
-		// 闁插﹥鏂侀棅铏櫏
+		// 释放音效
 		serverWorld.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.WITHER_SHOOT, SoundSource.PLAYERS, 1.0f, 0.7f);
 		serverWorld.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.SAND_BREAK, SoundSource.PLAYERS, 1.5f, 0.5f);
 
-		// 婢堆囧櫤缁帒鐡欓弫鍫熺亯閿涙岸鍣鹃懝鍙夌煓鐏忔﹢顥撻弳?
+		// 大量粒子效果：金色沙尘风?
 		for (int i = 0; i < 100; i++) {
 			double angle = Math.random() * Math.PI * 2;
 			double dist = Math.random() * radius;
@@ -171,22 +171,22 @@ public class GoldenSandstormWitherSand {
 				player.getX(), player.getY() + 1.0, player.getZ(),
 				40, radius * 0.5, 1.0, radius * 0.5, 0.02);
 
-		// 閼惧嘲褰囬懠鍐ㄦ纯閸愬懐鏁撻悧?
+		// 获取范围内生?
 		AABB box = player.getBoundingBox().inflate(radius);
 		List<LivingEntity> targets = serverWorld.getEntitiesOfClass(LivingEntity.class, box,
 				e -> e != player && e.isAlive() && e.distanceToSqr(player) <= radius * radius);
 
 		for (LivingEntity target : targets) {
-			// 閻ц棄鎮曢崡鏇燁梾閺?
+			// 白名单检??
 			if (WhitelistUtils.isProtected(player, target)) continue;
 
-			// 閺傝棄濮為懛瀵告锤閺佸牊鐏夐敍?缁夋帪绱氶敍娑樼敨閺傝姤纭堕懓?source 娓氭稑鍙嗗锔藉閹搭亜缍婇崶?
+			// 施加致盲效果?秒）；带施法?source 供入梦拦截归?
 			target.addEffect(new MobEffectInstance(github.com.gengyoubo.sscfa.init.AddonEffects.SAND_BLIND.get(), BAL.i("blind_duration", BLIND_DURATION), 0, false, true), player);
 
-			// 閸欑姴濮?鐏炲倷闀滈摀鈧悜娆忓祪
+			// 叠??层侵蚀烙印
 			GoldenSandstormErosionBrand.onSandstormHit(player, target, brandStacks);
 
-			// 閸涙垝鑵戠划鎺戠摍
+			// 命中粒子
 			ParticleUtils.spawnParticles(serverWorld, ParticleTypes.SOUL,
 					target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
 					5, 0.3, 0.3, 0.3, 0.02);
@@ -194,8 +194,8 @@ public class GoldenSandstormWitherSand {
 	}
 
 	/**
-	 * 閸欐牗绉烽拑鍕
-	 * @param interrupted 閺勵垰鎯佺悮顐ｅⅵ閺傤叏绱欓崣妤€鍩屾导銈咁唺閿?
+	 * 取消蓄力
+	 * @param interrupted 是否被打断（受到伤害??
 	 */
 	private static void cancelCharge(ServerPlayer player, boolean interrupted) {
 		removeChargeSlow(player);
@@ -203,7 +203,7 @@ public class GoldenSandstormWitherSand {
 	}
 
 	/**
-	 * 閺傝棄濮為拑鍕閸戝繘鈧?
+	 * 施加蓄力减??
 	 */
 	private static void applyChargeSlow(ServerPlayer player) {
 		AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
@@ -216,7 +216,7 @@ public class GoldenSandstormWitherSand {
 	}
 
 	/**
-	 * 缁夊娅庨拑鍕閸戝繘鈧?
+	 * 移除蓄力减??
 	 */
 	private static void removeChargeSlow(ServerPlayer player) {
 		AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
@@ -226,14 +226,14 @@ public class GoldenSandstormWitherSand {
 	}
 
 	/**
-	 * 濡偓閺屻儳甯虹€硅埖妲搁崥锔筋劀閸︺劏鎼崝娑崇礄閸欘垳鏁ゆ禍搴ㄦ▎濮濄垹鍙炬禒鏍ㄦ惙娴ｆ粣绱?
+	 * 检查玩家是否正在蓄力（可用于阻止其他操作??
 	 */
 	public static boolean isCharging(UUID playerUuid) {
 		return CHARGING_PLAYERS.containsKey(playerUuid);
 	}
 
 	/**
-	 * 閻溾晛顔嶉弬顓犲殠/閸欐ê鑸伴弮鑸电閻?
+	 * 玩家断线/变形时清??
 	 */
 	public static void clearPlayer(ServerPlayer player) {
         ChargeState state = CHARGING_PLAYERS.remove(player.getUUID());
@@ -244,12 +244,12 @@ public class GoldenSandstormWitherSand {
 	}
 
 	/**
-	 * 閺堝秴濮熼崳銊╁櫢閸?閻戭參鍣告潪鑺ユ濞撳懐鎮婇幍鈧張澶屽Ц閹?
-	 * 娴肩姴鍙?server 娴犮儰绌堕柅鎰嚋缁夊娅庨崷銊у殠閻溾晛顔嶉煬顐＄瑐閻ㄥ嫯鎼崝娑樺櫤闁喍鎱ㄦ鎵儊閿涘矂浼╅崗?reload 閸氬海甯虹€规儼顫﹀闀愮畽閸戝繘鈧喆鈧?
-	 * 閸忎浇顔?server 娑?null閿涘牓娼ら幀浣稿灙鐞涖劋绮庡〒鍛敄閿涘鈧?
+	 * 服务器重??热重载时清理所有状??
+	 * 传??server 以便逐个移除在线玩家身上的蓄力减速修饰符，避?reload 后玩家被永久减速??
+	 * 允??server ??null（静态列表仅清空）??
 	 */
 	public static void clearAll(net.minecraft.server.MinecraftServer server) {
-		// SERVER_STARTING 闂冭埖顔?getPlayerManager() 閸欘垵鍏樼亸姘弓閸掓繂顫愰崠鏍电礉韫囧懘銆忛崑姘扁敄閸婂吋顥呴弻?
+		// SERVER_STARTING 阶??getPlayerManager() 可能尚未初始化，必须做空值检?
 		if (server != null) {
 			net.minecraft.server.players.PlayerList pm = server.getPlayerList();
 			if (pm != null) {
@@ -263,7 +263,7 @@ public class GoldenSandstormWitherSand {
 		CHARGING_PLAYERS.clear();
 	}
 
-	// ==================== 閸愬懘鍎撮弫鐗堝祦缁?====================
+	// ==================== 内部数据??====================
 	private static class ChargeState {
         long castId = -1;
 		int brandStacks = 1;

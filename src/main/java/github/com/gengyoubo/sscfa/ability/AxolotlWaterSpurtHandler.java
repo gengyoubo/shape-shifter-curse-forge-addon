@@ -17,41 +17,41 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 杩涘寲缇庤タ铻堛€屾按娴佸啿鍒恒€嶏紙water_spurt 鑺傜偣锛夆€斺€?鏈嶅姟绔彲闈犲疄鐜帮紝姘撮檰涓ゅ瑙﹀彂褰诲簳闅旂銆?
+ * 进化美西螈「水流冲刺」（water_spurt 节点）—?服务端可靠实现，水陆两套触发彻底隔离?
  *
- * <p><b>姘翠笅鍐插埡</b>锛堝悓 SSC {@code form_axolotl_2_water_spurt}锛夛細鍦ㄦ按涓寜<b>鐤捐窇閿?/b>锛坰print 涓婂崌娌匡級鈫?
- * 娌胯绾垮墠鍐诧紝<b>涓嶆秷鑰楁箍娑﹀害</b>锛堜笌 SSC 涓€鑷达級锛岀嫭绔嬪喎鍗?5 绉掋€?/p>
- * <p><b>闄嗗湴鍐插埡</b>锛氬湪闄嗗湴涓婄柧璺戞椂鎸?b>娼滆閿?/b>锛坰neak 涓婂崌娌夸笖褰撳墠/涓婁竴 tick 澶勪簬鐤捐窇锛夆啋
- * 鍚屾牱鐨勫墠鍐蹭綅绉伙紝<b>娑堣€?{@link #LAND_MOISTURE_COST} 鐐规箍娑﹀害(air)</b>锛岀嫭绔嬪喎鍗?5 绉掋€?/p>
- * <p>鐢?{@code isTouchingWater()} 鍖哄垎姘?闄嗭紝涓ゅ垎鏀簰鏂ワ紙姘撮噷鍙蛋鐤捐窇鍐插埡銆佷笉鍝嶅簲娼滆锛涢檰鍦板彧璧版綔琛屽啿鍒恒€?
- * 涓嶅搷搴旂柧璺戯級锛屼笖鍚勮嚜鐙珛鍐峰嵈锛屼簰涓嶅共鎵般€傚凡瑙ｉ攣 water_spurt 鑺傜偣鎵嶇敓鏁堛€?/p>
+ * <p><b>水下冲刺</b>（同 SSC {@code form_axolotl_2_water_spurt}）：在水中按<b>疾跑?/b>（sprint 上升沿）?
+ * 沿视线前冲，<b>不消耗湿润度</b>（与 SSC 一致），独立冷?5 秒?/p>
+ * <p><b>陆地冲刺</b>：在陆地上疾跑时?b>潜行?/b>（sneak 上升沿且当前/上一 tick 处于疾跑）→
+ * 同样的前冲位移，<b>消?{@link #LAND_MOISTURE_COST} 点湿润度(air)</b>，独立冷?5 秒?/p>
+ * <p>?{@code isTouchingWater()} 区分?陆，两分支互斥（水里只走疾跑冲刺、不响应潜行；陆地只走潜行冲刺?
+ * 不响应疾跑），且各自独立冷却，互不干扰。已解锁 water_spurt 节点才生效?/p>
  */
 public final class AxolotlWaterSpurtHandler {
 
-	/** 闄嗗湴鍐插埡鐨勬湇鍔＄鎵ｈ垂鍜屽鎴风璧勬簮闂ㄦ鍏辩敤鍚屼竴鏁板€笺€?*/
+	/** 陆地冲刺的服务端扣费和客户端资源门槛共用同一数值?*/
 	public static int landAirCostForHud(net.minecraft.world.entity.player.Player player) {
 		return github.com.gengyoubo.sscfa.compat.UpgradeAxolotlPerks.landDashAirCost(player, BAL.i("land_moisture_cost", LAND_MOISTURE_COST));
 	}
 
-	// 浠ヤ笅鍧囦负榛樿鍊硷紱杩愯鏃朵粠 balance 蹇収璇诲彇锛坅bilities.axolotl_water_spurt锛?
+	// 以下均为默认值；运行时从 balance 快照读取（abilities.axolotl_water_spurt?
 	private static final int CD_TICKS = 100;   // 5 绉?
 	private static final ResourceLocation WATER_HUD = new ResourceLocation("my_addon", "form_upgrade_axolotl_dash_hud_water");
 	private static final ResourceLocation LAND_HUD = new ResourceLocation("my_addon", "form_upgrade_axolotl_dash_hud_land");
-	private static final double BURST = 1.6;    // 鍓嶅啿鍔涘害锛堟按闄嗕竴鑷达級
-	/** 闄嗗湴鍐插埡娑堣€楃殑婀挎鼎搴︼紙air 鍊硷紱鍙傜収 WaterSpearLeapManager 鐨?18=6%锛屽啿鍒烘洿杞伙紝鍙?12鈮?%锛夈€傛按涓嬪啿鍒哄悓 SSC 鍏嶈垂銆?*/
+	private static final double BURST = 1.6;    // 前冲力度（水陆一致）
+	/** 陆地冲刺消耗的湿润度（air 值；参照 WaterSpearLeapManager ?18=6%，冲刺更轻，?12?%）。水下冲刺同 SSC 免费?*/
 	private static final int LAND_MOISTURE_COST = 12;
 
-	/** balance 蹇収璇诲彇锛堝揩鐓ф湭鍒濆鍖栧洖閫€榛樿甯搁噺锛?*/
+	/** balance 快照读取（快照未初始化回退默认常量?*/
 	private static final BalanceReader BAL = new BalanceReader("abilities.axolotl_water_spurt");
 
-	/** 瀹㈡埛绔笂鎶ョ殑銆岀湡姝ｇ柧璺戦敭銆嶆寜浣忕姸鎬侊紙鍖哄垎鍙屽嚮 W / 娓告吵鑷姩鐤捐窇锛岄伩鍏嶈瑙﹀彂鍐插埡锛夈€?*/
+	/** 客户端上报的「真正疾跑键」按住状态（区分双击 W / 游泳自动疾跑，避免误触发冲刺）?*/
 	private static final Map<UUID, Boolean> CLIENT_SPRINT = new ConcurrentHashMap<>();
 	private static final Map<UUID, Boolean> WAS_CLIENT_SPRINT = new ConcurrentHashMap<>();
 	private static final Map<UUID, Boolean> WAS_SNEAKING = new ConcurrentHashMap<>();
 	private static final Map<UUID, Integer> WATER_CD = new ConcurrentHashMap<>();
 	private static final Map<UUID, Integer> LAND_CD = new ConcurrentHashMap<>();
 
-	/** 瀹㈡埛绔彂銆岀柧璺戦敭鎸変綇鐘舵€併€嶅寘鏃惰皟鐢紙浠呰繘鍖栫編瑗胯煚鏈満浼氬彂锛涘尯鍒嗙湡姝ｇ柧璺戦敭涓庡弻鍑?W/娓告吵鑷姩鐤捐窇锛夈€?*/
+	/** 客户端发「疾跑键按住状态」包时调用（仅进化美西蟠本机会发；区分真正疾跑键与双?W/游泳自动疾跑）?*/
 	public static void setClientSprintHeld(ServerPlayer player, boolean held) {
 		CLIENT_SPRINT.put(player.getUUID(), held);
 	}
@@ -59,7 +59,7 @@ public final class AxolotlWaterSpurtHandler {
 	private AxolotlWaterSpurtHandler() {
 	}
 
-	/** 姣忔湇鍔＄ tick 瀵规瘡涓湪绾跨帺瀹惰皟鐢ㄣ€?*/
+	/** 每服务端 tick 对每个在线玩家调用?*/
 	public static void tick(ServerPlayer player) {
 		UUID id = player.getUUID();
 		int wcd = WATER_CD.getOrDefault(id, 0);
@@ -74,18 +74,18 @@ public final class AxolotlWaterSpurtHandler {
 			return;
 		}
 
-		// 鐢ㄥ鎴风涓婃姤鐨勩€岀湡姝ｇ柧璺戦敭銆嶇姸鎬侊紝鑰岄潪鏈嶅姟绔?isSprinting()锛堝悗鑰呬細琚弻鍑?W / 娓告吵鑷姩缃湡 鈫?璇啿锛?
+		// 用客户端上报的「真正疾跑键」状态，而非服务?isSprinting()（后者会被双?W / 游泳自动置真 ?误冲?
 		boolean sprintKey = CLIENT_SPRINT.getOrDefault(id, false);
-		// HUD 璧勬簮浠呭湪 CD 娲昏穬鏈熷悓姝ワ紙绌洪棽绋虫€?wcd==lcd==0 闆惰祫婧愯鍐欙級锛欳D 褰掗浂鍚庤ˉ鍙戜竴娆?0锛?
-		// 涔嬪悗涓嶅啀瑙︾璧勬簮锛涜Е鍙戝啿鍒烘椂鍦ㄥ垎鏀唴鐩存帴鍐?HUD锛堝€煎繀鍙橈紝鏃犻渶姣斿锛夈€?
-		// 褰掗浂琛ュ彂鑻ュ洜鏋佺鏃跺簭琚簲鐢ㄥ眰涓㈠純锛堟崲缁村害/浼犻€佺灛闂村疄浣撴湭杩借釜锛夛紝绌洪棽鏈熸瘡 100t 浣庨瀵硅处
-		// 涓€娆¤嚜鎰堬紙鏈嶅姟绔湰鍦拌涓€娆℃瘮瀵癸紝鍊间笉绗︽墠閲嶅彂鈥斺€旀甯告€侀浂棰濆鍖咃紝寮傚父鎬佹渶澶氭畫鐣?5s锛夈€?
+		// HUD 资源仅在 CD 活跃期同步（空闲稳?wcd==lcd==0 零资源读写）：CD 归零后补发一?0?
+		// 之后不再触碰资源；触发冲刺时在分支内直接?HUD（值必变，无需比对）?
+		// 归零补发若因极端时序被应用层丢弃（换维度/传送瞬间实体未追踪），空闲期每 100t 低频对账
+		// 一次自愈（服务端本地读一次比对，值不符才重发——正常态零额外包，异常态最多残?5s）?
 		boolean waterCooling = wcd > 0;
 		boolean landCooling = lcd > 0;
 		boolean idleAudit = !waterCooling && !landCooling && wcd != 1 && lcd != 1 && player.tickCount % 100 == 0;
 		if (waterCooling || wcd == 1 || (idleAudit
 				&& PowerUtils.getResourceValue(player, WATER_HUD) != 0)) {
-			// 姣?tick 鎭板ソ -1 鐨?CD 鍊掕鏃讹細閫掑噺鏈熻蛋鎵归噺棰勬祴閫氶亾锛屽綊闆跺抚/瀵硅处璧扮珛鍗冲悓姝ワ紙2026-09-24锛?
+			// ?tick 恰好 -1 ?CD 倒计时：递减期走批量预测通道，归零帧/对账走立即同步（2026-09-24?
 			if (waterCooling) PowerUtils.countDownAndSync(player, WATER_HUD, Math.max(0, wcd - 1));
 			else PowerUtils.setResourceValueAndSync(player, WATER_HUD, Math.max(0, wcd - 1));
 		}
@@ -100,7 +100,7 @@ public final class AxolotlWaterSpurtHandler {
 		WAS_CLIENT_SPRINT.put(id, sprintKey);
 		WAS_SNEAKING.put(id, sneaking);
 
-		// 鏈В閿?water_spurt 鑺傜偣锛氬彧鏇存柊鐘舵€併€佷笉瑙﹀彂浠讳綍鍐插埡
+		// 未解?water_spurt 节点：只更新状态、不触发任何冲刺
 		if (!RegEvolutionComponent.EVOLUTION.get(player).isUnlocked(AxolotlTree.NODE_WATER_SPURT)) {
 			return;
 		}
@@ -109,21 +109,21 @@ public final class AxolotlWaterSpurtHandler {
 		int cdTicks = BAL.i("cd_ticks", CD_TICKS);
 
 		if (inWater) {
-			// ===== 姘翠笅鍐插埡锛氭按閲?+ 鎸変笅鐪熸鐤捐窇閿紙涓婂崌娌匡級鈫?鍓嶅啿锛屽厤璐癸紙鍙屽嚮 W/娓告吵鑷姩鐤捐窇涓嶈Е鍙戯級=====
+			// ===== 水下冲刺：水?+ 按下真正疾跑键（上升沿）?前冲，免费（双击 W/游泳自动疾跑不触发）=====
 			if (sprintKey && !wasSprintKey && WATER_CD.getOrDefault(id, 0) <= 0) {
 				doDash(player);
 				WATER_CD.put(id, cdTicks);
 				PowerUtils.setResourceValueAndSync(player, WATER_HUD, cdTicks);
 			}
-			// 姘撮噷鍙搷搴旂柧璺戦敭鍒嗘敮锛岄殧绂婚檰鍦版綔琛岄€昏緫
+			// 水里只响应疾跑键分支，隔离陆地潜行逻辑
 			return;
 		}
 
-		// ===== 闄嗗湴鍐插埡锛氶檰鍦?+ 鎸変綇鐪熸鐤捐窇閿椂鎸夋綔琛岋紙sneak 涓婂崌娌匡級鈫?鍓嶅啿锛屾秷鑰楁箍娑﹀害 =====
+		// ===== 陆地冲刺：陆?+ 按住真正疾跑键时按潜行（sneak 上升沿）?前冲，消耗湿润度 =====
 		if (sneaking && !wasSneaking && sprintKey && LAND_CD.getOrDefault(id, 0) <= 0) {
 			int landCost = landAirCostForHud(player);
 			if (player.getAirSupply() < landCost) {
-				return; // 婀挎鼎搴︿笉瓒筹紝涓嶈Е鍙?
+				return; // 湿润度不足，不触?
 			}
 			player.setAirSupply(player.getAirSupply() - landCost);
 			doDash(player);
@@ -132,7 +132,7 @@ public final class AxolotlWaterSpurtHandler {
 		}
 	}
 
-	/** 娌胯绾垮墠鍐蹭竴娆★紙姘撮檰涓€鑷寸殑浣嶇Щ涓庤鍚弽棣堬級銆?*/
+	/** 沿视线前冲一次（水陆一致的位移与视听反馈）?*/
 	private static void doDash(ServerPlayer player) {
 		Vec3 look = player.getLookAngle();
 		double burst = BAL.d("burst", BURST);

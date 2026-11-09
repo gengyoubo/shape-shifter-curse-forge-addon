@@ -9,10 +9,10 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;
 
 /**
- * 寄生果蝠专属「生命恢复」buff。
+ * 寄生果蝠专属「生命恢复」buff??
  * 回血在施加瞬间由调用方一次性完成（{@code target.heal}，触发血条回血动画），
- * 本效果不周期回血（canApplyUpdateEffect 恒 false），仅提供状态栏图标与名字显示，
- * 因此即使带持续时间也「只回一次」。图标/名字复用原版生命恢复。
+ * 本效果不周期回血（canApplyUpdateEffect ??false），仅提供状态栏图标与名字显示，
+ * 因此即使带持续时间也「只回一次」。图???名字复用原版生命恢复???
  */
 public class BatRegenEffect extends MobEffect {
     public BatRegenEffect() {

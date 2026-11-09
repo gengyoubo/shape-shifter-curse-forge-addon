@@ -4,7 +4,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 
-/** 铚樿洓璺宠洓锛圫pider Salticidae锛夊舰鎬佸姞鎴愬崰浣嶅疄鐜帮細寰?Apoli perk 灞傜Щ妞嶅悗鏇挎崲銆?*/
+/** 蜘蛛跳蛛（Spider Salticidae）形态加成占位实现：?Apoli perk 层移植后替换?*/
 public final class SpiderSalticidaePerks {
     private SpiderSalticidaePerks() {}
 

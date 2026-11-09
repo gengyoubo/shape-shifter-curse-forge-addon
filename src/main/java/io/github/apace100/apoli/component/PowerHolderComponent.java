@@ -7,14 +7,14 @@ import net.minecraft.world.entity.player.Player;
 import java.util.Collection;
 import java.util.List;
 
-/** Apoli PowerHolderComponent 兼容占位：Forge 侧暂无对应 Power 实例。 */
+/** Apoli PowerHolderComponent 兼容占位：Forge 侧暂无对?Power 实例?*/
 public final class PowerHolderComponent {
     public static final Key KEY = new Key();
 
     private PowerHolderComponent() {}
 
     public static final class Key {
-        public Holder get(Player player) {
+        public Holder get(net.minecraft.world.entity.Entity player) {
             return new Holder();
         }
     }
@@ -33,7 +33,7 @@ public final class PowerHolderComponent {
         }
     }
 
-    public static <T extends Power> Collection<T> getPowers(Player player, Class<T> type) {
+    public static <T extends Power> java.util.List<T> getPowers(net.minecraft.world.entity.Entity entity, Class<T> type) {
         return List.of();
     }
 

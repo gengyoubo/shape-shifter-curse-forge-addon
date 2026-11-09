@@ -31,70 +31,70 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
 /**
- * 璺宠洓銆岃烦鏉€锛圝ump Kill锛夈€嶄富鎶€鑳斤紙sp_primary锛夆€斺€?鏈嶅姟绔姸鎬佹満銆?
+ * 跳蛛「跳杀（Jump Kill）」主技能（sp_primary）—?服务端状态机?
  *
- * <p><b>钃勫姏</b>锛堥暱鎸?sp_primary锛夛細钃勫姏瓒婁箙绱㈡晫璺濈瓒婂ぇ锛堝熀纭€ {@value #BASE_DIST} 鏍?/
- * 婊¤搫 {@value #CHARGE_MAX}t=3 绉?鈫?{@value #MAX_DIST} 鏍硷級锛涜搫鍔涙湡绉婚€熷噺鍗娿€佽浆瑙嗚鐬勫噯锛?
- * 姣?tick 鎵弿鍓嶆柟瑙嗛敟鍐呭彲鎵戠洰鏍囷細鍏ㄩ儴<b>绾㈣壊鎻忚竟</b>銆佸噯鏄熸渶鎺ヨ繎鑰?b>缁胯壊鎻忚竟</b>锛堜粎鏈汉鍙锛夈€?/p>
+ * <p><b>蓄力</b>（长?sp_primary）：蓄力越久索敌距离越大（基础 {@value #BASE_DIST} ?/
+ * 满蓄 {@value #CHARGE_MAX}t=3 ??{@value #MAX_DIST} 格）；蓄力期移速减半、转视角瞄准?
+ * ?tick 扫描前方视锥内可扑目标：全部<b>红色描边</b>、准星最接近?b>绿色描边</b>（仅本人可见）?/p>
  *
- * <p><b>璺虫潃</b>锛堟澗寮€锛夛細浠ョ豢鑹查攣瀹氱洰鏍囷紙鏃犲垯鎸夊噯鏄熻惤鐐癸級鍚戝墠璺虫墤鈥斺€攞@code setNoGravity} + 姣?tick
- * 鏂芥寚鍚戠洰鏍囩殑銆屾媺鍔涖€嶈鎷借繃鍘伙紙绗叚鏉★級锛岃窛绂昏秺杩滆捣璺宠秺楂橈紙绗簲鏉★級銆傚懡涓€犳垚 {@value #DAMAGE}
- * 鐗╃悊 + 涓瘨 II {@value #POISON_DURATION}t(8s) + 瀹氳韩 {@value #STUN_DURATION}t(0.35s)銆?/p>
+ * <p><b>跳杀</b>（松开）：以绿色锁定目标（无则按准星落点）向前跳扑——{@code setNoGravity} + ?tick
+ * 施指向目标的「拉力」被拽过去（第六条），距离越远起跳越高（第五条）。命中造成 {@value #DAMAGE}
+ * 物理 + 中毒 II {@value #POISON_DURATION}t(8s) + 定身 {@value #STUN_DURATION}t(0.35s)?/p>
  *
- * <p><b>绌轰腑杩借釜锛堢涓冩潯锛?/b>锛氳拷韪椂鎵戝悜鐩爣<b>鎻愬墠閲忔嫤鎴偣</b>锛堝綋鍓嶄綅缃?+ 閫熷害脳{@value #LEAD_TICKS}锛夛紝
- * 鍔犲ぇ鏇存鑼冨洿锛涜劚閿佸宸互銆岃捣璺虫椂閿佸畾浣嶇疆 lockPos0銆嶄负鍦嗗績銆佸崐寰?= {@value #LEASH_K}脳璺宠穬璺濈
- * 锛堣烦瓒婅繙瀹瑰樊瓒婂ぇ銆佽秺杩戣秺灏忥級锛涚洰鏍囩Щ鍑哄宸嵆鑴遍攣銆佹寜鏈€鍚庢柟鍚戠洿椋炴墤绌恒€?/p>
+ * <p><b>空中追踪（第七条?/b>：追踪时扑向目标<b>提前量拦截点</b>（当前位?+ 速度×{@value #LEAD_TICKS}），
+ * 加大更正范围；脱锁容差以「起跳时锁定位置 lockPos0」为圆心、半?= {@value #LEASH_K}×跳跃距离
+ * （跳越远容差越大、越近越小）；目标移出容差即脱锁、按最后方向直飞扑空?/p>
  *
- * <p><b>CD</b>锛氭墤涓寜 power JSON cooldown銆佹墤绌烘寜 fail_cooldown銆?
- * 鐧藉悕鍗曪細榛樿鐧藉悕鍗曪紙鎶ょ帺瀹?+ 瀹犵墿/鍙敜鐗╋級銆傚叏鍒ゅ畾鏈嶅姟绔紝璺宠穬姣?tick 琛ュ彂閫熷害鍖呯粰瀹㈡満銆?/p>
+ * <p><b>CD</b>：扑中按 power JSON cooldown、扑空按 fail_cooldown?
+ * 白名单：默认白名单（护玩?+ 宠物/召唤物）。全判定服务端，跳跃?tick 补发速度包给客机?/p>
  */
 public final class JumpKillManager {
 
-	// 浠ヤ笅宸茬櫥璁板父閲忓潎涓洪粯璁ゅ€硷紱杩愯鏃朵粠 balance 蹇収璇诲彇锛坅bilities.jump_kill锛?
-	private static final int CHARGE_MAX = 60;        // 婊¤搫 3 绉?
-	private static final double BASE_DIST = 3.0;      // 鍩虹绱㈡晫 3 鏍?
-	private static final double MAX_DIST = 16.0;      // 婊¤搫绱㈡晫 16 鏍?
+	// 以下已登记常量均为默认值；运行时从 balance 快照读取（abilities.jump_kill?
+	private static final int CHARGE_MAX = 60;        // 满蓄 3 ?
+	private static final double BASE_DIST = 3.0;      // 基础索敌 3 ?
+	private static final double MAX_DIST = 16.0;      // 满蓄索敌 16 ?
 	private static final float DAMAGE = 8.0f;
-	private static final int POISON_DURATION = 160;  // 涓瘨 II 8 绉?
-	private static final int POISON_AMPLIFIER = 1;   // 涓瘨 II
-	private static final int STUN_DURATION = 7;      // 瀹氳韩 0.35 绉?
+	private static final int POISON_DURATION = 160;  // 中毒 II 8 ?
+	private static final int POISON_AMPLIFIER = 1;   // 中毒 II
+	private static final int STUN_DURATION = 7;      // 定身 0.35 ?
 	private static final String SKILL_ID = "my_addon:form_spider_salticidae_jump_kill";
-	private static final double CHARGE_SLOW = -0.5;  // 钃勫姏绉婚€?脳0.5
-	private static final double LEASH_K = 0.4;       // 鑴遍攣瀹瑰樊绯绘暟锛堝崐寰?= LEASH_K 脳 璺宠穬璺濈锛?
-	private static final int LEAD_TICKS = 6;         // 鎻愬墠閲忥細鎵戝悜 鐩爣浣嶇疆 + 閫熷害 脳 LEAD_TICKS
-	private static final double LEAP_SPEED = 0.85;   // 璺宠穬姘村钩鎷夊姏閫熷害
-	private static final int MAX_LEAP_TICKS = 40;    // 璺宠穬纭笂闄?2 绉?
-	private static final double HIT_RADIUS = 1.3;    // 鍛戒腑鍒ゅ畾璺濈
-	private static final double SCAN_COS = 0.978;    // 閿佸畾瑙嗛敟鍗婅 鈮?12掳锛堝彧閿佸噯鏄熼檮杩戠洰鏍囷級
-	private static final double GRAVITY_STEP = 0.08; // 璺宠穬鏈熸墜鍔ㄦ姏鐗╋細姣?tick 绔栫洿閫熷害琛板噺锛? 閲嶅姏鍔犻€熷害锛?
-	private static final double TURN_LERP = 0.3;     // 姘村钩杞悜骞虫粦绯绘暟锛堥槻鎺ヨ繎鐩爣鏃跺乏鍙虫憜鍔級
-	private static final int HIGHLIGHT_TICKS = 15;   // 鎻忚竟鏃堕暱锛堢暀鍒锋柊浣欓噺闃查棯鐑侊級
-	private static final int CHARGE_CRY_COUNT = 5;   // 钃勫姏鏈熻湗铔涘樁楦ｆ€绘鏁帮紙浠呰嚜宸卞惉锛?
-	private static final int COLOR_RED = 0xFF3030;   // 鍊欓€夌洰鏍囩孩杈?
-	private static final int COLOR_GREEN = 0x30FF30; // 閿佸畾鐩爣缁胯竟
-	// ===== 瀹夊叏涓濓紙淇濆懡鎷夊洖锛?=====
-	private static final double SILK_MAX = 48.0;     // 涓濈嚎鏈€闀?48 鏍硷紝瓒呰繃鍗虫柇
-	private static final int RECALL_WINDOW = 160;    // 璺虫潃缁撴潫鍚?8 绉掑唴鍙媺鍥?
-	private static final double RECALL_SPEED = 1.15; // 鎷夊洖閫熷害锛堟瘮璺宠穬蹇紝蹇€熸嫿鍥烇級
-	private static final double RECALL_ARRIVE = 1.6; // 鎷夊洖鍒拌揪闃堝€硷紙璺濋敋鐐瑰皬浜庡嵆鍋滐級
-	private static final int RECALL_STALL_TICKS = 5; // 鎷夊洖杩炵画 5t 璺濈涓嶆媺杩?鈫?澶栧姏杩囧己锛屼笣鏂?
-	private static final double OBSCURE_BREAK_BLOCKS = 1.5; // 涓濈嚎琚疄蹇冩柟鍧楅伄鎸＄疮璁￠槇鍊硷紙閲囨牱 0.5 鏍?涓細鍏佽绌?1.5 鏍煎帤澧欙紝鈮? 鏍兼柇锛?
+	private static final double CHARGE_SLOW = -0.5;  // 蓄力移?×0.5
+	private static final double LEASH_K = 0.4;       // 脱锁容差系数（半?= LEASH_K × 跳跃距离?
+	private static final int LEAD_TICKS = 6;         // 提前量：扑向 目标位置 + 速度 × LEAD_TICKS
+	private static final double LEAP_SPEED = 0.85;   // 跳跃水平拉力速度
+	private static final int MAX_LEAP_TICKS = 40;    // 跳跃硬上?2 ?
+	private static final double HIT_RADIUS = 1.3;    // 命中判定距离
+	private static final double SCAN_COS = 0.978;    // 锁定视锥半角 ?12°（只锁准星附近目标）
+	private static final double GRAVITY_STEP = 0.08; // 跳跃期手动抛物：?tick 竖直速度衰减? 重力加速度?
+	private static final double TURN_LERP = 0.3;     // 水平转向平滑系数（防接近目标时左右摆动）
+	private static final int HIGHLIGHT_TICKS = 15;   // 描边时长（留刷新余量防闪烁）
+	private static final int CHARGE_CRY_COUNT = 5;   // 蓄力期蜘蛛嘶鸣总次数（仅自己听?
+	private static final int COLOR_RED = 0xFF3030;   // 候选目标红?
+	private static final int COLOR_GREEN = 0x30FF30; // 锁定目标绿边
+	// ===== 安全丝（保命拉回?=====
+	private static final double SILK_MAX = 48.0;     // 丝线最?48 格，超过即断
+	private static final int RECALL_WINDOW = 160;    // 跳杀结束?8 秒内可拉?
+	private static final double RECALL_SPEED = 1.15; // 拉回速度（比跳跃快，快速拽回）
+	private static final double RECALL_ARRIVE = 1.6; // 拉回到达阈值（距锚点小于即停）
+	private static final int RECALL_STALL_TICKS = 5; // 拉回连续 5t 距离不拉??外力过强，丝?
+	private static final double OBSCURE_BREAK_BLOCKS = 1.5; // 丝线被实心方块遮挡累计阈值（采样 0.5 ?个：允许?1.5 格厚墙，? 格断?
 
 	private static final UUID SLOW_UUID = UUID.fromString("b7e2c9a4-3f81-4d6e-9a25-7c1e0f4d82ab");
 
-	// 闃舵 5锛氭湇鍔＄鏉冨▉蹇収璇诲彇锛堝揩鐓ф湭鍒濆鍖栧洖閫€榛樿甯搁噺锛?
+	// 阶段 5：服务端权威快照读取（快照未初始化回退默认常量?
 	private static final BalanceReader BAL = new BalanceReader("abilities.jump_kill");
 
 	private static final Map<UUID, State> STATES = new ConcurrentHashMap<>();
 
-	/** 瀹夊叏涓濇媺鍥炵獥鍙ｏ細璺虫潃缁撴潫鍚庨敋鐐逛繚鐣欑殑鏃舵锛堣秴鏃跺嵆澶辨晥锛夈€?*/
+	/** 安全丝拉回窗口：跳杀结束后锚点保留的时段（超时即失效）?*/
 	private static final Map<UUID, SilkAnchor> ANCHORS = new ConcurrentHashMap<>();
 
 	private static final class SilkAnchor {
-		final Vec3 pos;        // 涓濈嚎閿氱偣锛堣捣璺崇偣锛?
-		final long validUntil;  // 涓栫晫鏃堕棿锛氳秴杩囧嵆澶辨晥
-		double lastDist = -1;   // 鎷夊洖鏈燂細涓?tick 鍒伴敋鐐硅窛绂伙紙鏂笣鍒ゅ畾鐢級
-		int stall = 0;          // 鎷夊洖鏈燂細璺濈鏈媺杩戣繛缁?tick 鏁?
+		final Vec3 pos;        // 丝线锚点（起跳点?
+		final long validUntil;  // 世界时间：超过即失效
+		double lastDist = -1;   // 拉回期：?tick 到锚点距离（断丝判定用）
+		int stall = 0;          // 拉回期：距离未拉近连?tick ?
 		SilkAnchor(Vec3 pos, long validUntil) { this.pos = pos; this.validUntil = validUntil; }
 	};
 
@@ -103,16 +103,16 @@ public final class JumpKillManager {
 		int chargeMax = CHARGE_MAX;
 		float killHealing;
 		int strengthTicks;
-		int phase = 0;        // 0=钃勫姏 1=璺宠穬 2=鎷夊洖
+		int phase = 0;        // 0=蓄力 1=跳跃 2=拉回
 		int chargeTick = 0;
 		// 璺宠穬鏈?
 		int leapTick = 0;
-		UUID lockTarget;      // 璺宠穬閿佸畾鐩爣锛坣ull=绾綅绉伙級
-		Vec3 lockPos0;       // 璧疯烦鏃堕攣瀹氱洰鏍囦綅缃紙鑴遍攣瀹瑰樊鍦嗗績锛?
-		double jumpDist;      // 璧疯烦鏃跺埌鐩爣鐨勮窛绂伙紙鍐冲畾璺抽珮 + 瀹瑰樊锛?
-		double flightTime;    // 棰勮椋炶 tick锛堝崗璋冩姏鐗╃嚎钀界偣锛?
-		Vec3 lastDir = new Vec3(0, 0, 1); // 姘村钩鎷夊姏鏂瑰悜锛堝崟浣嶅悜閲忥紝y=0锛涘钩婊戞彃鍊艰拷韪級
-		double vy0;           // 璧疯烦绔栫洿鍒濋€燂紙鍗忚皟鎶涚墿锛歠lightTime 鍚庣珫鐩村埌鐩爣楂樺害锛?
+		UUID lockTarget;      // 跳跃锁定目标（null=纯位移）
+		Vec3 lockPos0;       // 起跳时锁定目标位置（脱锁容差圆心?
+		double jumpDist;      // 起跳时到目标的距离（决定跳高 + 容差?
+		double flightTime;    // 预计飞行 tick（协调抛物线落点?
+		Vec3 lastDir = new Vec3(0, 0, 1); // 水平拉力方向（单位向量，y=0；平滑插值追踪）
+		double vy0;           // 起跳竖直初速（协调抛物：flightTime 后竖直到目标高度?
 	}
 
 	private JumpKillManager() {}
@@ -121,15 +121,15 @@ public final class JumpKillManager {
 		return FormUtils.isForm(player, FormIdentifiers.SPIDER_SALTICIDAE);
 	}
 
-	/** 瀹㈡埛绔寜涓?sp_primary锛氫紭鍏堝垽銆屽畨鍏ㄤ笣鎷夊洖銆嶏紙6s 绐楀彛鍐咃紝缁曡繃 CD鈥斺€旇烦鏉€ CD 8~12s 蹇呯劧瑕嗙洊绐楀彛锛夛紱鍚﹀垯寮€濮嬭搫鍔涖€?*/
+	/** 客户端按?sp_primary：优先判「安全丝拉回」（6s 窗口内，绕过 CD——跳杀 CD 8~12s 必然覆盖窗口）；否则开始蓄力?*/
 	public static void startCharge(ServerPlayer player) {
 		if (!isSalticidae(player)) return;
-		// 瀹夊叏涓濇媺鍥烇細璺虫潃缁撴潫鍚?6s 鍐呭啀鎸変富閿?鈫?蹇€熸嫿鍥為敋鐐癸紙涓嶈繘钃勫姏銆佷笉鍙?CD 闃绘尅锛?
+		// 安全丝拉回：跳杀结束?6s 内再按主??快速拽回锚点（不进蓄力、不?CD 阻挡?
 		SilkAnchor anchor = ANCHORS.get(player.getUUID());
 		if (anchor != null) {
 			if (player.serverLevel().getGameTime() > anchor.validUntil
 					|| player.position().distanceTo(anchor.pos) > SILK_MAX) {
-				// 绐楀彛瓒呮椂 / 璺濋敠鐐硅繃杩滐細涓濆凡鏂紙甯︽柇涓濈壒鏁堬級
+				// 窗口超时 / 距锦点过远：丝已断（带断丝特效）
 				if (player.level() instanceof ServerLevel sw0) snapSilk(player, sw0, anchor);
 				ANCHORS.remove(player.getUUID());
 				SscAddonNetworking.syncJumpKillSilk(player, false, 0, 0, 0);
@@ -139,7 +139,7 @@ public final class JumpKillManager {
 			}
 		}
 		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.ready(player, SKILL_ID)) return; // CD 涓?
-		if (STATES.containsKey(player.getUUID())) return; // 鏂芥硶涓笉鍙噸鍏?
+		if (STATES.containsKey(player.getUUID())) return; // 施法中不可重?
 		if (!SpiderSalticidaePerks.beginSkill(player, SKILL_ID, false)) return;
         State s = new State();
         s.castId = github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.currentCastId(player, SKILL_ID);
@@ -150,13 +150,13 @@ public final class JumpKillManager {
 		SpiderSalticidaePerks.setSensing(player, s.strengthTicks > 0);
 		applyChargeSlow(player);
 		if (player.level() instanceof ServerLevel sw) {
-			// 钃勫姏璧锋墜锛氫綆娌夎湗铔涘樁楦ｏ紙钃勫娍锛?
+			// 蓄力起手：低沉蜘蛛嘶鸣（蓄势?
 			sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 					SoundEvents.SPIDER_AMBIENT, SoundSource.PLAYERS, 0.8f, 0.6f);
 		}
 	}
 
-	/** 瀹㈡埛绔澗寮€ sp_primary 鈫?璺虫潃銆?*/
+	/** 客户端松开 sp_primary ?跳杀?*/
 	public static void release(ServerPlayer player) {
 		State s = STATES.get(player.getUUID());
 		if (s == null || s.phase != 0) return;
@@ -171,7 +171,7 @@ public final class JumpKillManager {
 		double ratio = Math.min(1.0, (double) s.chargeTick / chargeMax);
 		double scanDist = baseDist + ratio * (maxDist - baseDist);
 
-		// 鏉惧紑鐬棿鎸夊綋鍓嶅噯鏄熼噸鏂伴攣瀹氾紙鍑嗘槦鏈€鎺ヨ繎鐨勫€欓€夛級
+		// 松开瞬间按当前准星重新锁定（准星最接近的候选）
 		LivingEntity lock = pickLockTarget(player, sw, scanDist);
 
 		s.phase = 1;
@@ -180,7 +180,7 @@ public final class JumpKillManager {
 		Vec3 look = player.getLookAngle().normalize();
 		s.lastDir = look;
 
-		// 瀹夊叏涓濓細閿氱偣蹇呴』钀藉湪瀹炲湴鈥斺€斿悜涓嬫娴?2 鏍煎唴鐨勯涓疄蹇冩柟鍧楅《闈紙鑴氱鍦?2 鏍煎唴璧疯烦 鈫?涓濊浆绉诲埌鍦伴潰锛涜秴杩?2 鏍肩┖涓?鈫?涓嶇敓鎴愶級
+		// 安全丝：锚点必须落在实地——向下检?2 格内的首个实心方块顶面（脚离?2 格内起跳 ?丝转移到地面；超?2 格空??不生成）
 		Vec3 anchorPos = groundAnchor(player);
 		if (anchorPos != null) {
 			SilkAnchor anchor = new SilkAnchor(anchorPos, player.serverLevel().getGameTime() + RECALL_WINDOW);
@@ -200,7 +200,7 @@ public final class JumpKillManager {
 
 		PlayerGravityLease.acquire(player, SKILL_ID);
 		player.fallDistance = 0.0f;
-		// 鍗忚皟鎶涚墿绾胯捣璺筹細璁＄畻浣挎姏鐗╃嚎 flightTime 鍚庢按骞?绔栫洿鍚屾椂鎶佃揪钀界偣锛堣建杩规祦鐣咃紝璺濈瓒婅繙鎶涚墿瓒婇珮锛?
+		// 协调抛物线起跳：计算使抛物线 flightTime 后水?竖直同时抵达落点（轨迹流畅，距离越远抛物越高?
 		Vec3 aim = (lock != null) ? bodyCenter(lock) : player.getEyePosition().add(look.scale(s.jumpDist));
 		Vec3 horiz = new Vec3(aim.x - player.getX(), 0, aim.z - player.getZ());
 		double horizDist = horiz.length();
@@ -209,20 +209,20 @@ public final class JumpKillManager {
 		double dy = aim.y - player.getY();
 		double T = Math.max(6.0, horizDist / leapSpeed);
 		s.flightTime = T;
-		s.vy0 = dy / T + 0.5 * GRAVITY_STEP * T; // T tick 鍚庣珫鐩村埌杈?aim.y锛汿 瓒婂ぇ锛堣窛绂昏秺杩滐級璧疯烦瓒婇珮
+		s.vy0 = dy / T + 0.5 * GRAVITY_STEP * T; // T tick 后竖直到?aim.y；T 越大（距离越远）起跳越高
 		s.lastDir = horiz;
 		player.setDeltaMovement(horiz.x * leapSpeed, s.vy0, horiz.z * leapSpeed);
 		player.hurtMarked = true;
 		pushVelocity(player);
 
-		// 璧疯烦闊虫晥锛氳湗铔涙墤鍑诲樁楦?+ 鐮寸┖
+		// 起跳音效：蜘蛛扑击嘶?+ 破空
 		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.SPIDER_AMBIENT, SoundSource.PLAYERS, 1.0f, 1.5f);
 		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 0.7f, 0.8f);
 	}
 
-	/** 姣忔湇鍔＄ tick 瀵规瘡涓湪绾跨帺瀹惰皟鐢ㄣ€?*/
+	/** 每服务端 tick 对每个在线玩家调用?*/
 	public static void tick(ServerPlayer player) {
 		State s = STATES.get(player.getUUID());
 		SpiderSalticidaePerks.setSensing(player, s != null && s.phase == 0 && s.strengthTicks > 0);
@@ -233,27 +233,27 @@ public final class JumpKillManager {
 		if (s.phase == 0) {
 			tickCharge(player, sw, s);
 		} else if (s.phase == 1) {
-			checkSilk(player); // 璺宠穬鏈熶笣绾挎鏌ワ細瓒?32 鏍?/ 琚伄鎸?鈫?涓濇柇锛堟媺鍥炵獥鍙ｄ綔搴燂級
-			if (STATES.containsKey(player.getUUID())) tickLeap(player, sw, s); // 涓濇柇涓嶆竻璺宠穬鎬侊紝浠呬綔搴熼敠鐐?
+			checkSilk(player); // 跳跃期丝线检查：?32 ?/ 被遮??丝断（拉回窗口作废）
+			if (STATES.containsKey(player.getUUID())) tickLeap(player, sw, s); // 丝断不清跳跃态，仅作废锦?
 		} else {
 			tickRecall(player, sw, s);
 		}
 	}
 
-	/** 閿︾偣瀛樺湪 tick锛氱函閿︾偣锛堟棤娲诲姩鐘舵€侊級涔熻鎺ㄨ繘 8 绉掑€掕鏃垛€斺€斿埌鏃朵笣绾挎柇瑁傛秷澶憋紙甯︾壒鏁堬級銆?*/
+	/** 锦点存在 tick：纯锦点（无活动状态）也要推进 8 秒倒计时——到时丝线断裂消失（带特效）?*/
 	public static void tickAnchors(ServerPlayer player) {
 		SilkAnchor anchor = ANCHORS.get(player.getUUID());
 		if (anchor == null) return;
 		State s = STATES.get(player.getUUID());
-		if (s != null && (s.phase == 1 || s.phase == 2)) return; // 璺宠穬/鎷夊洖涓細绐楀彛鐢?finishRecall 閲嶇疆璁℃椂
+		if (s != null && (s.phase == 1 || s.phase == 2)) return; // 跳跃/拉回中：窗口?finishRecall 重置计时
 		if (player.serverLevel().getGameTime() > anchor.validUntil) {
 			if (player.level() instanceof ServerLevel sw) snapSilk(player, sw, anchor);
 			ANCHORS.remove(player.getUUID());
-			SscAddonNetworking.syncJumpKillSilk(player, false, 0, 0, 0); // 涓濈嚎鍒版椂鏂锛堝鎴风鍚屾绉婚櫎锛?
+			SscAddonNetworking.syncJumpKillSilk(player, false, 0, 0, 0); // 丝线到时断裂（客户端同步移除?
 		}
 	}
 
-	/** 寮€濮嬪畨鍏ㄤ笣鎷夊洖锛氶敋鐐逛粠绐楀彛琛ㄨ浆鍏ユ椿鍔ㄧ姸鎬侊紝phase=2銆?*/
+	/** 开始安全丝拉回：锚点从窗口表转入活动状态，phase=2?*/
 	private static void startRecall(ServerPlayer player, SilkAnchor anchor) {
 		SpiderSalticidaePerks.setSensing(player, false);
         State s = new State();
@@ -264,7 +264,7 @@ public final class JumpKillManager {
 		PlayerGravityLease.acquire(player, SKILL_ID);
 		player.fallDistance = 0.0f;
 		if (player.level() instanceof ServerLevel sw) {
-			// 鎷夊洖璧锋墜锛氳洓楦?+ 涓夊弶鎴熸嫋鎷藉０
+			// 拉回起手：蛛?+ 三叉戟拖拽声
 			sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 					SoundEvents.SPIDER_AMBIENT, SoundSource.PLAYERS, 0.9f, 1.3f);
 			sw.playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -272,15 +272,15 @@ public final class JumpKillManager {
 		}
 	}
 
-	/** 鎷夊洖鎺ㄨ繘锛氭瘡 tick 鍚戦敠鐐圭洿绾挎嫿锛堜笁缁寸洿绾?+ 璺濈姣斾緥鍑忛€燂級锛岃澶栧姏鍘嬭繃鎷変笉杩戯紙杩炵画 5t 璺濈涓嶇缉鐭級鎴栨挒澧?鈫?涓濇柇鏀惧純銆?*/
+	/** 拉回推进：每 tick 向锦点直线拽（三维直?+ 距离比例减速），被外力压过拉不近（连续 5t 距离不缩短）或撞??丝断放弃?*/
 	private static void tickRecall(ServerPlayer player, ServerLevel sw, State s) {
 		s.leapTick++;
 		SilkAnchor anchor = ANCHORS.get(player.getUUID());
 		if (anchor == null) { finishRecall(player, false); return; }
-		if (s.leapTick > 60) { finishRecall(player, true); return; } // 纭笂闄?3s
+		if (s.leapTick > 60) { finishRecall(player, true); return; } // 硬上?3s
 
 		double dist = player.position().distanceTo(anchor.pos);
-		// 鏂笣鍒ゅ畾锛氭挒澧欏崱浣?/ 杩炵画澶?tick 璺濈涓嶇缉鐭紙澶栧姏杩囧己鎷戒笉鍥炴潵锛? 涓濈嚎琚伄鎸?
+		// 断丝判定：撞墙卡?/ 连续?tick 距离不缩短（外力过强拽不回来? 丝线被遮?
 		if (s.leapTick > 3 && player.horizontalCollision) { snapSilk(player, sw, anchor); finishRecall(player, false); return; }
 		if (computeObscuration(player, bodyCenter(player), anchor.pos) > OBSCURE_BREAK_BLOCKS) {
 			snapSilk(player, sw, anchor); finishRecall(player, false); return;
@@ -295,7 +295,7 @@ public final class JumpKillManager {
 		}
 		anchor.lastDist = dist;
 
-		// 鍒拌揪閿︾偣闄勮繎 鈫?鎷夊洖鎴愬姛锛堟竻姘村钩閫熷害闃插啿杩囧ご涔辨檭锛?
+		// 到达锦点附近 ?拉回成功（清水平速度防冲过头乱晃?
 		if (dist < RECALL_ARRIVE) {
 			Vec3 v = player.getDeltaMovement();
 			player.setDeltaMovement(v.x * 0.1, v.y, v.z * 0.1);
@@ -304,17 +304,17 @@ public final class JumpKillManager {
 			return;
 		}
 
-		// 鎷藉悜閿︾偣锛氫笁缁寸洿绾?+ 璺濈姣斾緥鍑忛€燂紙杩滃蹇€佷复杩戣嚜鍔ㄥ埞杞︼紝涓嶅啿杩囬敠鐐逛笉涔辨檭锛?
+		// 拽向锦点：三维直?+ 距离比例减速（远处快、临近自动刹车，不冲过锦点不乱晃?
 		Vec3 to = anchor.pos.subtract(player.position());
 		Vec3 dir3 = to.normalize();
-		double speed = Math.min(RECALL_SPEED, dist / 3.0 + 0.25); // 涓磋繎鑷姩闄嶉€燂紙鍓?1 鏍?鈮?0.58/t锛?
+		double speed = Math.min(RECALL_SPEED, dist / 3.0 + 0.25); // 临近自动降速（?1 ??0.58/t?
 		speed = Math.max(0.3, speed);
 		player.setDeltaMovement(dir3.x * speed, Math.max(dir3.y * speed, -0.5), dir3.z * speed);
 		player.hurtMarked = true;
 		player.fallDistance = 0.0f;
 		pushVelocity(player);
 
-		// 涓濈嚎瑙嗚锛氭部绾挎瘡 2 鏍间竴涓洓缃戠矑瀛愶紙鎷夊洖杩囩▼鐭殏锛屽紑閿€鍙帶锛? 灏捐抗
+		// 丝线视觉：沿线每 2 格一个蛛网粒子（拉回过程短暂，开销可控? 尾迹
 		Vec3 dir = anchor.pos.subtract(player.position());
 		double len = dir.length();
 		if (len > 1.0) {
@@ -327,48 +327,48 @@ public final class JumpKillManager {
 		}
 	}
 
-	/** 涓濇柇鍙嶉锛氱怀缁撴柇瑁傞煶 + 鐧借壊涓濈嚎绮掑瓙銆?*/
+	/** 丝断反馈：绳结断裂音 + 白色丝线粒子?*/
 	private static void snapSilk(ServerPlayer player, ServerLevel sw, SilkAnchor anchor) {
 		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.WOOL_BREAK, SoundSource.PLAYERS, 0.9f, 1.4f);
-		// owner 鎵撴爣锛氫粎鏈汉绗竴浜虹О閬胯锛屼粬浜鸿瑙掑師鏍?
+		// owner 打标：仅本人第一人称避让，他人视角原?
 		github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(sw, player, net.minecraft.core.particles.ParticleTypes.CLOUD, player.getX(), player.getY(0.5), player.getZ(),
 				10, 0.2, 0.2, 0.2, 0.02);
 	}
 
 	/**
-	 * 钀藉湴閿氱偣锛氫粠鐜╁鑴氶儴鍚戜笅鎵?2 鏍硷紝杩斿洖棣栦釜銆屽彲绔欑珛鏂瑰潡銆嶏紙鏈夊褰㈣疆寤撳嵆鍙€斺€?
-	 * 鏍忔潌/鏍呮爮/鍗婄爾/鍙伴樁/闂ㄧ瓑闈炲疄蹇冧絾鍙鎾炲潎鍙級鐨勫潗鏍囷紱
-	 * 绌轰腑锛堣剼涓?2 鏍兼棤鍦帮級杩斿洖 null = 涓嶇敓鎴愯洓涓濓紙鑴氱鍦?2 鏍煎唴 鈫?涓濊浆绉诲埌鍦伴潰锛涜秴杩?2 鏍?鈫?娑堝け锛夈€?
+	 * 落地锚点：从玩家脚部向下?2 格，返回首个「可站立方块」（有外形轮廓即可—?
+	 * 栏杆/栅栏/半砖/台阶/门等非实心但可碰撞均可）的坐标；
+	 * 空中（脚?2 格无地）返回 null = 不生成蛛丝（脚离?2 格内 ?丝转移到地面；超?2 ??消失）?
 	 */
 	private static Vec3 groundAnchor(ServerPlayer player) {
 		BlockPos feet = player.blockPosition();
-		for (int dy = 0; dy <= 2; dy++) { // 0锛堣剼閮級銆?1銆?2 涓夋。锛氳鐩?2 鏍兼娴?
+		for (int dy = 0; dy <= 2; dy++) { // 0（脚部）?1?2 三档：覆?2 格检?
 			BlockPos check = feet.below(dy);
 			if (isStandable(player, check)) {
-				return new Vec3(check.getX() + 0.5, check.getY() + 1.0, check.getZ() + 0.5); // 鏂瑰潡椤堕潰涓績
+				return new Vec3(check.getX() + 0.5, check.getY() + 1.0, check.getZ() + 0.5); // 方块顶面中心
 			}
 		}
-		// 鑴氶儴銆佷笅涓€鏍笺€佷笅涓ゆ牸閮界┖锛氬啀绮剧‘妫€娴嬪崐鏍硷紙鐜╁鍙兘绔欏湪鏂瑰潡杈圭紭锛岃剼閮?y 鍋忎笂锛?
+		// 脚部、下一格、下两格都空：再精确检测半格（玩家可能站在方块边缘，脚?y 偏上?
 		BlockPos half = BlockPos.containing(player.getX(), player.getY() - 2.5, player.getZ());
 		if (isStandable(player, half)) {
 			return new Vec3(half.getX() + 0.5, half.getY() + 1.0, half.getZ() + 0.5);
 		}
-		return null; // 绌轰腑锛氭棤鍦板彲閿氾紝涓嶇敓鎴愪笣
+		return null; // 空中：无地可锚，不生成丝
 	}
 
-	/** 鍙珯绔嬪垽瀹氾細鏂瑰潡澶栧舰杞粨闈炵┖锛堟爮鏉?鏍呮爮/鍗婄爾/鍙伴樁/闂ㄧ瓑鏈夌鎾為潰鍗崇畻锛岀┖姘?鑽変笡涓嶇畻锛夈€?*/
+	/** 可站立判定：方块外形轮廓非空（栏?栅栏/半砖/台阶/门等有碰撞面即算，空?草丛不算）?*/
 	private static boolean isStandable(ServerPlayer player, BlockPos pos) {
 		net.minecraft.world.level.block.state.BlockState state = player.level().getBlockState(pos);
 		return !state.getShape(player.level(), pos).isEmpty();
 	}
 
-	/** 鎷夊洖缁撴潫锛氭仮澶嶉噸鍔涖€佹竻閿︾偣锛堟棤璁烘垚璐ワ紝鎷夊洖鏈轰細鍙敤涓€娆★紱涓濈嚎鑰楀敖涔熸挱鏂笣鐗规晥锛夈€?*/
+	/** 拉回结束：恢复重力、清锦点（无论成败，拉回机会只用一次；丝线耗尽也播断丝特效）?*/
 	private static void finishRecall(ServerPlayer player, boolean arrived) {
 		PlayerGravityLease.release(player, SKILL_ID);
 		SilkAnchor anchor = ANCHORS.get(player.getUUID());
 		if (player.level() instanceof ServerLevel sw) {
-			if (anchor != null) snapSilk(player, sw, anchor); // 涓濈嚎鎷夊畬鑰楀敖锛氬悓鏍锋柇瑁傚弽棣?
+			if (anchor != null) snapSilk(player, sw, anchor); // 丝线拉完耗尽：同样断裂反?
 			if (arrived) {
 				sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 						SoundEvents.GOAT_LONG_JUMP, SoundSource.PLAYERS, 0.7f, 1.2f);
@@ -381,12 +381,12 @@ public final class JumpKillManager {
 
 	private static void tickCharge(ServerPlayer player, ServerLevel sw, State s) {
 		int chargeMax = s.chargeMax;
-		boolean justReachedMax = s.chargeTick == chargeMax - 1; // 涓嬩竴琛岄€掑鍚庢伆濂芥弧钃勶紙涓€娆℃€ц竟娌匡紝闃叉弧钃勫悗姣?tick 閲嶅搷锛?
+		boolean justReachedMax = s.chargeTick == chargeMax - 1; // 下一行递增后恰好满蓄（一次性边沿，防满蓄后?tick 重响?
 		if (s.chargeTick < chargeMax) s.chargeTick++;
 		double ratio = Math.min(1.0, (double) s.chargeTick / chargeMax);
 		double scanDist = BAL.d("base_dist", BASE_DIST) + ratio * (BAL.d("max_dist", MAX_DIST) - BAL.d("base_dist", BASE_DIST));
 
-		// 鎵弿鍊欓€夛細绱㈡晫璺濈鍐呭叏閮ㄥ彲鎵戠洰鏍囷紙鏃犻伄鎸℃墠鏄剧ず/鍙攣锛夆€斺€旂孩杈癸紱鍑嗘槦 12掳 閿ュ唴鏈€杩戣€呯豢杈归攣瀹?
+		// 扫描候选：索敌距离内全部可扑目标（无遮挡才显示/可锁）——红边；准星 12° 锥内最近者绿边锁?
 		List<LivingEntity> cands = scanCandidates(player, sw, scanDist);
 		LivingEntity best = pickInCrosshair(player, cands);
 
@@ -395,7 +395,7 @@ public final class JumpKillManager {
 			SscAddonNetworking.sendWebHighlight(player, e.getId(), HIGHLIGHT_TICKS, color);
 		}
 
-		// 钃勫姏闊虫晥锛氬叏绋嬪叡 5 澹颁笂鍗囧樁楦ｏ紙浠呰嚜宸卞惉锛夛紝闂撮殧鍧囧垎锛涙弧钃勭灛闂撮澶栦竴澹扮粡楠屽彯澹帮紙杈规部瑙﹀彂锛岄槻婊¤搫鍚庡惊鐜搷锛?
+		// 蓄力音效：全程共 5 声上升嘶鸣（仅自己听），间隔均分；满蓄瞬间额外一声经验叮声（边沿触发，防满蓄后循环响?
 		int interval = Math.max(1, chargeMax / CHARGE_CRY_COUNT);
 		boolean cryNow = s.chargeTick < chargeMax && s.chargeTick % interval == 0 && s.chargeTick > 0;
 		if (cryNow) {
@@ -411,7 +411,7 @@ public final class JumpKillManager {
 
 	private static void tickLeap(ServerPlayer player, ServerLevel sw, State s) {
 		s.leapTick++;
-		// 瓒呮椂鍜屾挒澧欑珛鍗崇粨鏉燂紱钀藉湴鍓嶅厛鏍稿鍛戒腑锛岄伩鍏嶅悓 tick 鐨勬湁鏁堟帴瑙﹁鍒ゆ垚鎵戠┖銆?
+		// 超时和撞墙立即结束；落地前先核对命中，避免同 tick 的有效接触被判成扑空?
 		if (s.leapTick > s.flightTime + 15 || s.leapTick > BAL.i("max_leap_ticks", MAX_LEAP_TICKS)
 				|| (s.leapTick > 3 && player.horizontalCollision)) {
 			finish(player, false);
@@ -423,15 +423,15 @@ public final class JumpKillManager {
 
 		LivingEntity target = (s.lockTarget != null) ? resolve(sw, s.lockTarget) : null;
 		if (target != null && target.isAlive()) {
-			// 鑴遍攣鍒ゅ畾锛氱洰鏍囧亸绂昏捣璺抽攣瀹氫綅缃秴杩囧宸紙鍗婂緞闅忚烦璺冭窛绂荤嚎鎬э級
+			// 脱锁判定：目标偏离起跳锁定位置超过容差（半径随跳跃距离线性）
 			double leash = LEASH_K * s.jumpDist;
 			if (bodyCenter(target).distanceTo(s.lockPos0) > leash) {
-				s.lockTarget = null; // 鑴遍攣 鈫?娌挎渶鍚庢柟鍚戠洿椋炴墤绌?
+				s.lockTarget = null; // 脱锁 ?沿最后方向直飞扑?
 				targetPoint = playerPos.add(s.lastDir.scale(10));
 			} else {
-				// 鎻愬墠閲忔嫤鎴偣锛堢涓冩潯锛夛細鎵戝悜 鐩爣褰撳墠浣嶇疆 + 閫熷害 脳 LEAD_TICKS
+				// 提前量拦截点（第七条）：扑向 目标当前位置 + 速度 × LEAD_TICKS
 				targetPoint = bodyCenter(target).add(target.getDeltaMovement().scale(LEAD_TICKS));
-				// 鍛戒腑鍒ゅ畾
+				// 命中判定
 				if (bodyCenter(target).distanceTo(playerPos) < BAL.d("hit_radius", HIT_RADIUS)) {
 					onHit(player, sw, target);
 					finish(player, true);
@@ -443,13 +443,13 @@ public final class JumpKillManager {
 			targetPoint = playerPos.add(s.lastDir.scale(10));
 		}
 
-		// 鍙湁鏈懡涓洰鏍囩殑钀藉湴鎵嶇粨绠楁墤绌猴紱涓嶅欢闀胯惤鍦板悗鐨勮拷鍑绘椂闂淬€?
+		// 只有未命中目标的落地才结算扑空；不延长落地后的追击时间?
 		if (s.leapTick > 5 && player.onGround()) {
 			finish(player, false);
 			return;
 		}
 
-		// 鏂藉姏锛氭按骞虫柟鍚戝钩婊戞彃鍊艰浆鍚戯紙闃叉帴杩戠洰鏍囨椂宸﹀彸鎽嗗姩锛? 鍗忚皟鎶涚墿绔栫洿锛堟祦鐣呮洸绾匡級
+		// 施力：水平方向平滑插值转向（防接近目标时左右摆动? 协调抛物竖直（流畅曲线）
 		Vec3 desired = new Vec3(targetPoint.x - playerPos.x, 0, targetPoint.z - playerPos.z);
 		if (desired.lengthSqr() > 1.0e-4) {
 			desired = desired.normalize();
@@ -457,20 +457,20 @@ public final class JumpKillManager {
 			if (s.lastDir.lengthSqr() > 1.0e-4) s.lastDir = s.lastDir.normalize();
 		}
 		double leapSpeed = BAL.d("leap_speed", LEAP_SPEED);
-		double vy = s.vy0 - GRAVITY_STEP * s.leapTick; // 鎶涚墿绔栫洿锛堜笉閲嶇畻锛屼繚鎸佸钩婊戯級
+		double vy = s.vy0 - GRAVITY_STEP * s.leapTick; // 抛物竖直（不重算，保持平滑）
 		player.setDeltaMovement(s.lastDir.x * leapSpeed, vy, s.lastDir.z * leapSpeed);
 		player.hurtMarked = true;
 		player.fallDistance = 0.0f;
 		pushVelocity(player);
 
-		// 璺宠穬鎷栧熬锛氳洓涓濆井绮掞紙owner 鎵撴爣锛氫粎鏈汉绗竴浜虹О閬胯锛?
+		// 跳跃拖尾：蛛丝微粒（owner 打标：仅本人第一人称避让?
 		if (s.leapTick % 2 == 0) {
 			github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(sw, player, ParticleTypes.CRIT, player.getX(), player.getY(0.5), player.getZ(),
 					2, 0.1, 0.1, 0.1, 0.0);
 		}
 	}
 
-	/** 鍛戒腑缁撶畻锛? 鐗╃悊 + 涓瘨 II 8s锛堟瘨娑茶吅浣擄細绛夌骇+1 / 鏃堕暱脳70%锛? 瀹氳韩 0.35s + 闊虫晥绮掑瓙銆?*/
+	/** 命中结算? 物理 + 中毒 II 8s（毒液腺体：等级+1 / 时长×70%? 定身 0.35s + 音效粒子?*/
 	private static void onHit(ServerPlayer player, ServerLevel sw, LivingEntity target) {
 		if (WhitelistUtils.isProtected(player, target)) return;
 		DamageSource src = player.damageSources().playerAttack(player);
@@ -495,18 +495,18 @@ public final class JumpKillManager {
 				18, 0.3, 0.3, 0.3, 0.4);
 	}
 
-	/** 璺宠穬缁撴潫锛氭仮澶嶉噸鍔涖€佽繘 CD銆佹竻鐘舵€併€?*/
+	/** 跳跃结束：恢复重力、进 CD、清状态?*/
 	private static void finish(ServerPlayer player, boolean hit) {
         State finishing = STATES.get(player.getUUID());
         if (finishing == null) return;
 		PlayerGravityLease.release(player, SKILL_ID);
-		// 鎵戜腑 = 鎴愬姛 CD锛坈ooldown锛夛紝鎵戠┖ = 澶辫触 CD锛坒ail_cooldown锛?
+		// 扑中 = 成功 CD（cooldown），扑空 = 失败 CD（fail_cooldown?
 		if (hit) github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.completed(player, SKILL_ID, finishing.castId);
 		else github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.failed(player, SKILL_ID, finishing.castId);
 		STATES.remove(player.getUUID());
 	}
 
-	/** 璺宠穬鏈熶笣绾挎鏌ワ細绂婚敋鐐硅秴 32 鏍?/ 涓濈嚎琚疄蹇冩柟鍧楅伄鎸?鈫?涓濇柇锛堥敋鐐瑰け鏁堬紝鏃犳媺鍥烇級銆?*/
+	/** 跳跃期丝线检查：离锚点超 32 ?/ 丝线被实心方块遮??丝断（锚点失效，无拉回）?*/
 	private static void checkSilk(ServerPlayer player) {
 		SilkAnchor anchor = ANCHORS.get(player.getUUID());
 		if (anchor == null) return;
@@ -519,7 +519,7 @@ public final class JumpKillManager {
 		}
 	}
 
-	/** 涓濈嚎閬尅閲忥細娌夸笣绾块噰鏍风疮璁″疄蹇冩柟鍧楁暟锛堝悓鏈堢粐铔涚畻娉曪紝涓ょ鍚勮烦杩?0.6 鏍奸槻璐村璇柇锛夈€?*/
+	/** 丝线遮挡量：沿丝线采样累计实心方块数（同月织蛛算法，两端各跳?0.6 格防贴墙误断）?*/
 	private static double computeObscuration(ServerPlayer player, Vec3 from, Vec3 to) {
 		double totalDist = from.distanceTo(to);
 		if (totalDist < 2.0) return 0.0;
@@ -539,7 +539,7 @@ public final class JumpKillManager {
 		return obscured;
 	}
 
-	/** 鍙栨秷锛堟浜?涓㈠舰鎬?鏂嚎锛夛細绉婚櫎鍑忛€熴€佹仮澶嶉噸鍔涖€佹竻鐘舵€佷笌閿︾偣锛堝甫鏂笣鐗规晥锛夛紝涓嶈繘 CD銆?*/
+	/** 取消（死?丢形?断线）：移除减速、恢复重力、清状态与锦点（带断丝特效），不进 CD?*/
 	public static void cancel(ServerPlayer player) {
 		SpiderSalticidaePerks.setSensing(player, false);
 		State s = STATES.remove(player.getUUID());
@@ -559,7 +559,7 @@ public final class JumpKillManager {
 		if (STATES.containsKey(player.getUUID())) cancel(player);
 	}
 
-	/** 鏂嚎/鍋滄湇娓呯悊锛氶敠鐐逛竴骞舵竻銆?*/
+	/** 断线/停服清理：锦点一并清?*/
 	public static void clearPlayer(UUID uuid) {
 		STATES.remove(uuid);
 		ANCHORS.remove(uuid);
@@ -570,7 +570,7 @@ public final class JumpKillManager {
 		ANCHORS.clear();
 	}
 
-	/** 璺宠穬鏈熷厤鐤細鐜╁姝ｅ湪璺虫潃涓斾激瀹虫簮鏀诲嚮鑰呮槸鍏堕攣瀹氱洰鏍?鈫?鍏嶇柅锛坢ixin 鏌ヨ锛夈€?*/
+	/** 跳跃期免疫：玩家正在跳杀且伤害源攻击者是其锁定目??免疫（mixin 查询）?*/
 	public static boolean isLeapingAgainst(ServerPlayer player, Entity attacker) {
 		if (attacker == null) return false;
 		State s = STATES.get(player.getUUID());
@@ -578,14 +578,14 @@ public final class JumpKillManager {
 		return attacker.getUUID().equals(s.lockTarget);
 	}
 
-	/** 姣掓恫鎶€鑳界敤锛氬畨鍏ㄤ笣閿氱偣鏄惁瀛樺湪涓斿湪鏈夋晥绐楀彛鍐咃紙=銆屾湁涓濈嚎杩炵潃鑷繁銆嶏級銆?*/
+	/** 毒液技能用：安全丝锚点是否存在且在有效窗口内（=「有丝线连着自己」）?*/
 	public static boolean hasActiveSilk(ServerPlayer player) {
 		SilkAnchor anchor = ANCHORS.get(player.getUUID());
 		return anchor != null && player.serverLevel().getGameTime() <= anchor.validUntil
 				&& player.position().distanceTo(anchor.pos) <= SILK_MAX;
 	}
 
-	/** 姣掓恫鎶€鑳界敤锛氭秷鑰椾笣绾匡紙鑽′笣鍐插埡鐢ㄦ帀閿氱偣锛屽甫鏂笣鐗规晥涓庡鎴风鍚屾锛夈€?*/
+	/** 毒液技能用：消耗丝线（荡丝冲刺用掉锚点，带断丝特效与客户端同步）?*/
 	public static void consumeSilk(ServerPlayer player) {
 		SilkAnchor anchor = ANCHORS.remove(player.getUUID());
 		if (anchor != null) {
@@ -594,13 +594,13 @@ public final class JumpKillManager {
 		}
 	}
 
-	/** 鏉惧紑鏃舵寜褰撳墠鍑嗘槦閿佸畾锛氫粠绱㈡晫鍊欓€夛紙鍚伄鎸¤繃婊わ級閲屽彇鍑嗘槦 12掳 閿ュ唴鏈€杩戣€呫€?*/
+	/** 松开时按当前准星锁定：从索敌候选（含遮挡过滤）里取准星 12° 锥内最近者?*/
 	private static LivingEntity pickLockTarget(ServerPlayer player, ServerLevel sw, double scanDist) {
 		List<LivingEntity> cands = scanCandidates(player, sw, scanDist);
 		return pickInCrosshair(player, cands);
 	}
 
-	/** 绱㈡晫鍊欓€夛細scanDist 鍐呭叏閮ㄦ椿浣擄紙闈炶嚜宸?闈炴梺瑙?闈炵櫧鍚嶅崟锛夛紝涓旇绾挎棤鏂瑰潡閬尅锛堥伄鎸?= 璺充笉杩囧幓 鈫?涓嶆樉绀轰笉鍙攣锛夈€?*/
+	/** 索敌候选：scanDist 内全部活体（非自?非旁?非白名单），且视线无方块遮挡（遮?= 跳不过去 ?不显示不可锁）?*/
 	private static List<LivingEntity> scanCandidates(ServerPlayer player, ServerLevel sw, double scanDist) {
 		Vec3 eye = player.getEyePosition();
 		AABB box = player.getBoundingBox().inflate(scanDist);
@@ -616,7 +616,7 @@ public final class JumpKillManager {
 		return visible;
 	}
 
-	/** 鍑嗘槦閿佸畾锛氬€欓€変腑涓庡噯鏄熸柟鍚戝す瑙掑湪 12掳 閿ュ唴銆佷笖涓庡噯鏄熸渶鎺ヨ繎鑰呫€?*/
+	/** 准星锁定：候选中与准星方向夹角在 12° 锥内、且与准星最接近者?*/
 	private static LivingEntity pickInCrosshair(ServerPlayer player, List<LivingEntity> cands) {
 		Vec3 eye = player.getEyePosition();
 		Vec3 look = player.getLookAngle().normalize();
@@ -629,7 +629,7 @@ public final class JumpKillManager {
 		return best;
 	}
 
-	/** 閬尅妫€娴嬶細鐜╁鐪肩潧鈫掔洰鏍囪韩浣撲腑蹇冨皠绾匡紙纰版挒绠卞舰鐘讹紝蹇界暐娴佷綋锛変笉鍛戒腑浠讳綍鏂瑰潡 = 鏃犻伄鎸°€?*/
+	/** 遮挡检测：玩家眼睛→目标身体中心射线（碰撞箱形状，忽略流体）不命中任何方块 = 无遮挡?*/
 	private static boolean hasLineOfSight(ServerPlayer player, LivingEntity target) {
 		Vec3 from = player.getEyePosition();
 		Vec3 to = bodyCenter(target);
@@ -649,7 +649,7 @@ public final class JumpKillManager {
 	}
 
 	private static void pushVelocity(ServerPlayer player) {
-		// 鐜╁绉诲姩瀹㈡埛绔潈濞侊細鏄惧紡琛ュ彂閫熷害鍖咃紝寮哄埗涓绘満/瀹㈡満搴旂敤璺宠穬浣嶇Щ锛堝啿鍒烘妧韪╄繃鍧戯級
+		// 玩家移动客户端权威：显式补发速度包，强制主机/客机应用跳跃位移（冲刺技踩过坑）
 		if (player.connection != null) {
 			player.connection.send(new ClientboundSetEntityMotionPacket(player));
 		}

@@ -17,13 +17,13 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Blocks;
 
 /**
- * 致盲效果 - 金沙岚SP的凋零金沙技能施加的debuff
- * 效果：
- * - 视野限制（通过同时施加原版失明效果实现）
- * - 移动速度 -20%
- * - 非玩家生物的警戒和攻击距离减少至5格（通过修改FOLLOW_RANGE属性实现）
- * - 头部周围生成沙尘和黑色粒子
- * 持续时间：3秒
+ * 致盲效???- 金沙岚SP的凋零金沙技能施加的debuff
+ * 效果?
+ * - 视野限制（通过同时施加原版失明效果实现???
+ * - 移动速???-20%
+ * - 非玩家生物的警戒和攻击距离减少???格（通过修改FOLLOW_RANGE属性实现??
+ * - 头部周围生成沙尘和黑色粒??
+ * 持续时间????
  */
 public class SandBlindEffect extends MobEffect {
 
@@ -34,19 +34,19 @@ public class SandBlindEffect extends MobEffect {
 	private static final String FOLLOW_RANGE_MODIFIER_NAME = "Sand Blind Follow Range Reduction";
 
 	public SandBlindEffect() {
-		super(MobEffectCategory.HARMFUL, 0xD4A017); // 金沙色
+		super(MobEffectCategory.HARMFUL, 0xD4A017); // 金沙?
 	}
 
 	@Override
 	public void addAttributeModifiers(LivingEntity entity, AttributeMap attributes, int amplifier) {
 		super.addAttributeModifiers(entity, attributes, amplifier);
 
-		// 施加原版失明效果（视野限制）
+		// 施加原版失明效果（视野限制??
 		MobEffectInstance currentSandBlind = entity.getEffect(this);
 		int blindDuration = currentSandBlind != null ? currentSandBlind.getDuration() : 60;
 		entity.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, blindDuration, 0, false, false, false));
 
-		// 移动速度 -20%
+		// 移动速???-20%
 		AttributeInstance speedAttr = entity.getAttribute(Attributes.MOVEMENT_SPEED);
 		if (speedAttr != null) {
 			speedAttr.removeModifier(SPEED_MODIFIER_UUID);
@@ -58,12 +58,12 @@ public class SandBlindEffect extends MobEffect {
 			));
 		}
 
-		// 非玩家生物：将警戒/攻击距离减少至5格
+		// 非玩家生物：将警?攻击距离减少????
 		if (entity instanceof Mob mob) {
 			AttributeInstance followRange = mob.getAttribute(Attributes.FOLLOW_RANGE);
 			if (followRange != null) {
 				followRange.removeModifier(FOLLOW_RANGE_MODIFIER_UUID);
-				// 计算需要减少的量，使最终值为5
+				// 计算需要减少的量，使最终值???
 				double currentBase = followRange.getValue();
 				double reduction = -(currentBase - 5.0);
 				if (reduction < 0) {
@@ -85,7 +85,7 @@ public class SandBlindEffect extends MobEffect {
 		// 移除原版失明效果
 		entity.removeEffect(MobEffects.BLINDNESS);
 
-		// 移除速度修正
+		// 移除速度修??
 		AttributeInstance speedAttr = entity.getAttribute(Attributes.MOVEMENT_SPEED);
 		if (speedAttr != null) {
 			speedAttr.removeModifier(SPEED_MODIFIER_UUID);
@@ -102,7 +102,7 @@ public class SandBlindEffect extends MobEffect {
 
 	@Override
 	public boolean isDurationEffectTick(int duration, int amplifier) {
-		// 每4tick生成一次头部粒子
+		// ??tick生成一次头部粒??
 		return duration % 4 == 0;
 	}
 
@@ -114,13 +114,13 @@ public class SandBlindEffect extends MobEffect {
 		double headY = entity.getEyeY() + 0.3;
 		double headZ = entity.getZ();
 
-		// 沙尘落粒子 - 广播给所有附近玩家（含受影响实体本身）
+		// 沙尘落粒??- 广播给所有附近玩家（含受影响实体本身??
 		serverWorld.sendParticles(
 				new BlockParticleOption(ParticleTypes.FALLING_DUST, Blocks.SAND.defaultBlockState()),
 				headX, headY, headZ,
 				5, 0.45, 0.25, 0.45, 0);
 
-		// 黑色烟雾粒子 - 广播给所有附近玩家
+		// 黑色烟雾粒??- 广播给所有附近玩??
 		serverWorld.sendParticles(
 				ParticleTypes.SMOKE,
 				headX, headY, headZ,

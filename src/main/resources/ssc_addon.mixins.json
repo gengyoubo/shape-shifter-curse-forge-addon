@@ -25,10 +25,16 @@
     "SoundRangeCommandMixin",
     "ThreadedAnvilChunkStorageAccessor",
     "entity.PatrolEntityAccessor",
+    "entity.GoalSelectorGoalsAccessor",
+    "entity.MobEntityGoalAccessor",
+    "entity.PrioritizedGoalAccessor",
     "PocketSpaceBoundaryMixin",
     "PocketSpaceChunkFilterMixin"
   ],
-  "client": [],
+  "client": [
+    "client.FrozenNativeStateAccessor",
+    "client.LivingEntityStatusEffectsAccessor"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

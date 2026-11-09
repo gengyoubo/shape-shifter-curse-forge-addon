@@ -25,35 +25,35 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 妞嬪海浼掗敍鍫熸箑妤傛挾骞嗙挒鍦皸閿?- 閵嗗瞼鏌ф搴ょ箾閻栴亗鈧秴涔忛柨顔跨箾閸戠粯濡ч懗鏂ょ礄閺堝秴濮熺粩顖滃Ц閹焦婧€閿涘鈧?
+ * 风灵（月髓环豹猫??- 「疾风连爪」左键连击技能（服务端状态机）??
  *
- * 閹稿顒村锕傛暛 閳?鏉╃偟鐢婚悥顏勫毊閿涘矁绉洪幍鎾圭Ш韫囶偓绱欓梻鎾 1.0s 閳?3 缁夋帒鎮?0.34s閿涘绱卞В蹇旑偧閻栴亜鍤€电懓澧犻弬?2.5 閺嶈壈瀵栭崶鎾偓鐘冲灇濡亝澹傛导銈咁唺
- * 閿涘牆鐔€绾偓 8閿涘矂娈㈤弮鍫曟毐鐞涙澘鍣洪敍灞肩瑬閸欑姴濮?MC 閸樼喓澧楅弨璇插毊閸愬嘲宓堥崙蹇庢縺閿涘绱濋崜宥呭暱娑撯偓鐏忓繑顔岄妴浣瑰⒏妤楅亶顥ゆ惔锔衡偓鍌氬櫙閺勭喐娼崡鐐解偓宀冣偓鎰閵嗗稄绱濇潻鐐插毊瀵偓婵妞傚掳鈧?
- * 闂呭繑鐦″▎锛勫焻閸戣绗呴梽宥忕幢閺夋儳绱戦幋鏍ㄥⅵ缁屽搫鎮楁禒搴＄秼閸撳秷绻樻惔锔藉弮閹便垹娲栧鈽呯礄閸ョ偞寮х痪?8 缁夋帪绱濋張鐔兼？瀹革箓鏁?瀵鲸娅橀弨?0%閳?0%閿涘鈧?
- * 缁夊鈧喖娈㈤弮鍫曟毐缁炬寧鈧嗏€滈崙蹇ョ礄-15%/缁夋帪绱濈亸渚€銆?-45%閿涘鈧?
+ * 按死左键 ??连续爪击，越打越快（间隔 1.0s ??3 秒??0.34s）；每次爪击对前?2.5 格范围造成横扫伤害
+ * （基础 8，随时长衰减，且叠??MC 原版攻击冷却减伤），前冲一小段、扣饱食度。准星条即「耐力」，连击开始时满??
+ * 随每次爪击下降；松开或打空后从当前进度慢慢回满（回满?8 秒，期间左??弱普?0%??0%）??
+ * 移速随时长线性衰减（-15%/秒，封??-45%）??
  *
- * 鐎广垺鍩涚粩顖氬櫙閺勭喐鏁鹃崙璇插枎閸楀瓨娼悽?{@code ClawCrosshairMixin} 鐠囪褰囩紒?S2C閿涘湧ACKET_CLAW_STATE閿涘鎮撳銉ф畱
- * {@code ClawClientState} 缂佹ê鍩楅妴鍌涙拱缁褰ч崑姘箛閸旓紕顏崚銈呯暰閿涘奔绻氱拠浣割樋娴滆桨绔撮懛娣偓?
+ * 客户端准星攻击冷却条?{@code ClawCrosshairMixin} 读取?S2C（PACKET_CLAW_STATE）同步的
+ * {@code ClawClientState} 绘制。本类只做服务端判定，保证多人一致?
  */
 public final class WindSpiritClawManager {
 
-    // 娴犮儰绗呭鑼鐠佹澘鐖堕柌蹇撴綆娑撴椽绮拋銈呪偓纭风幢鏉╂劘顢戦弮鏈电矤 balance 韫囶偆鍙庣拠璇插絿閿涘潊bilities.wind_spirit_claw閿?
+    // 以下已登记常量均为默认值；运行时从 balance 快照读取（abilities.wind_spirit_claw??
     private static final float BASE_DAMAGE = 8.0f;
     private static final double RADIUS = 2.5;
     private static final double REACH = 2.0;
     private static final int MAX_INTERVAL = 20;   // 1.0s
     private static final int MIN_INTERVAL = 7;    // 閳?.34s
-    private static final int RAMP_TICKS = 60;     // 3 缁夋帟鎻張鈧箛?
-    private static final int MAX_CLAW_TICKS = 200; // 鏉╃偛鍤張鈧梹?10 缁夋帒鍘规惔?
-    private static final int RECOVER_TICKS = 160;  // 娴?0 閸ョ偞寮?8 缁?
-    private static final int RECOVER_TICKS_NECKLACE = 110; // 閹存挳顥撻悘鍏哥瑩鐏炵偤銆嶉柧鎾呯窗閼版劕濮忛崶鐐村姬缁?5.5 缁?
+    private static final int RAMP_TICKS = 60;     // 3 秒达最?
+    private static final int MAX_CLAW_TICKS = 200; // 连击最?10 秒兜?
+    private static final int RECOVER_TICKS = 160;  // ??0 回??8 ??
+    private static final int RECOVER_TICKS_NECKLACE = 110; // 戴风灵专属项链：耐力回满??5.5 ??
     private static final float DMG_DECAY_PER_SEC = 0.12f;
     private static final float DMG_DECAY_MAX = 0.36f;
     private static final float SPD_DECAY_PER_SEC = 0.15f;
     private static final float SPD_DECAY_MAX = 0.45f;
-    private static final float EXHAUSTION_PER_HIT = 0.64f; // 閳?.16 妤楅亶顥ゆ惔锔惧仯
+    private static final float EXHAUSTION_PER_HIT = 0.64f; // ??.16 饱食度点
     private static final float FORWARD_LUNGE = 0.28f;
-    private static final float PROGRESS_PER_HIT = 1.0f / 25.0f; // 閺堚偓韫囶偊顣堕悳鍥︾瑓缁?10 缁夋帗澧︾粚?
+    private static final float PROGRESS_PER_HIT = 1.0f / 25.0f; // 最快频率下??10 秒打?
 
     private static final UUID SPEED_MOD_UUID = UUID.fromString("6a1d3c9e-7b2f-4c8a-9e1d-0f5a2c7b4d33");
     private static final String SPEED_MOD_NAME = "wind_spirit_claw_slow";
@@ -64,14 +64,14 @@ public final class WindSpiritClawManager {
 
     private static final Map<UUID, ClawState> STATES = new ConcurrentHashMap<>();
 
-    // 閸擃垱濡ч懗鏂ょ窗+50% 瀵版帗澧?瑜般垺鈧椒婵€鐎?buff閿涘湑D 2 缁夋帞鏁?power JSON 闁板秶鐤嗛敍灞藉斧 SECONDARY_CD_TICKS 鐢悂鍣哄鎻掑灩閿?
+    // 副技能：+50% 徒??形态伤??buff（CD 2 秒??power JSON 配置，原 SECONDARY_CD_TICKS 常量已删??
     private static final int BUFF_DURATION = 10;      // 0.5 缁?
     private static final float BUFF_MULT = 1.5f;
     private static final Map<UUID, Integer> BUFF_TICKS = new ConcurrentHashMap<>();
 
-    // 闂冭埖顔?5閿涙碍婀囬崝锛勵伂閺夊啫鈻夎箛顐ゅ弾鐠囪褰囬敍鍫濇彥閻撗勬弓閸掓繂顫愰崠鏍ф礀闁偓姒涙顓荤敮鎼佸櫤閿?
+    // 阶??5：服务端权威快照读取（快照未初始化回退默认常量??
     private static final BalanceReader BAL = new BalanceReader("abilities.wind_spirit_claw");
-    /** 缂佺喍绔撮崘宄板祱閺堝秴濮熼惃鍕旂€规碍濡ч懗?ID閿涘牏缍夌紒婊冨瘶鐟欙箑褰傞崹瀣剁礆閵?*/
+    /** 统一冷却服务的稳定技?ID（网络包触发型）??*/
     private static final String SKILL_ID = "my_addon:form_ocelot_wind_spirit_claw_buff";
 
     public static final class ClawState {
@@ -90,7 +90,7 @@ public final class WindSpiritClawManager {
     private WindSpiritClawManager() {
     }
 
-    /** 鐎广垺鍩涚粩顖欑瑐閹躲儱涔忛柨顔藉瘻娴ｅ繒濮搁幀浣碘偓?*/
+    /** 客户端上报左键按住状态?*/
     public static void setHolding(ServerPlayer player, boolean holding) {
         if (!FormUtils.isOcelotSP(player)) {
             clear(player);
@@ -101,13 +101,13 @@ public final class WindSpiritClawManager {
         if (holding && s.phase == PHASE_IDLE) {
             s.phase = PHASE_CLAW;
             s.holdTicks = 0;
-            s.sinceLastAttack = BAL.i("min_interval", MIN_INTERVAL); // 閹稿绗呯粙宥囩处閸愯绱濋柆鍨帳閹稿绗呴崡鍐叉嚒娑?
+            s.sinceLastAttack = BAL.i("min_interval", MIN_INTERVAL); // 按下稍缓冲，避免按下即命??
         }
     }
 
-    /** 濮ｅ繑婀囬崝锛勵伂 tick 鐎佃鐦℃稉顏勬躬缁捐法甯虹€规儼鐨熼悽銊ｂ偓?*/
+    /** 每服务端 tick 对每个在线玩家调用?*/
     public static void tick(ServerPlayer player) {
-        // 閸擃垱濡ч懗?buff 鐠佲剝妞傞敍鍫㈠缁斿绨潻鐐插毊閻樿埖鈧緤绱?
+        // 副技?buff 计时（独立于连击状态??
         Integer buff = BUFF_TICKS.get(player.getUUID());
         if (buff != null) {
             if (buff <= 1 || !FormUtils.isOcelotSP(player)) BUFF_TICKS.remove(player.getUUID());
@@ -129,7 +129,7 @@ public final class WindSpiritClawManager {
             }
         }
 
-        // 閻栴亜鍤幍锝堚偓鎰閹稿绨ㄦ禒璺烘倱濮濄儻绱辨潻鍥╁劰閺夆剝瀵滈張宥呭缁旑垰娲栨径宥夆偓鐔峰閺堫剙婀撮幒銊ㄧ箻閿涘本鐦＄粔鎺撶墡閸戝棎鈧?
+        // 爪击扣耐力按事件同步；过热条按服务端回复速度本地推进，每秒校准??
         if (STATES.containsKey(player.getUUID())) {
             float progress = crosshairProgress(s);
             float step = s.phase == PHASE_OVERHEAT ? recoveryStep(player) : 0;
@@ -160,7 +160,7 @@ public final class WindSpiritClawManager {
             performClawAttack(player, s);
             s.sinceLastAttack = 0;
             s.progress -= PROGRESS_PER_HIT;
-            player.resetAttackStrengthTicker(); // 鐠佲晛甯悧鍫濆櫤娴?閸戝棙妲﹂崗鍛板厴閸欏秵妲ч悥顏勫毊閼哄倸顨?
+            player.resetAttackStrengthTicker(); // 让原版减??准星充能反映爪击节??
         }
 
         if (s.progress <= 0.0f || s.holdTicks >= BAL.i("max_claw_ticks", MAX_CLAW_TICKS)) {
@@ -173,11 +173,11 @@ public final class WindSpiritClawManager {
     private static void tickOverheat(ServerPlayer player, ClawState s) {
         removeSpeedSlow(player);
 
-        // 閸嬫粍澧滈崥搴ｇ彌閸楀厖绮犺ぐ鎾冲鏉╂稑瀹抽幈銏″弮閸ョ偞寮ч敍鍫熸￥瀵ゆ儼绻滈敍澶涚幢閺堢喖妫垮锕傛暛 = 瀵鲸娅橀弨浼欑礄getRecoveryMultiplier 缂傗晜鏂?0閳?0%閿涘鈧?
-        // 閹存挳顥撻悘鍏哥瑩鐏炵偤銆嶉柧淇扁偓灞藉敖妞嬪海鍩呴柧鍐︹偓宥嗘閼版劕濮忛崶鐐差槻閺囨潙鎻╅敍?s 閳?5.5s閿涘鈧?
+        // 停手后立即从当前进度慢慢回满（无延迟）；期间左键 = 弱普攻（getRecoveryMultiplier 缩??0??0%）??
+        // 戴风灵专属项链「御风爪铃」时耐力回复更快?s ??5.5s）??
         s.recovery += recoveryStep(player);
         if (s.recovery >= 1.0f) {
-            // 閸ョ偞寮ч敍姘矝閹稿缍?閳?閺冪姷绱抽柌宥呮儙鏉╃偛鍤敍娑樻儊閸掓瑧绮ㄩ弶鐔粹偓浣稿櫙閺勭喐娼☉鍫濄亼
+            // 回满：仍按????无缝重启连击；否则结束、准星条消失
             if (s.holding) {
                 s.phase = PHASE_CLAW;
                 s.holdTicks = 0;
@@ -192,7 +192,7 @@ public final class WindSpiritClawManager {
 
     private static void enterOverheat(ClawState s) {
         s.phase = PHASE_OVERHEAT;
-        s.recovery = Mth.clamp(s.progress, 0.0f, 1.0f); // 娴犲骸缍嬮崜宥呭⒖娴ｆ瑨绻樻惔锕€绱戞慨瀣礀濠娾槄绱欓幍鎾崇繁鐡掑﹣绠欓崜鈺勭Ш鐏忔垯鈧礁娲栫搾濠佺畽閿?
+        s.recovery = Mth.clamp(s.progress, 0.0f, 1.0f); // 从当前剩余进度开始回满（打得越久剩越少、回越久??
     }
 
     private static float recoveryStep(ServerPlayer player) {
@@ -216,7 +216,7 @@ public final class WindSpiritClawManager {
                 .add(side.scale(randSide))
                 .add(0, randUp, 0);
 
-        // MC 閸樼喓澧楅弨璇插毊閸愬嘲宓堥崙蹇庢縺缁粯鏆熼敍鍫㈡埂鐎圭偛鍘栭懗鍊熺箻鎼达讣绱氳劤 閻栴亜鍤弮鍫曟毐鐞涙澘鍣?
+        // MC 原版攻击冷却减伤系数（真实充能进度）× 爪击时长衰??
         float g = player.getAttackStrengthScale(0.5f);
         float vanillaFactor = 0.2f + g * g * 0.8f;
         float clawFactor = 1.0f - Math.min((float) BAL.d("dmg_decay_max", DMG_DECAY_MAX),
@@ -227,8 +227,8 @@ public final class WindSpiritClawManager {
         AABB box = new AABB(center.subtract(radius, radius, radius), center.add(radius, radius, radius));
         for (Entity e : sw.getEntities(player, box)) {
             if (!(e instanceof LivingEntity living)) continue;
-            if (WhitelistUtils.isProtected(player, living)) continue; // 姒涙顓婚惂钘夋倳閸?
-            // 鐟欏棛鍤庡Λ鈧弻銉窗婢ф瑥鎮楅惄顔界垼娑撳秴鎳℃稉顓ㄧ礄娴犲灝甯悧?PR #523 鐠炲湱灏楅崘鎻掑煛缁屽灝顣炬穱顔碱槻閿?
+            if (WhitelistUtils.isProtected(player, living)) continue; // 默认白名??
+            // 视线检查：墙后目标不命中（仿原?PR #523 豹猫冲刺穿墙修复??
             if (!github.com.gengyoubo.sscfa.util.LineOfSightUtils.hasLineOfSight(sw, player, living)) continue;
             living.hurt(player.damageSources().playerAttack(player), dmg);
             Vec3 push = living.position().subtract(player.position());
@@ -257,7 +257,7 @@ public final class WindSpiritClawManager {
     private static void applySpeedSlow(ServerPlayer player, float factor) {
         AttributeInstance attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (attr == null) return;
-        double target = -factor; // MULTIPLY_TOTAL閿?0.15 = 缁夊鈧唻?.85
+        double target = -factor; // MULTIPLY_TOTAL??0.15 = 移速?.85
         AttributeModifier existing = attr.getModifier(SPEED_MOD_UUID);
         if (existing != null) {
             if (Math.abs(existing.getAmount() - target) < 1.0e-4) return;
@@ -275,7 +275,7 @@ public final class WindSpiritClawManager {
         }
     }
 
-    /** 閹稿缍囬弮鍫曟毐 閳?瑜版挸澧犻弨璇插毊闂傛挳娈ч敍鍧眎ck閿涘绱?0 閳?3 缁夋帒鎮?7閵?*/
+    /** 按住时长 ??当前攻击间隔（tick）??0 ??3 秒??7??*/
     private static int currentInterval(int holdTicks) {
         int rampTicks = BAL.i("ramp_ticks", RAMP_TICKS);
         float t = Math.min(holdTicks, rampTicks) / (float) rampTicks;
@@ -284,7 +284,7 @@ public final class WindSpiritClawManager {
         return Math.round(maxInterval - (maxInterval - minInterval) * t);
     }
 
-    /** 閸戝棙妲﹂弶?閼版劕濮忛敍姘卞焻閸戠粯婀?閸撯晙缍戞潻娑樺(闂呭繑鐦″▎锛勫焻閸戣绗呴梽?閿涙稖绻冮悜顓熸埂=娴犲骸缍嬮崜宥堢箻鎼达箑娲栧?0閳?)閿涙稓鈹栭梻?1閵?*/
+    /** 准星?耐力：爪击??剩余进度(随每次爪击下?；过热期=从当前进度回?0??)；空?1??*/
     public static float crosshairProgress(ClawState s) {
         return switch (s.phase) {
             case PHASE_CLAW -> Mth.clamp(s.progress, 0.0f, 1.0f);
@@ -293,7 +293,7 @@ public final class WindSpiritClawManager {
         };
     }
 
-    /** 瀵版帗澧?闂堢偞顒熼崳銊ㄧ箮閹存ü婵€鐎瑰啿鈧秶宸?= 鏉╁洨鍎归崶鐐差槻缂傗晜鏂?0-0.9) 鑴?閸擃垱濡ч懗?buff(1.5)閵嗗倻绮?ClawDamageBoostMixin 閻劊鈧?*/
+    /** 徒??非武器近战伤害倍??= 过热回复缩??0-0.9) ??副技?buff(1.5)。??ClawDamageBoostMixin 用??*/
     public static float getNormalMeleeMultiplier(ServerPlayer player) {
         return getNormalMeleeMultiplier(player, null);
     }
@@ -302,7 +302,7 @@ public final class WindSpiritClawManager {
         float recovery = 1.0f;
         ClawState s = STATES.get(player.getUUID());
         if (s != null && s.phase == PHASE_OVERHEAT) {
-            recovery = s.recovery * 0.9f; // 閸ョ偛顦叉潻娑樺 0閳? 閺勭姴鐨犳导銈咁唺 0閳?0%
+            recovery = s.recovery * 0.9f; // 回复进度 0?? 映射伤害 0??0%
         }
         float buff = BUFF_TICKS.containsKey(player.getUUID())
                 ? (float) BAL.d("buff_mult", BUFF_MULT) : 1.0f;
@@ -311,7 +311,7 @@ public final class WindSpiritClawManager {
         return recovery * buff;
     }
 
-    /** 閺勵垰鎯侀幍瀣瘮濮濓箑娅掗敍鍫滅瑢娑撹瀵?is_weapon 娑撯偓閼疯揪绱版稉缁樺閺€璇插毊閸旀稑濮為幋?&gt; 1閿涘鈧倹瀣佸锕€娅掗弮鏈电瑝閸氬啰鏌ф搴ょ箾閻?閸擃垱濡ч懗钘夊娴笺倧绱欓悘顐ｅΩ/妞嬬喓澧?閺傜懓娼＄粵澶愭姜濮濓箑娅掓禒宥呮倖閿涘鈧?*/
+    /** 是否手持武器（与主??is_weapon 一致：主手攻击力加?&gt; 1）。拿武器时不吃疾风连??副技能加伤（火把/食??方块等非武器仍吃）??*/
     public static boolean isHoldingWeapon(ServerPlayer player) {
         ItemStack stack = player.getMainHandItem();
         if (stack.isEmpty()) return false;
@@ -326,7 +326,7 @@ public final class WindSpiritClawManager {
         return totalAdd > 1.0;
     }
 
-    /** 閸擃垱濡ч懗鏂ょ礄sp_secondary閿涘绱?.5 缁夋帒鍞村鎺撳/瑜般垺鈧椒婵€鐎?+50%閿涘畱d 2 缁夋帇鈧?*/
+    /** 副技能（sp_secondary）??.5 秒内徒手/形态伤??+50%，cd 2 秒??*/
     public static void activateSecondaryBuff(ServerPlayer player) {
         if (!FormUtils.isOcelotSP(player)) return;
         if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.ready(player, SKILL_ID)) return; // CD 娑?
@@ -335,11 +335,11 @@ public final class WindSpiritClawManager {
         ServerLevel sw = (ServerLevel) player.level();
         sw.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 0.8f, 1.6f);
-        // owner 閹垫挻鐖ｉ敍姘矌閺堫兛姹夌粭顑跨娴滆櫣袨闁儻顔€
+        // owner 打标：仅本人第一人称避让
         github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(sw, player, ParticleTypes.CRIT, player.getX(), player.getY() + 1.0, player.getZ(), 20, 0.4, 0.5, 0.4, 0.2);
     }
 
-    /** 瑜拌绨冲〒鍛倞閿涙氨些闂勩倗濮搁幀?+ 缁夊鈧喍鎱ㄦ鎵儊閿涘苯鑻熼柅姘辩叀鐎广垺鍩涚粩顖氬櫙閺勭喐娼☉鍫濄亼閵?*/
+    /** 彻底清理：移除状?+ 移速修饰符，并通知客户端准星条消失??*/
     public static void clear(ServerPlayer player) {
         removeSpeedSlow(player);
         if (STATES.remove(player.getUUID()) != null) {

@@ -25,60 +25,60 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * SP 缇庤タ铻?- 婕╂丁钃勫姏鎶€鑳斤紙鏈嶅姟绔姸鎬佹満锛夈€?
+ * SP 美西?- 漩涡蓄力技能（服务端状态机）?
  *
- * 鎸?sp_primary 寮€濮嬭搫鍔涳紱姣?10 tick 鎵?8 婀挎鼎鍊?air) 涓斾激瀹?+2锛堝熀纭€ 0锛夛紱
- * 鏈€澶?4 绉?80t / 8 娆?銆佹渶澶ф秷鑰?60 婀挎鼎鍊硷紱涓€斿啀鎸?sp_primary 绔嬪嵆閲婃斁銆佹弧 4 绉掕嚜鍔ㄩ噴鏀俱€?
- * 閲婃斁锛氬崐寰?3 鑼冨洿鐗╃悊浼ゅ = 宸叉墸娆℃暟 脳 2 + 缂撴參 III + 鍑婚€€锛汣D 15 绉?300t) 閲婃斁鍚庢墠璧风畻銆?
+ * ?sp_primary 开始蓄力；?10 tick ?8 湿润?air) 且伤?+2（基础 0）；
+ * 最?4 ?80t / 8 ?、最大消?60 湿润值；中途再?sp_primary 立即释放、满 4 秒自动释放?
+ * 释放：半?3 范围物理伤害 = 已扣次数 × 2 + 缓慢 III + 击退；CD 15 ?300t) 释放后才起算?
  *
- * vortex_state 璧勬簮锛坢y_addon:form_axolotl_sp_vortex_impact_vortex_state锛夌敤浣?钃勫姏涓?鏍囪骞跺悓姝ュ鎴风锛?
- * 0 = 鏈搫鍔涳紝>0 = 钃勫姏涓紙鍊?宸茶搫鍔?tick 鏁帮級銆傚鎴风鎹鍐冲畾鎸夐敭鏄?寮€濮?杩樻槸"閲婃斁"銆?
+ * vortex_state 资源（my_addon:form_axolotl_sp_vortex_impact_vortex_state）用?蓄力?标记并同步客户端?
+ * 0 = 未蓄力，>0 = 蓄力中（?已蓄?tick 数）。客户端据此决定按键?开?还是"释放"?
  */
 public final class VortexChargeManager {
 	public static final ResourceLocation VORTEX_STATE =
 			new ResourceLocation("my_addon", "form_axolotl_sp_vortex_impact_vortex_state");
 
 	/**
-	 * 娑℃祦銆岀Щ鍔ㄥ厤鐤€嶅疄浣撶被鍨?tag锛氬懡涓殑瀹炰綋涓嶈娑℃祦鍚搁檮 / 鍑婚€€锛堜粛姝ｅ父鍙椾激锛夈€?
-	 * <p>鏁版嵁鍖呰矾寰?{@code data/my_addon/tags/entity_types/vortex_immune.json}锛岄粯璁ゅ惈鍘熺増 6 绫?
-	 * boss / 閲嶇敳锛堥搧鍌€鍎÷峰噵鐏德锋湯褰遍緳路娼滃奖璐澛风洃瀹堣€吢疯繙鍙ゅ畧鍗€咃級锛泏@code "replace": false} 鍏佽
-	 * 鍏跺畠鏁版嵁鍖?/ 妯＄粍鎶婅嚜瀹?boss 杩藉姞杩涙潵锛屾棤闇€鏀逛唬鐮佸嵆鍙墿灞曞吋瀹广€?
+	 * 涡流「移动免疫」实体类?tag：命中的实体不被涡流吸附 / 击退（仍正常受伤）?
+	 * <p>数据包路?{@code data/my_addon/tags/entity_types/vortex_immune.json}，默认含原版 6 ?
+	 * boss / 重甲（铁傀儡·凋灵·末影龙·潜影贝·监守者·远古守卫者）；{@code "replace": false} 允许
+	 * 其它数据?/ 模组把自?boss 追加进来，无需改代码即可扩展兼容?
 	 */
 	private static final TagKey<EntityType<?>> VORTEX_IMMUNE =
 			TagKey.create(Registries.ENTITY_TYPE, new ResourceLocation("my_addon", "vortex_immune"));
 
-	// 浠ヤ笅鍧囦负榛樿鍊硷紱杩愯鏃朵粠 balance 蹇収璇诲彇锛坅bilities.vortex_charge锛?
+	// 以下均为默认值；运行时从 balance 快照读取（abilities.vortex_charge?
 	private static final int AIR_PER_HIT = 8;
 	private static final int MAX_AIR_SPENT = 60;
 	private static final int MAX_TICKS = 80;     // 4 绉?
-	private static final int HIT_INTERVAL = 10;  // 姣?10 tick 鎵ｄ竴娆?
+	private static final int HIT_INTERVAL = 10;  // ?10 tick 扣一?
 	private static final int DAMAGE_PER_HIT = 2;
-	// CD锛?5 绉掞紝閲婃斁鍚庤捣绠楋級鐢辩粺涓€鍐峰嵈鏈嶅姟 + power JSON 閰嶇疆绠＄悊锛屽師 CD_TICKS 甯搁噺宸插垹
+	// CD?5 秒，释放后起算）由统一冷却服务 + power JSON 配置管理，原 CD_TICKS 常量已删
 	private static final double RADIUS = 3.0;
-	// ===== 钃勫姏鏈熷惛闄勶紙鍞竴鍚搁檮婧愶細鍘?JSON pull_effect 鐨勫浐瀹氬姏搴﹀惛闄勫凡鍒狅紝鏀圭敱姝ゅ鎸夊嚮閫€鎶楁€у垎妗ｇ壍寮曪級=====
-	/** 鍚搁檮浣滅敤鍗婂緞锛堜笌鍘?JSON 鍚搁檮瑙﹀強鑼冨洿涓€鑷达級 */
+	// ===== 蓄力期吸附（唯一吸附源：?JSON pull_effect 的固定力度吸附已删，改由此处按击退抗性分档牵引）=====
+	/** 吸附作用半径（与?JSON 吸附触及范围一致） */
 	private static final double PULL_RADIUS = 6.0;
-	/** 鍩虹鍚搁檮鍔涘害锛堟湞鍚戠帺瀹剁殑姘村钩閫熷害鍒嗛噺锛涚ǔ鎬侀€熷害鈮?2脳鏈€济楀垎妗ｇ郴鏁帮紝濡傚お寮?澶急璋冩鍊硷級 */
+	/** 基础吸附力度（朝向玩家的水平速度分量；稳态速度?2×本值×分档系数，如太?太弱调此值） */
 	private static final double PULL_FORCE = 0.6;
 
-	/** balance 蹇収璇诲彇锛堝揩鐓ф湭鍒濆鍖栧洖閫€榛樿甯搁噺锛?*/
+	/** balance 快照读取（快照未初始化回退默认常量?*/
 	private static final BalanceReader BAL = new BalanceReader("abilities.vortex_charge");
-	/** 缁熶竴鍐峰嵈鏈嶅姟鐨勭ǔ瀹氭妧鑳?ID锛堢綉缁滃寘瑙﹀彂鍨嬶級銆?*/
+	/** 统一冷却服务的稳定技?ID（网络包触发型）?*/
 	private static final String SKILL_ID = "my_addon:form_axolotl_sp_vortex_charge";
 
-	/** HUD 闂ㄦ鍚屾簮锛氭瘡娆″懡涓箍娑﹀害娑堣€楋紙balance 鍙皟锛汬UD 灞曠ず鐢級銆?*/
+	/** HUD 门槛同源：每次命中湿润度消耗（balance 可调；HUD 展示用）?*/
 	public static int airPerHitForHud(net.minecraft.world.entity.player.Player player) {
 		return AxolotlSpPerks.vortexAirCost(BAL.i("air_per_hit", AIR_PER_HIT), AxolotlSpPerks.hasWaterMagicEfficiency(player));
 	}
 
-	/** HUD 杈呭姪鏍忓悓婧愶細钃勫姏鎬绘椂闀夸笂闄愶紙balance 鍙皟锛汬UD 娑ㄦ潯鍒嗘瘝锛屼粠灏忓埌澶э級銆?*/
+	/** HUD 辅助栏同源：蓄力总时长上限（balance 可调；HUD 涨条分母，从小到大）?*/
 	public static int maxTicksForHud() { return BAL.i("max_ticks", MAX_TICKS); }
 
-	// ===== 鍔ㄦ€佺矑瀛愶紙闈掕摑/鐧斤細钃勫姏鍚搁檮 + 閲婃斁鎶涚墿绾匡紝鍏ㄩ儴鏈嶅姟绔敓鎴愬苟骞挎挱缁欐墍鏈夊鎴风锛?=====
-	/** 闈掕摑鑹插皹鍩冿紙婕傛诞锛屽惛闄勪笌鎵╂暎鐫€鑹茬敤锛?*/
+	// ===== 动态粒子（青蓝/白：蓄力吸附 + 释放抛物线，全部服务端生成并广播给所有客户端?=====
+	/** 青蓝色尘埃（漂浮，吸附与扩散着色用?*/
 	private static final net.minecraft.core.particles.DustParticleOptions CYAN_DUST =
 			new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.20f, 0.62f, 0.92f), 1.6f);
-	/** 鐧借壊灏樺焹锛堟紓娴紝鍚搁檮鐢級 */
+	/** 白色尘埃（漂浮，吸附用） */
 	private static final net.minecraft.core.particles.DustParticleOptions WHITE_DUST =
 			new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.92f, 0.96f, 1.0f), 1.3f);
 
@@ -109,35 +109,35 @@ public final class VortexChargeManager {
 	}
 
 	/**
-	 * 瀹㈡埛绔湰鍦扮帺瀹躲€屾丁娴佽搫鍔涗腑銆嶇紦瀛樻爣璁帮細鐢?VortexChargeClient 姣忓鎴风 tick 鏇存柊涓€娆★紝
-	 * 渚涚鎾炴帹鎸?mixin锛圫scAddonLivingEntityMixin.pushAwayFrom锛夊揩閫熻鍙栵紝閬垮厤姣忔瀹炰綋纰版挒閮借 Apoli 璧勬簮銆?
-	 * 浠呭鎴风鏈夋剰涔夛紙鏈嶅姟绔亽 false锛屾湇鍔＄璧?{@link #isCharging} 鏌ヨ〃锛夈€?
+	 * 客户端本地玩家「涡流蓄力中」缓存标记：?VortexChargeClient 每客户端 tick 更新一次，
+	 * 供碰撞推?mixin（SscAddonLivingEntityMixin.pushAwayFrom）快速读取，避免每次实体碰撞都读 Apoli 资源?
+	 * 仅客户端有意义（服务端恒 false，服务端?{@link #isCharging} 查表）?
 	 */
 	private static volatile boolean clientLocalCharging = false;
 
-	/** 瀹㈡埛绔瘡 tick 鏇存柊鏈湴鐜╁钃勫姏鏍囪銆?*/
+	/** 客户端每 tick 更新本地玩家蓄力标记?*/
 	public static void setClientLocalCharging(boolean charging) {
 		clientLocalCharging = charging;
 	}
 
-	/** 纰版挒鎺ㄦ尋 mixin 璇诲彇锛氬鎴风鏈湴鐜╁鏄惁澶勪簬娑℃祦钃勫姏銆?*/
+	/** 碰撞推挤 mixin 读取：客户端本地玩家是否处于涡流蓄力?*/
 	public static boolean isClientLocalCharging() {
 		return clientLocalCharging;
 	}
 
-	/** 瀹㈡埛绔彂銆屽紑濮嬭搫鍔涖€嶅寘鏃惰皟鐢ㄣ€?*/
+	/** 客户端发「开始蓄力」包时调用?*/
 	public static void start(ServerPlayer player) {
 		if (CHARGING.containsKey(player.getUUID())) return;
 		if (player.hasEffect(github.com.gengyoubo.sscfa.init.AddonEffects.PURIFIED.get())) return;
 		if (!FormUtils.isAxolotlSP(player)) return;
 		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.ready(player, SKILL_ID)) return;
-		if (player.getAirSupply() < airPerHitForHud(player)) return; // 涓嶩UD浣跨敤鍚屼竴瀹為檯璧锋墜璐圭敤
+		if (player.getAirSupply() < airPerHitForHud(player)) return; // 与HUD使用同一实际起手费用
 		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.begin(player, SKILL_ID)) return;
 		ChargeState s = new ChargeState();
 		s.discounted = AxolotlSpPerks.hasWaterMagicEfficiency(player);
         s.castId = github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.currentCastId(player, SKILL_ID);
         CHARGING.put(player.getUUID(), s);
-		PowerUtils.setResourceValueAndSync(player, VORTEX_STATE, 1); // 鏍囪钃勫姏涓紙瀹㈡埛绔 >0锛?
+		PowerUtils.setResourceValueAndSync(player, VORTEX_STATE, 1); // 标记蓄力中（客户端读 >0?
 		ServerLevel sw = (ServerLevel) player.level();
 		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.PLAYER_SPLASH_HIGH_SPEED, SoundSource.PLAYERS, 1.5f, 0.5f);
@@ -145,11 +145,11 @@ public final class VortexChargeManager {
 				SoundEvents.ELDER_GUARDIAN_CURSE, SoundSource.PLAYERS, 0.6f, 1.5f);
 		github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(sw, player, ParticleTypes.BUBBLE, player.getX(), player.getY() + 1, player.getZ(), 40, 0.6, 0.6, 0.6, 0.6);
 		github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(sw, player, ParticleTypes.BUBBLE_POP, player.getX(), player.getY() + 1, player.getZ(), 5, 0.3, 0.3, 0.3, 0.1);
-		// 闈?鐧界矑瀛愬悜涓績鍚搁檮锛堟缉娑¤捣鎵嬶級
+		// ?白粒子向中心吸附（漩涡起手）
 		spawnAbsorbRing(sw, player, player.getX(), player.getY() + 1, player.getZ(), 16, 0.0);
 	}
 
-	/** 姣忔湇鍔＄ tick 瀵规瘡涓湪绾跨帺瀹惰皟鐢ㄣ€?*/
+	/** 每服务端 tick 对每个在线玩家调用?*/
 	public static void tick(ServerPlayer player) {
 		ChargeState s = CHARGING.get(player.getUUID());
 		if (s == null) return;
@@ -158,17 +158,17 @@ public final class VortexChargeManager {
 			return;
 		}
 		if (player.isDeadOrDying() || !FormUtils.isAxolotlSP(player)) {
-			cancel(player); // 褰㈡€佷涪澶?姝讳骸 鈫?鍙栨秷锛屼笉缁撶畻
+			cancel(player); // 形态丢?死亡 ?取消，不结算
 			return;
 		}
 		s.ticks++;
 		int hitInterval = BAL.i("hit_interval", HIT_INTERVAL);
 		int maxTicks = BAL.i("max_ticks", MAX_TICKS);
-		// 鎸佺画鍚搁檮婕╂丁锛堟瘡 2 tick 涓€鍦堬紝鐩镐綅闅忔椂闂存棆杞?鈫?鍔ㄦ€佹敹鏉燂級
+		// 持续吸附漩涡（每 2 tick 一圈，相位随时间旋??动态收束）
 		if (s.ticks % 2 == 0) {
 			spawnAbsorbRing((ServerLevel) player.level(), player,
 					player.getX(), player.getY() + 1, player.getZ(), 8, s.ticks * 0.35);
-			// 钃勫姏鏈熷疄浣撳惛闄勶細鎶婅寖鍥村唴鎬墿鏈濈帺瀹剁壍寮曪紝鍔涘害闅忓嚮閫€鎶楁€ц“鍑忥紙姣忕骇 -20%锛屽厤鐤殑鍚镐笉鍔級
+			// 蓄力期实体吸附：把范围内怪物朝玩家牵引，力度随击退抗性衰减（每级 -20%，免疫的吸不动）
 			pullEntitiesDuringCharge((ServerLevel) player.level(), player);
 		}
 		if (s.ticks % hitInterval == 0) {
@@ -176,14 +176,14 @@ public final class VortexChargeManager {
 			int maxAirSpent = BAL.i("max_air_spent", MAX_AIR_SPENT);
 			int baseSpend = Math.min(airPerHit, Math.max(0, maxAirSpent - s.baseAirSpent));
 			int spend = AxolotlSpPerks.vortexAirCost(s.baseAirSpent + baseSpend, s.discounted) - s.airSpent;
-			// 鏈姞Perk鏃朵繚鐣欏師闂ㄦ锛涘姞Perk鏃朵互鏈绱璐﹀崟鐨勫疄闄呭閲忔牎楠屻€?
+			// 未加Perk时保留原门槛；加Perk时以本次累计账单的实际增量校验?
 			int required = s.discounted ? spend : airPerHit;
 			if (s.baseAirSpent < maxAirSpent && player.getAirSupply() >= required) {
 				player.setAirSupply(player.getAirSupply() - spend);
 				s.airSpent += spend;
 				s.baseAirSpent += baseSpend;
 				s.hits++;
-				// 钃勫姏杩涘害鍚屾锛堝€?宸茶搫鍔?tick 鏁帮紱HUD 涓绘妧鑳借緟鍔╂爮鎹浠庡皬鍒板ぇ娑ㄦ潯锛?
+				// 蓄力进度同步（?已蓄?tick 数；HUD 主技能辅助栏据此从小到大涨条?
 				PowerUtils.setResourceValueAndSync(player, VORTEX_STATE, s.ticks);
 				ServerLevel sw = (ServerLevel) player.level();
 				github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(sw, player, ParticleTypes.BUBBLE,
@@ -191,18 +191,18 @@ public final class VortexChargeManager {
 				sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 						SoundEvents.FISHING_BOBBER_SPLASH, SoundSource.PLAYERS, 0.8f, 0.6f);
 			} else {
-				release(player); // air 涓嶈冻鎴栧凡鎵ｆ弧 60 鈫?鑷姩閲婃斁
+				release(player); // air 不足或已扣满 60 ?自动释放
 				return;
 			}
 		}
-		// 娉細vortex_state 涓嶅啀閫?tick 鍚屾鈥斺€擩SON 鏉′欢鍙銆?0銆嶏紱
-		// start(1)/姣忔钃勫姏璺冲彉(杩涘害鍊?/release(0)/cancel(0) 鍚屾宸茶冻澶燂紝HUD 杈呭姪鏍忚杩涘害鍊间粠灏忓埌澶ф定鏉°€?
+		// 注：vortex_state 不再?tick 同步——JSON 条件只读?0」；
+		// start(1)/每次蓄力跳变(进度?/release(0)/cancel(0) 同步已足够，HUD 辅助栏读进度值从小到大涨条?
 		if (s.ticks >= maxTicks) {
-			release(player); // 婊?4 绉掕嚜鍔ㄩ噴鏀?
+			release(player); // ?4 秒自动释?
 		}
 	}
 
-	/** 瀹㈡埛绔彂銆岄噴鏀俱€嶅寘 鎴?鑷姩閲婃斁鏃惰皟鐢ㄣ€?*/
+	/** 客户端发「释放」包 ?自动释放时调用?*/
 	public static void release(ServerPlayer player) {
 		if (player.hasEffect(github.com.gengyoubo.sscfa.init.AddonEffects.PURIFIED.get())) {
 			onPurified(player);
@@ -211,7 +211,7 @@ public final class VortexChargeManager {
 		ChargeState s = CHARGING.remove(player.getUUID());
 		PowerUtils.setResourceValueAndSync(player, VORTEX_STATE, 0);
 		if (s == null) return;
-		// 0 钃勫姏鏉炬墜鎸夊彇娑堝鐞嗭細涓嶈繘 CD
+		// 0 蓄力松手按取消处理：不进 CD
 		if (s.hits <= 0) {
 			github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.cancelled(player, SKILL_ID, s == null ? -1 : s.castId);
 			return;
@@ -226,24 +226,24 @@ public final class VortexChargeManager {
 				SoundEvents.AXOLOTL_SPLASH, SoundSource.PLAYERS, 1.5f, 0.5f);
 		github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(sw, player, ParticleTypes.SPLASH, player.getX(), player.getY() + 1, player.getZ(),
 				150, radius, 1.0, radius, 1.0);
-		// owner 鎵撴爣锛氫粎鏈汉绗竴浜虹О閬胯锛屼粬浜鸿瑙掑師鏍?
+		// owner 打标：仅本人第一人称避让，他人视角原?
 		github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(sw, player, ParticleTypes.EXPLOSION, player.getX(), player.getY() + 1, player.getZ(),
 				8, radius * 0.5, 0.5, radius * 0.5, 0.1);
-		// 浠?RC-4 鑽按鐮寸鐨勬按鑺辩垎寮€锛堜笌姘寸煕钀藉湴鍚屾锛?
+		// ?RC-4 药水破碎的水花爆开（与水矛落地同款?
 		github.com.gengyoubo.sscfa.util.ParticleUtils.spawnWaterBurst(sw, player, player.getX(), player.getY() + 1, player.getZ(), 1.3);
-		if (damage <= 0) return; // 涓€娆￠兘娌¤搫鍒帮紝浠呭彇娑?
+		if (damage <= 0) return; // 一次都没蓄到，仅取?
 		AABB box = player.getBoundingBox().inflate(radius);
 		for (Entity e : sw.getEntities(player, box)) {
 			if (!(e instanceof LivingEntity living)) continue;
-			// 榛樿鐧藉悕鍗曪細璞佸厤鐜╁/瀹犵墿/鐧藉悕鍗曚釜浣擄紝涓嶅彈娑℃祦鍐插嚮浼ゅ涓庢帶鍒?
+			// 默认白名单：豁免玩家/宠物/白名单个体，不受涡流冲击伤害与控?
 			if (github.com.gengyoubo.sscfa.util.WhitelistUtils.isProtected(player, living)) continue;
 
-			// 浼ゅ锛氭墍鏈夊彈褰卞搷鐢熺墿涓€寰嬫弧棰濓紙鐢ㄦ埛瀹氱銆屼激瀹虫甯搞€嶏紝boss 涔熺収甯稿彈浼わ級
+			// 伤害：所有受影响生物一律满额（用户定稿「伤害正常」，boss 也照常受伤）
 			living.hurt(player.damageSources().mobAttack(player), (float) damage);
 
-			// 鍑婚€€鍔涘害 = f(鍑婚€€鎶楁€х瓑绾? 鏄惁涓篵oss)锛歜oss 鈫?0锛堜笉鍑婚€€涓嶇紦鎱級锛屾櫘閫氭€寜鎶楁€у垎妗?
+			// 击退力度 = f(击退抗性等? 是否为boss)：boss ?0（不击退不缓慢），普通怪按抗性分?
 			double scale = getMovementForceScale(living);
-			if (scale <= 0.0) continue;              // boss / 鏋侀珮鎶楁€э細鍙彈浼わ紝涓嶈绉诲姩
+			if (scale <= 0.0) continue;              // boss / 极高抗性：只受伤，不被移动
 			living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 2), player);
 			Vec3 push = living.position().subtract(player.position());
 			if (push.lengthSqr() < 1.0e-4) push = new Vec3(0, 1, 0);
@@ -253,7 +253,7 @@ public final class VortexChargeManager {
 		}
 	}
 
-	/** 鍑€鍖栫珛鍗虫挙閿€钃勫姏锛屼笉浜х敓鍐插嚮锛屽苟浠庡綋鍓嶆椂鍒昏捣杩涘叆瀹屾暣鎶€鑳?CD銆?*/
+	/** 净化立即撤销蓄力，不产生冲击，并从当前时刻起进入完整技?CD?*/
 	public static void onPurified(ServerPlayer player) {
 		ChargeState s = CHARGING.remove(player.getUUID());
 		if (s == null) return;
@@ -263,7 +263,7 @@ public final class VortexChargeManager {
 				SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 0.5f, 1.5f);
 	}
 
-	/** 鍙栨秷钃勫姏锛堜笉缁撶畻浼ゅ銆佷笉杩?CD锛夈€?*/
+	/** 取消蓄力（不结算伤害、不?CD）?*/
 	public static void cancel(ServerPlayer player) {
 		ChargeState s = CHARGING.remove(player.getUUID());
         if (s != null) {
@@ -272,15 +272,15 @@ public final class VortexChargeManager {
 		github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.cancelled(player, SKILL_ID, s == null ? -1 : s.castId);
 	}
 
-	// ==================== Boss 鍒ゅ畾 + 绉诲姩鍔涘害绯绘暟 ====================
+	// ==================== Boss 判定 + 移动力度系数 ====================
 
 	/**
-	 * 鍒ゅ畾涓€涓敓鐗╂槸鍚︺€屾丁娴佺Щ鍔ㄥ厤鐤€嶏紙涓嶈鍚搁檮 / 鍑婚€€锛屼絾浠嶆甯稿彈浼わ級銆?
-	 * <p>鍙岄噸鍒ゅ畾锛?
+	 * 判定一个生物是否「涡流移动免疫」（不被吸附 / 击退，但仍正常受伤）?
+	 * <p>双重判定?
 	 * <ol>
-	 *   <li><b>鍑婚€€鎶楁€?鈮?0.99</b>锛氳嚜鍔ㄥ懡涓搧鍌€鍎÷风洃瀹堣€吢蜂互鍙婅浜嗛珮鎶楁€х殑妯＄粍 boss锛屾棤闇€鐧昏銆?/li>
-	 *   <li><b>瀹炰綋绫诲瀷 tag {@code my_addon:vortex_immune}</b>锛氳ˉ浣忓師鐗堝嚮閫€鎶楁€?0.0 鍗村簲鍏嶇柅鐨?
-	 *       鍑嬬伒路鏈奖榫櫬锋綔褰辫礉路杩滃彜瀹堝崼鑰咃紙榛樿宸插啓杩?tag锛夛紝骞跺厑璁告ā缁勬妸鑷 boss 杩藉姞杩?tag 鎵╁睍鍏煎銆?/li>
+	 *   <li><b>击退抗??0.99</b>：自动命中铁傀儡·监守者·以及设了高抗性的模组 boss，无需登记?/li>
+	 *   <li><b>实体类型 tag {@code my_addon:vortex_immune}</b>：补住原版击退抗?0.0 却应免疫?
+	 *       凋灵·末影龙·潜影贝·远古守卫者（默认已写?tag），并允许模组把自家 boss 追加?tag 扩展兼容?/li>
 	 * </ol>
 	 */
 	private static boolean isVortexImmune(LivingEntity living) {
@@ -288,14 +288,14 @@ public final class VortexChargeManager {
 	}
 
 	/**
-	 * 璁＄畻鐩爣鍙楁丁娴併€岀Щ鍔ㄧ被鏁堟灉銆嶏紙钃勫姏鍚搁檮 / 閲婃斁鍑婚€€锛夌殑鍔涘害绯绘暟 [0.0, 1.0]銆?
-	 * <p>渚濇嵁鐢ㄦ埛瀹氱鐨勪袱椤瑰垽鎹細
+	 * 计算目标受涡流「移动类效果」（蓄力吸附 / 释放击退）的力度系数 [0.0, 1.0]?
+	 * <p>依据用户定稿的两项判据：
 	 * <ul>
-	 *   <li><b>鏄惁涓?boss</b>锛歿@link #isVortexImmune} 鍛戒腑 鈫?杩斿洖 0.0锛堝畬鍏ㄤ笉琚Щ鍔紝鍔涘害褰掗浂锛夈€?/li>
-	 *   <li><b>鍑婚€€鎶楁€х瓑绾?/b>锛氭櫘閫氭€寜銆屾瘡 0.2 鐐规姉鎬т竴绾с€佹瘡绾?-20% 鍔涘害銆嶅垎妗?
+	 *   <li><b>是否?boss</b>：{@link #isVortexImmune} 命中 ?返回 0.0（完全不被移动，力度归零）?/li>
+	 *   <li><b>击退抗性等?/b>：普通怪按「每 0.2 点抗性一级、每?-20% 力度」分?
 	 *       鈥斺€?0.0鈫?.0銆?.2鈫?.8銆?.4鈫?.6銆?.6鈫?.4銆?.8鈫?.2銆佲墺1.0鈫?.0銆?/li>
 	 * </ul>
-	 * 鍚搁檮涓庡嚮閫€鍏辩敤姝ょ郴鏁帮紝淇濊瘉涓ゅ鍔涘害鍙ｅ緞涓€鑷淬€備激瀹充笉璧版绯绘暟锛堢敱璋冪敤鏂规寜銆屼激瀹虫甯搞€嶆弧棰濈粨绠楋級銆?
+	 * 吸附与击退共用此系数，保证两处力度口径一致。伤害不走此系数（由调用方按「伤害正常」满额结算）?
 	 */
 	private static double getMovementForceScale(LivingEntity living) {
 		if (isVortexImmune(living)) return 0.0;
@@ -304,18 +304,18 @@ public final class VortexChargeManager {
 		return Math.max(0.0, 1.0 - level * 0.2);
 	}
 
-	// ==================== 钃勫姏鏈熷疄浣撳惛闄?====================
+	// ==================== 蓄力期实体吸?====================
 
 	/**
-	 * 钃勫姏鏈熸妸鑼冨洿鍐呮€墿鏈濈帺瀹剁壍寮曘€?
-	 * <p>鍚搁檮鍔涘害渚濇嵁 {@link #getMovementForceScale}锛堝嚮閫€鎶楁€х瓑绾?+ 鏄惁涓?boss锛夛細
+	 * 蓄力期把范围内怪物朝玩家牵引?
+	 * <p>吸附力度依据 {@link #getMovementForceScale}（击退抗性等?+ 是否?boss）：
 	 * <ul>
-	 *   <li>Boss / 閲嶇敳瀹炰綋锛堥搧鍌€鍎÷峰噵鐏德锋湯褰遍緳路鐩戝畧鑰吢锋綔褰辫礉路杩滃彜瀹堝崼鑰吢烽珮鎶楁€фā缁?boss锛夆啋 鍔涘害 0锛屼笉琚惛闄勩€?/li>
-	 *   <li>鏅€氭€寜鍑婚€€鎶楁€с€屾瘡 0.2 鐐逛竴绾с€佹瘡绾?-20% 鍔涘害銆嶅垎妗ｈ“鍑忋€?
-	 *       娉細setVelocity 鐩存帴瑕嗙洊閫熷害涓嶇粡杩?takeKnockback锛屾晠鍑婚€€鎶楁€т笉鑳借嚜鐒跺厬搴曪紝闈犲姏搴︾郴鏁版樉寮忚“鍑忋€?/li>
-	 *   <li>鐜╁ / 椹湇瀹犵墿 / 鐧藉悕鍗曚釜浣撹眮鍏嶏紙{@link WhitelistUtils#isProtected}锛夈€?/li>
+	 *   <li>Boss / 重甲实体（铁傀儡·凋灵·末影龙·监守者·潜影贝·远古守卫者·高抗性模?boss）→ 力度 0，不被吸附?/li>
+	 *   <li>普通怪按击退抗性「每 0.2 点一级、每?-20% 力度」分档衰减?
+	 *       注：setVelocity 直接覆盖速度不经?takeKnockback，故击退抗性不能自然兑底，靠力度系数显式衰减?/li>
+	 *   <li>玩家 / 驯服宠物 / 白名单个体豁免（{@link WhitelistUtils#isProtected}）?/li>
 	 * </ul>
-	 * 姣?2 tick 鏂藉姞涓€娆℃湞鍚戠帺瀹剁殑姘村钩閫熷害锛岃创鑴搁槇鍊煎唴涓嶅啀鎷夎繎锛堥槻闇囪崱锛夈€?
+	 * ?2 tick 施加一次朝向玩家的水平速度，贴脸阈值内不再拉近（防震荡）?
 	 */
 	private static void pullEntitiesDuringCharge(ServerLevel sw, ServerPlayer player) {
 		double pullRadius = BAL.d("pull_radius", PULL_RADIUS);
@@ -324,19 +324,19 @@ public final class VortexChargeManager {
 		Vec3 playerPos = player.position();
 		for (Entity e : sw.getEntities(player, box)) {
 			if (!(e instanceof LivingEntity living)) continue;
-			// 鐧藉悕鍗?/ 鐜╁ / 瀹犵墿璞佸厤
+			// 白名?/ 玩家 / 宠物豁免
 			if (WhitelistUtils.isProtected(player, living)) continue;
 
-			// 鍚搁檮鍔涘害 = f(鍑婚€€鎶楁€х瓑绾? 鏄惁涓篵oss)锛歜oss 鈫?0锛堜笉鍚革級锛屾櫘閫氭€寜鎶楁€у垎妗?
+			// 吸附力度 = f(击退抗性等? 是否为boss)：boss ?0（不吸），普通怪按抗性分?
 			double scale = getMovementForceScale(living);
-			if (scale <= 0.0) continue;              // 鍔涘害褰掗浂锛歜oss 鎴栨瀬楂樻姉鎬э紝鍚镐笉鍔?
+			if (scale <= 0.0) continue;              // 力度归零：boss 或极高抗性，吸不?
 
 			Vec3 toPlayer = playerPos.subtract(living.position());
-			// 涓嶈璐磋劯闃堝€硷細鍏佽鎬墿琚惛鍒扮帺瀹惰韩涓婂悗鍙嶅闇囪崱锛堢壒鑹叉晥鏋滐紝鐢ㄦ埛瀹氱淇濈暀锛?
-			// 鏈濆悜鐜╁鐨勬按骞虫柟鍚戯紙蹇界暐 Y锛岄伩鍏嶆妸鎬惛鍒板ぉ涓?/ 鍦颁笅锛夛紱normalize 瀵归浂鍚戦噺杩斿洖 ZERO锛屾棤 NaN 椋庨櫓
+			// 不设贴脸阈值：允许怪物被吸到玩家身上后反复震荡（特色效果，用户定稿保留?
+			// 朝向玩家的水平方向（忽略 Y，避免把怪吸到天?/ 地下）；normalize 对零向量返回 ZERO，无 NaN 风险
 			Vec3 dir = new Vec3(toPlayer.x, 0, toPlayer.z).normalize();
 			double force = pullForce * scale;
-			// 鍙犲姞鏈濆悜鐜╁鐨勬按骞抽€熷害锛堜笉瑕嗙洊鍘熸湁 Y锛屼繚鐣欓噸鍔?/ 璺宠穬锛?
+			// 叠加朝向玩家的水平速度（不覆盖原有 Y，保留重?/ 跳跃?
 			living.setDeltaMovement(living.getDeltaMovement().x * 0.5 + dir.x * force,
 					living.getDeltaMovement().y,
 					living.getDeltaMovement().z * 0.5 + dir.z * force);
@@ -348,12 +348,12 @@ public final class VortexChargeManager {
 		CHARGING.remove(uuid);
 	}
 
-	// ==================== 鍑婚€€鎶楁€ц鍙?====================
+	// ==================== 击退抗性读?====================
 
 	/**
-	 * 璇诲彇涓€涓敓鐗╃殑鍑婚€€鎶楁€э紙0.0~1.0锛夈€?
-	 * <p>1.20.1 鐨?LivingEntity 鏃?getKnockbackResistance() 鏂规硶锛岄』璧板睘鎬у疄渚嬭鍙栥€?
-	 * 瀹炰綋鏈敞鍐岃灞炴€ф椂杩斿洖 0.0锛堝彲姝ｅ父琚嚮閫€/鍚搁檮锛夈€?
+	 * 读取一个生物的击退抗性（0.0~1.0）?
+	 * <p>1.20.1 ?LivingEntity ?getKnockbackResistance() 方法，须走属性实例读取?
+	 * 实体未注册该属性时返回 0.0（可正常被击退/吸附）?
 	 */
 	private static double getKnockbackResistance(LivingEntity living) {
 		if (living.getAttributes().hasAttribute(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE)) {
@@ -364,15 +364,15 @@ public final class VortexChargeManager {
 		return 0.0;
 	}
 
-	// ==================== 绮掑瓙杈呭姪 ====================
+	// ==================== 粒子辅助 ====================
 
-	/** 鐢熸垚涓€涓甫閫熷害鐨勬湁鍚戠矑瀛愶紙count=0 鏃?delta 鍗充负閫熷害鍚戦噺锛宻peed=1锛夈€?*/
+	/** 生成一个带速度的有向粒子（count=0 ?delta 即为速度向量，speed=1）?*/
 	private static void spawnDirected(ServerLevel sw, ServerPlayer owner, net.minecraft.core.particles.ParticleOptions particle,
 			double x, double y, double z, double vx, double vy, double vz) {
 		github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(sw, owner, particle, x, y, z, 0, vx, vy, vz, 1.0);
 	}
 
-	/** 钃勫姏鏈燂細鍦ㄥ鍦堢敓鎴愰潚/鐧界矑瀛愶紝閫熷害鎸囧悜涓績骞跺甫鍒囧悜鍒嗛噺 鈫?鍚戝唴鍚搁檮 + 鏃嬭浆婕╂丁銆?*/
+	/** 蓄力期：在外圈生成青/白粒子，速度指向中心并带切向分量 ?向内吸附 + 旋转漩涡?*/
 	private static void spawnAbsorbRing(ServerLevel sw, ServerPlayer owner, double cx, double cy, double cz, int count, double phase) {
 		double r = 2.6;
 		for (int i = 0; i < count; i++) {

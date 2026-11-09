@@ -13,23 +13,23 @@ import net.minecraft.world.phys.BlockHitResult;
 import github.com.gengyoubo.sscfa.block.TempWebBridgeBlock;
 
 /**
- * 铔涗笣鎼矾宸ュ叿锛坖ackcooper锛夛細浠庡師鐗?SSC {@code WebBridgeAction} 绉绘鐨勬惌璺€昏緫锛?
- * 浠呬竴澶勮涓哄樊寮傗€斺€旀斁缃ˉ/姊潡鏃惰嫢鐩爣鏍兼槸闄勫睘鐨勫噺閫熻洓缃戣啘锛坵eb_membrane锛夛紝
- * 鍏堥潤榛樻媶闄ょ綉鑶滐紙椤哄甫娓?{@link WebMembraneOwners} 鏂芥硶鑰呰褰曪級鍐嶆斁缃紝
- * 瀹炵幇銆屾惌璺柟鍧楁浛浠ｇ綉鑶溿€嶏紱鍏朵綑鏀剧疆瑙勫垯锛堢┖姘?/ 鏃㈡湁妗ュ潡锛変笌鍘熺増涓€鑷淬€?
+ * 蛛丝搭路工具（jackcooper）：从原?SSC {@code WebBridgeAction} 移植的搭路逻辑?
+ * 仅一处行为差异——放置桥/梯块时若目标格是附属的减速蛛网膜（web_membrane），
+ * 先静默拆除网膜（顺带?{@link WebMembraneOwners} 施法者记录）再放置，
+ * 实现「搭路方块替代网膜」；其余放置规则（空?/ 既有桥块）与原版一致?
  *
- * <p>鏀剧疆鐨勬柟鍧楁部鐢ㄥ師鐗?{@link RegCustomBlock#TEMP_WEB_BRIDGE}锛堢户鎵垮叾瀵垮懡 /
- * 閭诲眳濉岃惤 / 娓叉煋绛夊叏閮ㄨ涓猴級锛屾晠瀵规父鎴忓唴宸叉湁铔涗笣妗ョ殑瀛樻。鍏煎銆?/p>
+ * <p>放置的方块沿用原?{@link RegCustomBlock#TEMP_WEB_BRIDGE}（继承其寿命 /
+ * 邻居塌落 / 渲染等全部行为），故对游戏内已有蛛丝桥的存档兼容?/p>
  */
 public final class AddonWebBridgeAction {
 
 	private AddonWebBridgeAction() {}
 
-	/** 鎼矾鏀剧疆闂ㄦ锛氱┖姘?/ 鏃㈡湁妗ュ潡 / 闄勫睘缃戣啘锛堟浛浠ｏ級 鈫?鍙斁銆?*/
+	/** 搭路放置门槛：空?/ 既有桥块 / 附属网膜（替代） ?可放?*/
 	public static boolean SetWebBlock(Level world, BlockPos pos, Block webBlock, Direction facing) {
 		BlockState blockState = world.getBlockState(pos);
 		if (blockState.is(AddonBlocks.WEB_MEMBRANE.get())) {
-			// 缃戣啘璁╀綅锛氭媶鎺夊悗瑙嗕綔绌烘皵缁х画鏀剧疆锛坮emoveBlock 涓嶈Е鍙戦偦灞呰繛閿侊紝鍚庣画 setBlockState 鍏ㄩ噺鍚屾锛?
+			// 网膜让位：拆掉后视作空气继续放置（removeBlock 不触发邻居连锁，后续 setBlockState 全量同步?
 			world.removeBlock(pos, false);
 			WebMembraneOwners.remove(world, pos);
 			blockState = world.getBlockState(pos);
@@ -43,9 +43,9 @@ public final class AddonWebBridgeAction {
 	}
 
 	/**
-	 * 鍛戒腑鏂瑰潡鍚庡缓铔涗笣澶╂锛堜粠鍘熺増 BuildWebLadder 绉绘锛屾斁鍧楁敼璧?{@link #SetWebBlock}锛夈€?
-	 * 鍛戒腑椤堕潰 鈫?鍚戜笂鐖崌锛涘懡涓簳闈?鈫?鍚戜笅寤朵几锛涘懡涓晶闈?鈫?璐村鍚戜笅鎼€傚姞瀹芥。锛坱ier2+锛?
-	 * 娌块€旈殢鏈鸿ˉ渚ч潰閭绘牸銆?
+	 * 命中方块后建蛛丝天梯（从原版 BuildWebLadder 移植，放块改?{@link #SetWebBlock}）?
+	 * 命中顶面 ?向上爬升；命中底??向下延伸；命中侧??贴墙向下搭。加宽档（tier2+?
+	 * 沿途随机补侧面邻格?
 	 */
 	public static void BuildWebLadder(Level world, BlockHitResult blockHitResult, WebLadderConfig config, Block ladderBlock) {
 		BlockPos pos = blockHitResult.getBlockPos();
@@ -98,8 +98,8 @@ public final class AddonWebBridgeAction {
 	}
 
 	/**
-	 * 鑴氫笅骞抽摵铔涗笣妗ワ紙浠庡師鐗?BuildWebBridge 绉绘锛屾斁鍧楁敼璧?{@link #SetWebBlock}锛夈€?
-	 * 浠?pos 涓鸿捣鐐规部 direction 閾?length 闀裤€佷袱渚у悇 width 鏍肩殑妗ラ潰銆?
+	 * 脚下平铺蛛丝桥（从原?BuildWebBridge 移植，放块改?{@link #SetWebBlock}）?
+	 * ?pos 为起点沿 direction ?length 长、两侧各 width 格的桥面?
 	 */
 	public static void BuildWebBridge(Level world, BlockPos pos, Direction direction, WebBridgeConfig config, Block webBlock) {
 		if (direction == Direction.UP || direction == Direction.DOWN) {
@@ -135,10 +135,10 @@ public final class AddonWebBridgeAction {
 		}
 	}
 
-	/** 澶╂閰嶇疆锛堝搴斿師鐗?WebLadderConfig record锛夈€?*/
+	/** 天梯配置（对应原?WebLadderConfig record）?*/
 	public record WebLadderConfig(int SideBlockNum, int BottomBlockNum, int TopBlockNum,
 								  boolean LargerLadder, float LargerLadderCountPercent) {}
 
-	/** 妗ラ潰閰嶇疆锛堝搴斿師鐗?WebBridgeConfig record锛夈€?*/
+	/** 桥面配置（对应原?WebBridgeConfig record）?*/
 	public record WebBridgeConfig(int Length, int Width) {}
 }

@@ -25,7 +25,7 @@ import net.minecraftforge.event.server.ServerStoppingEvent;
 
 import java.util.function.Consumer;
 
-/** Forge 濞存粌顑勫▎銏ゆ焻閸岀偛甯抽悘鐐插亰缁辩増绂?Fabric 濡炲瀛╅悧鎼佸炊閻愬墎娈舵繛澶堝妼閸炰粙寮靛鍛潳缂佹棏鍨花銊︾闊祴鍋?*/
+/** Forge 浜嬩欢閫傞厤灞傦細???Fabric 椋庢牸鍥炶皟娉ㄥ唽鏈嶅姟绔簨浠???*/
 public final class SscEvents {
     private SscEvents() {}
 
@@ -114,6 +114,19 @@ public final class SscEvents {
                 e.setCancellationResult(r);
             }
         });
+    }
+
+    @FunctionalInterface
+    public interface EntityUnloadConsumer {
+        void accept(Entity entity, Level world);
+    }
+
+    public static void onEntityUnload(EntityUnloadConsumer cb) {
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.EntityLeaveLevelEvent e) -> cb.accept(e.getEntity(), e.getLevel()));
+    }
+
+    public static void allowResettingTime(java.util.function.Predicate<Player> cb) {
+        // no-op: sleeping time reset is not gated in the Forge port
     }
 
     @FunctionalInterface

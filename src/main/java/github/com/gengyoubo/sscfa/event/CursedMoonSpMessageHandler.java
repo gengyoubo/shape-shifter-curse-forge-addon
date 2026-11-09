@@ -11,9 +11,7 @@ import net.onixary.shapeShifterCurseForge.form.FormManager;
 import net.onixary.shapeShifterCurseForge.other.config.SscCommonConfig;
 
 /**
- * 诅咒之月开始时，给 SP 形态（{@value #SPECIAL_FORM} 标记）的玩家额外提示「形态比较特殊」。
- * 管理员关闭了诅咒之月变形时所有人都不会变形，此时不再提示，避免误导。
- */
+ * 诅咒之月开始时，给 SP 形态（{@value #SPECIAL_FORM} 标记）的玩家额外提示「形态比较特殊」? * 管理员关闭了诅咒之月变形时所有人都不会变形，此时不再提示，避免误导? */
 @Mod.EventBusSubscriber(modid = SscAddonForge.MOD_ID)
 public final class CursedMoonSpMessageHandler {
     private static final String SPECIAL_FORM = "special_form";

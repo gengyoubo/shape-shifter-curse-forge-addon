@@ -22,10 +22,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * 把 SSC Forge 的玩家状态变化转成 Forge 事件：SSC Forge 本身不发「形态改变」「诅咒之月开始」事件，
- * 这里在服务端每个玩家 tick 末比对上一 tick 的状态，变化时发 {@link FormChangedEvent} / {@link CursedMoonEvent}。
- * 只在服务端主线程访问。
- */
+ * ?SSC Forge 的玩家状态变化转?Forge 事件：SSC Forge 本身不发「形态改变」「诅咒之月开始」事件，
+ * 这里在服务端每个玩家 tick 末比对上一 tick 的状态，变化时发 {@link FormChangedEvent} / {@link CursedMoonEvent}? * 只在服务端主线程访问? */
 @Mod.EventBusSubscriber(modid = SscAddonForge.MOD_ID)
 public final class SscStateEvents {
     private record State(@Nullable ResourceLocation form, boolean cursedMoon) {}

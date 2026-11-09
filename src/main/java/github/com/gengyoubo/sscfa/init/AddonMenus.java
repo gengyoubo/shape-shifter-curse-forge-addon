@@ -3,6 +3,7 @@ package github.com.gengyoubo.sscfa.init;
 import github.com.gengyoubo.sscfa.SscAddonForge;
 import github.com.gengyoubo.sscfa.screen.EnergyBottlerScreenHandler;
 import github.com.gengyoubo.sscfa.screen.PotionStorageBoxScreenHandler;
+import github.com.gengyoubo.sscfa.screen.SpellbookScreenHandler;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
@@ -15,5 +16,9 @@ public final class AddonMenus {
             MENUS.register("energy_bottler", () -> new MenuType<>(EnergyBottlerScreenHandler::new, FeatureFlags.DEFAULT_FLAGS));
     public static final RegistryObject<MenuType<PotionStorageBoxScreenHandler>> POTION_STORAGE_BOX =
             MENUS.register("potion_storage_box", () -> new MenuType<>(PotionStorageBoxScreenHandler::new, FeatureFlags.DEFAULT_FLAGS));
+    public static final RegistryObject<MenuType<SpellbookScreenHandler>> SPELLBOOK_SCREEN_HANDLER =
+            MENUS.register("spellbook", () -> new MenuType<>((id, inv) -> new SpellbookScreenHandler(id, inv, net.minecraft.world.item.ItemStack.EMPTY), FeatureFlags.DEFAULT_FLAGS));
+
+
     private AddonMenus() {}
 }

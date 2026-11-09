@@ -8,6 +8,13 @@ import github.com.gengyoubo.sscfa.client.renderer.EnergyBottlerRenderer;
 import github.com.gengyoubo.sscfa.client.screen.EnergyBottlerScreen;
 import github.com.gengyoubo.sscfa.client.renderer.PotionStorageBoxRenderer;
 import github.com.gengyoubo.sscfa.client.screen.PotionStorageBoxScreen;
+import github.com.gengyoubo.sscfa.client.screen.SpellbookScreen;
+import github.com.gengyoubo.sscfa.client.mana.AllaySPManaBar;
+import github.com.gengyoubo.sscfa.client.mana.AnubisWolfSPSoulBar;
+import github.com.gengyoubo.sscfa.client.mana.BatDesmodusBloodBar;
+import github.com.gengyoubo.sscfa.client.mana.MancianimaResistanceBar;
+import github.com.gengyoubo.sscfa.client.mana.SimpleResourceBarRenderer;
+import github.com.gengyoubo.sscfa.client.mana.SnowFoxSPManaBar;
 import github.com.gengyoubo.sscfa.init.AddonBlockEntities;
 import github.com.gengyoubo.sscfa.init.AddonMenus;
 import github.com.gengyoubo.sscfa.init.AddonEntities;
@@ -74,6 +81,16 @@ public final class AddonClientEvents {
             github.com.gengyoubo.sscfa.client.hud.SpellbookHudRenderer.register();
             MenuScreens.register(AddonMenus.ENERGY_BOTTLER.get(), EnergyBottlerScreen::new);
             MenuScreens.register(AddonMenus.POTION_STORAGE_BOX.get(), PotionStorageBoxScreen::new);
+        MenuScreens.register(AddonMenus.SPELLBOOK_SCREEN_HANDLER.get(), SpellbookScreen::new);
+        SimpleResourceBarRenderer.register(new AllaySPManaBar());
+        SimpleResourceBarRenderer.register(new AnubisWolfSPSoulBar());
+        SimpleResourceBarRenderer.register(new BatDesmodusBloodBar());
+        SimpleResourceBarRenderer.register(new MancianimaResistanceBar());
+        SimpleResourceBarRenderer.register(new SnowFoxSPManaBar());
+        github.com.gengyoubo.sscfa.client.NineLivesHudRenderer.register();
+        github.com.gengyoubo.sscfa.client.SeedEnergyHudRenderer.register();
+        github.com.gengyoubo.sscfa.client.SkillCooldownClient.init();
+        github.com.gengyoubo.sscfa.client.MoistureWaterRecoveryClient.register();
             var empty = new ResourceLocation(SscAddonForge.MOD_ID, "empty");
             for (var item : java.util.List.of(AddonItems.INFINITE_ENERGY_POTION, AddonItems.INFINITE_ENERGY_POTION_SPLASH, AddonItems.INFINITE_ENERGY_POTION_LINGERING)) {
                 ItemProperties.register(item.get(), empty, (stack, world, entity, seed) -> {

@@ -21,10 +21,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 
 /**
- * 玩家离线清理：每个连接只执行一次，在服务端主线程、玩家数据保存之前调用。
- *
- * <p>Forge 的 {@link PlayerEvent.PlayerLoggedOutEvent} 在 {@code PlayerList.remove} 开头、保存玩家数据之前触发；
- * 关服时 {@link ServerStoppingEvent} 早于保存全部玩家，这里先对所有在线玩家执行一次（之后的登出事件会被去重）。</p>
+ * 玩家离线清理：每个连接只执行一次，在服务端主线程、玩家数据保存之前调用? *
+ * <p>Forge ?{@link PlayerEvent.PlayerLoggedOutEvent} ?{@code PlayerList.remove} 开头、保存玩家数据之前触发；
+ * 关服?{@link ServerStoppingEvent} 早于保存全部玩家，这里先对所有在线玩家执行一次（之后的登出事件会被去重）?/p>
  */
 @Mod.EventBusSubscriber(modid = SscAddonForge.MOD_ID)
 public final class PlayerSessionCleanup {
@@ -34,7 +33,7 @@ public final class PlayerSessionCleanup {
 
     private PlayerSessionCleanup() {}
 
-    /** 注册离线清理回调（按注册顺序执行，单个回调抛异常不影响其余回调）。 */
+    /** 注册离线清理回调（按注册顺序执行，单个回调抛异常不影响其余回调）?*/
     public static void register(BiConsumer<ServerGamePacketListenerImpl, MinecraftServer> callback) {
         CALLBACKS.add(callback);
     }

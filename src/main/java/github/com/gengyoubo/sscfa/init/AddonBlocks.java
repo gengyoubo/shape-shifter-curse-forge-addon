@@ -26,7 +26,7 @@ import net.minecraftforge.registries.RegistryObject;
 public final class AddonBlocks {
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, SscAddonForge.MOD_ID);
 
-    /** 娉曟湳鐮旂┒鍙版湞鍖楃鎾炵锛氬洓瑙掓鑵?+ 妗岄潰 + 鍖椾晶鑳屾澘锛堝彇鑷?Fabric 鐗?SpellResearchTableBlock锛夈€?*/
+    /** 法术研究台朝北碰撞箱：四角桌?+ 桌面 + 北侧背板（取?Fabric ?SpellResearchTableBlock）?*/
     private static final VoxelShape RESEARCH_TABLE_NORTH_SHAPE = Shapes.or(
             Block.box(0, 0, 0, 2, 10, 2), Block.box(14, 0, 0, 16, 10, 2),
             Block.box(14, 0, 14, 16, 10, 16), Block.box(0, 0, 14, 2, 10, 16),
@@ -46,7 +46,7 @@ public final class AddonBlocks {
     public static final RegistryObject<Block> TEMP_WEB_BRIDGE = BLOCKS.register("temp_web_bridge", () ->
             new github.com.gengyoubo.sscfa.block.TempWebBridgeBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOL).strength(0.2f)
                     .sound(SoundType.WOOL).noCollission().noOcclusion().noLootTable()));
-    // 娉ㄥ叆绁潧 / 娉曟湳鐮旂┒鍙帮細鐣岄潰涓庢柟鍧楀疄浣撲緷璧栨硶鏈郴缁燂紝鏆備负淇濈暀鏈濆悜涓庡舰鐘剁殑绌哄３
+    // 注入祭坛 / 法术研究台：界面与方块实体依赖法术系统，暂为保留朝向与形状的空壳
     public static final RegistryObject<Block> INFUSION_ALTAR = BLOCKS.register("infusion_altar", () ->
             new FacingShellBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(2.5f)
                     .sound(SoundType.AMETHYST).requiresCorrectToolForDrops().noOcclusion(), null));

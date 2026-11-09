@@ -19,13 +19,13 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * SP鎮︾伒缇や綋娌荤枟 - 鐧藉悕鍗曟不鐤楃郴缁?
+ * SP悦灵群体治疗 - 白名单治疗系?
  * <p>
- * 褰揓SON钃勫姏瀹屾垚鍚庤缃?heal_execute 璧勬簮涓?锛?
- * 姝ょ被鐨則ick妫€娴嬪埌鍚庢墽琛岀櫧鍚嶅崟杩囨护娌荤枟锛岀劧鍚庨噸缃负0銆?
+ * 当JSON蓄力完成后设?heal_execute 资源??
+ * 此类的tick检测到后执行白名单过滤治疗，然后重置为0?
  * <p>
- * 鐧藉悕鍗曞瓨鍌ㄥ湪SP鎮︾伒鐜╁鐨?command tags 涓紝
- * 鏍煎紡: "ssc_allay_wl:<鐩爣鐜╁UUID>"
+ * 白名单存储在SP悦灵玩家?command tags 中，
+ * 格式: "ssc_allay_wl:<目标玩家UUID>"
  */
 public class AllaySPGroupHeal {
 
@@ -35,16 +35,16 @@ public class AllaySPGroupHeal {
 	private static final ResourceLocation CHARGE_TIMER_ID = new ResourceLocation("my_addon", "form_allay_sp_group_heal_charge_timer");
 	private static final String SKILL_ID = "my_addon:form_allay_sp_group_heal_key_activation";
 	private static final ResourceLocation SOLO_DAMAGE_TIMER_ID = FormIdentifiers.ALLAY_GROUP_HEAL_SOLO_DAMAGE_TIMER;
-	// 缇ょ枟鍙傛暟锛氶粯璁や笌娉ㄩ噴涓€鑷达紱杩愯鏃朵粠 balance 蹇収璇诲彇锛坅bilities.allay_sp_group_heal锛?
+	// 群疗参数：默认与注释一致；运行时从 balance 快照读取（abilities.allay_sp_group_heal?
 	private static final double HEAL_RADIUS = 20.0;
 	private static final int RESISTANCE_TICKS = 200;
 	private static final int SOLO_BLESSING_TICKS = 400;
-	// 缇や綋娌荤枟锛氭瘡涓洰鏍囧洖琛€ = 鏈€澶х敓鍛矫?5%锛岄澶栫粰 鏈€澶х敓鍛矫?0% 鐨勯粍蹇冿紝鎸佺画30绉?
+	// 群体治疗：每个目标回血 = 最大生命?5%，额外给 最大生命?0% 的黄心，持续30?
 	private static final float HEAL_PERCENT = 0.75f;
 	private static final float ABSORPTION_PERCENT = 0.5f;
 	private static final int HEAL_ABSORPTION_TICKS = 600;
 
-	// 闃舵 5锛氭湇鍔＄鏉冨▉蹇収璇诲彇锛堝揩鐓ф湭鍒濆鍖栧洖閫€榛樿甯搁噺锛?
+	// 阶段 5：服务端权威快照读取（快照未初始化回退默认常量?
 	private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL =
 			new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.allay_sp_group_heal");
 
@@ -53,11 +53,11 @@ public class AllaySPGroupHeal {
 	}
 
 	/**
-	 * 姣弔ick妫€鏌ユ槸鍚﹂渶瑕佹墽琛屾不鐤?
+	 * 每tick检查是否需要执行治?
 	 */
 	public static void tick(ServerPlayer player) {
-		// 寤変环褰㈡€侀棬鎺у墠缃細闈?SP 鎮︾伒鐜╁鐩存帴璺宠繃锛岄伩鍏嶅鍏ㄥ憳姣?tick 鍋?Apoli 璧勬簮鏌ヨ
-		// 锛坓etResourceValue 姣忔閮借閬嶅巻鐜╁鍏ㄩ儴 power 鍒楄〃锛岄潪鎸佹湁鑰?100% 娴垂锛?
+		// 廉价形态门控前置：?SP 悦灵玩家直接跳过，避免对全员?tick ?Apoli 资源查询
+		// （getResourceValue 每次都要遍历玩家全部 power 列表，非持有?100% 浪费?
 		if (!github.com.gengyoubo.sscfa.util.FormUtils.isForm(player, FormIdentifiers.ALLAY_SP)) {
 			return;
 		}
@@ -71,14 +71,14 @@ public class AllaySPGroupHeal {
 		int healExecute = getResourceValue(player, HEAL_EXECUTE_ID);
 		if (healExecute != 1) return;
 
-		// 绔嬪嵆閲嶇疆瑙﹀彂鍣紙涓嶅悓姝ワ紝閬垮厤閲嶇疆椋樻诞璁℃椂鍣級
+		// 立即重置触发器（不同步，避免重置飘浮计时器）
 		setResourceValueNoSync(player, HEAL_EXECUTE_ID, 0);
 
-		// 鎵ц鐧藉悕鍗曡繃婊ゆ不鐤?
+		// 执行白名单过滤治?
 		executeWhitelistHeal(player);
 	}
 
-	/** 鍑€鍖栧彧涓柇缇や綋娌荤枟锛涗笉鏀瑰彉鍏跺畠鎮︾伒缇や綋鍑€鍖栫殑钃勫姏璧勬簮銆?*/
+	/** 净化只中断群体治疗；不改变其它悦灵群体净化的蓄力资源?*/
 	public static void onPurified(ServerPlayer player) {
 		long castId = stopCharge(player);
 		if (castId >= 0) github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.interruptedFull(player, SKILL_ID, castId);
@@ -103,18 +103,18 @@ public class AllaySPGroupHeal {
 	}
 
 	/**
-	 * 鎵ц鐧藉悕鍗曡繃婊ょ殑缇や綋娌荤枟
-	 * 鐧藉悕鍗曚负绌烘椂娌荤枟鎵€鏈夋椿浣擄紙鍘熺増琛屼负锛夛紱鏈夌櫧鍚嶅崟鏃跺彧娌荤枟鐧藉悕鍗曞唴鐨勭帺瀹跺強鍏跺彫鍞ょ墿
+	 * 执行白名单过滤的群体治疗
+	 * 白名单为空时治疗所有活体（原版行为）；有白名单时只治疗白名单内的玩家及其召唤物
 	 */
 	private static void executeWhitelistHeal(ServerPlayer allayPlayer) {
 		ServerLevel world = (ServerLevel) allayPlayer.level();
 		boolean soloHeal = !hasOtherHealablePlayer(allayPlayer, world);
-		// balance 杩愯鏃跺弬鏁帮紙鍚屾柟娉曞娆′娇鐢紝鍏堝彇灞€閮ㄥ彉閲忥級
+		// balance 运行时参数（同方法多次使用，先取局部变量）
 		double healRadius = BAL.d("heal_radius", HEAL_RADIUS);
 		double healRadiusSq = healRadius * healRadius;
 		int resistanceTicks = BAL.i("resistance_ticks", RESISTANCE_TICKS);
 
-		// 娌荤枟鑷韩
+		// 治疗自身
 		if (soloHeal) {
 			applySoloBlessing(allayPlayer);
 		} else {
@@ -122,21 +122,21 @@ public class AllaySPGroupHeal {
 			allayPlayer.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, resistanceTicks, 0, false, true, true));
 		}
 		spawnHealParticles(world, allayPlayer);
-		// 鍙湁SP鎮︾伒鑷繁鑳藉惉瑙?
+		// 只有SP悦灵自己能听?
 		allayPlayer.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.5f, 1.0f);
 
-		// 鑾峰彇鑼冨洿鍐呮墍鏈夋椿浣?
+		// 获取范围内所有活?
 		AABB box = allayPlayer.getBoundingBox().inflate(healRadius);
 		List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, box,
 					e -> e != allayPlayer && e.isAlive() && e.distanceToSqr(allayPlayer) <= healRadiusSq);
 
 		for (LivingEntity entity : entities) {
-			// 缁熶竴璧?WhitelistUtils.isBuffTarget锛屽悓鏃堕伒浠庢湇鍔＄ whitelistEnabled 鎬诲紑鍏?
+			// 统一?WhitelistUtils.isBuffTarget，同时遵从服务端 whitelistEnabled 总开?
 			if (WhitelistUtils.isBuffTarget(allayPlayer, entity)) {
 				healTarget(entity);
 				entity.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, resistanceTicks, 0, false, true, true));
 				spawnHealParticles(world, entity);
-				// 鎾斁澹伴煶锛氭不鐤楄€呭惉瑙佺鏈夊０闊筹紝鍏朵粬浜哄惉瑙佺┖闂村０闊?
+				// 播放声音：治疗者听见私有声音，其他人听见空间声?
 				allayPlayer.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.5f, 1.0f);
 				world.playSound(allayPlayer, entity.getX(), entity.getY(), entity.getZ(),
 						SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.5f, 1.0f);
@@ -165,7 +165,7 @@ public class AllaySPGroupHeal {
 		setResourceValue(allayPlayer, SOLO_DAMAGE_TIMER_ID, soloBlessingTicks);
 	}
 
-	/** 娌荤枟鍗曚釜鐩爣锛氬洖琛€=鏈€澶х敓鍛矫?5%锛屽苟缁欎簣 鏈€澶х敓鍛矫?0% 鐨勯粍蹇冿紙鎸佺画30绉掞級銆?*/
+	/** 治疗单个目标：回血=最大生命?5%，并给予 最大生命?0% 的黄心（持续30秒）?*/
 	private static void healTarget(LivingEntity entity) {
 		float maxHp = entity.getMaxHealth();
 		entity.heal(maxHp * (float) BAL.d("heal_percent", HEAL_PERCENT));
@@ -179,16 +179,16 @@ public class AllaySPGroupHeal {
 	}
 
 	/**
-	 * 灏嗙洰鏍囧疄浣撶殑鎵€鏈夎€咃紙濡傛灉鏄疇鐗╋級鎴栧疄浣撴湰韬紙濡傛灉鏄櫘閫氱敓鐗?鐜╁锛夊姞鍏ョ櫧鍚嶅崟
+	 * 将目标实体的所有者（如果是宠物）或实体本身（如果是普通生?玩家）加入白名单
 	 */
 	public static void addToWhitelist(ServerPlayer allayPlayer, LivingEntity target) {
 		if (target instanceof net.minecraft.world.entity.player.Player) {
-			// 鐜╁锛氬彧鍐?player 鍓嶇紑
+			// 玩家：只?player 前缀
 			allayPlayer.getTags().add(WHITELIST_TAG_PREFIX + target.getUUID().toString());
 		} else {
-			// 浠讳綍闈炵帺瀹剁敓鐗╋紙鍚疇鐗╋級锛氬弻鍐?player 鍓嶇紑锛堝吋瀹?isInWhitelist 鍒ゅ畾锛? mob 鍓嶇紑锛圙UI 鐢紝甯︾墿绉嶄俊鎭級
-			// 娉ㄦ剰锛氱櫧鍚嶅崟鐜╁鐨勬墍鏈夊疇鐗╁凡閫氳繃"涓讳汉 UUID 鍦?player 鐧藉悕鍗?璺緞榛樿鍙椾繚鎶わ紝
-			// 杩欓噷鍐欏疇鐗╄嚜韬?UUID 浠呭湪璇ュ疇鐗╄鏄惧紡鏍囪鏃剁敓鏁堬紝涓嶅奖鍝嶄富浜虹殑鍏跺畠瀹犵墿銆?
+			// 任何非玩家生物（含宠物）：双?player 前缀（兼?isInWhitelist 判定? mob 前缀（GUI 用，带物种信息）
+			// 注意：白名单玩家的所有宠物已通过"主人 UUID ?player 白名?路径默认受保护，
+			// 这里写宠物自?UUID 仅在该宠物被显式标记时生效，不影响主人的其它宠物?
 			String uuidStr = target.getUUID().toString();
 			allayPlayer.getTags().add(WHITELIST_TAG_PREFIX + uuidStr);
 			net.minecraft.resources.ResourceLocation typeId = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(target.getType());
@@ -199,33 +199,33 @@ public class AllaySPGroupHeal {
 	}
 
 	/**
-	 * 灏嗙洰鏍囧疄浣撶殑鎵€鏈夎€咃紙濡傛灉鏄疇鐗╋級鎴栧疄浣撴湰韬紙濡傛灉鏄櫘閫氱敓鐗?鐜╁锛変粠鐧藉悕鍗曠Щ闄?
+	 * 将目标实体的所有者（如果是宠物）或实体本身（如果是普通生?玩家）从白名单移?
 	 */
 	public static void removeFromWhitelist(ServerPlayer allayPlayer, LivingEntity target) {
-		// 濮嬬粓鎸?target 鑷韩 UUID 绉婚櫎锛堜笌 addToWhitelist 瀵圭О锛?
+		// 始终?target 自身 UUID 移除（与 addToWhitelist 对称?
 		allayPlayer.getTags().remove(WHITELIST_TAG_PREFIX + target.getUUID().toString());
-		// 鍚屾椂娓呴櫎鐢熺墿鐧藉悕鍗曚笂鐨?mob 鍓嶇紑 tag锛堝寘鍚墿浣欑殑 :ns:path 鍙樹綋锛?
+		// 同时清除生物白名单上?mob 前缀 tag（包含剩余的 :ns:path 变体?
 		github.com.gengyoubo.sscfa.util.WhitelistUtils.removeMobFromWhitelist(allayPlayer, target.getUUID());
 	}
 
 	/**
-	 * 妫€鏌UID鏄惁鍦ㄧ櫧鍚嶅崟涓?
+	 * 检查UUID是否在白名单?
 	 */
 	public static boolean isInWhitelist(Set<String> allayTags, UUID targetUuid) {
 		return allayTags.contains(WHITELIST_TAG_PREFIX + targetUuid.toString());
 	}
 
 	/**
-	 * 渚挎嵎鏂规硶锛氭鏌ヤ竴涓疄浣撴槸鍚﹀湪鐜╁鐨勭櫧鍚嶅崟涓紙渚涘敱鐗囨満绛夊閮ㄧ郴缁熶娇鐢級
-	 * 鐧藉悕鍗曚负绌烘椂杩斿洖true锛堝厑璁告墍鏈夌帺瀹跺拰鍙嬪ソ鐢熺墿锛?
+	 * 便捷方法：检查一个实体是否在玩家的白名单中（供唱片机等外部系统使用）
+	 * 白名单为空时返回true（允许所有玩家和友好生物?
 	 */
 	public static boolean isInWhitelist(ServerPlayer allayPlayer, LivingEntity entity) {
-		// 缁熶竴璧?WhitelistUtils.isBuffTarget锛岄伒浠?whitelistEnabled 鎬诲紑鍏?
+		// 统一?WhitelistUtils.isBuffTarget，遵?whitelistEnabled 总开?
 		return WhitelistUtils.isBuffTarget(allayPlayer, entity);
 	}
 
 	/**
-	 * 鍦ㄥ疄浣撲綅缃敓鎴愮埍蹇冪矑瀛?
+	 * 在实体位置生成爱心粒?
 	 */
 	private static void spawnHealParticles(ServerLevel world, LivingEntity entity) {
 		github.com.gengyoubo.sscfa.util.ParticleUtils.spawnParticles(world, ParticleTypes.HEART,
@@ -233,11 +233,11 @@ public class AllaySPGroupHeal {
 				5, 0.3, 0.3, 0.3, 0.01);
 	}
 
-	// ===== 鐧藉悕鍗曠鐞嗘柟娉曪紙渚?GUI / 缃戠粶灞傝皟鐢級 =====
-	// 鏃х殑 SP-only 鐜╁閲嶈浇锛坅dd/remove/clear锛夊凡闅?/ssc_addon whitelist 鎸囦护涓€骞跺垹闄ゃ€?
+	// ===== 白名单管理方法（?GUI / 网络层调用） =====
+	// 旧的 SP-only 玩家重载（add/remove/clear）已?/ssc_addon whitelist 指令一并删除?
 
 	/**
-	 * 浠庣櫧鍚嶅崟鎸塙UID绉婚櫎
+	 * 从白名单按UUID移除
 	 */
 	public static boolean removeFromWhitelistByUuid(ServerPlayer allayPlayer, UUID targetUuid) {
 		String tag = WHITELIST_TAG_PREFIX + targetUuid.toString();
@@ -245,7 +245,7 @@ public class AllaySPGroupHeal {
 	}
 
 	/**
-	 * 鑾峰彇鐧藉悕鍗曚腑鐨勬墍鏈塙UID
+	 * 获取白名单中的所有UUID
 	 */
 	public static java.util.List<UUID> getWhitelistUuids(ServerPlayer allayPlayer) {
 		java.util.List<UUID> uuids = new java.util.ArrayList<>();
@@ -254,14 +254,14 @@ public class AllaySPGroupHeal {
 				try {
 					uuids.add(UUID.fromString(tag.substring(WHITELIST_TAG_PREFIX.length())));
 				} catch (IllegalArgumentException e) {
-					// 鏃犳晥UUID锛岃烦杩?
+					// 无效UUID，跳?
 				}
 			}
 		}
 		return uuids;
 	}
 
-		// ===== Apoli璧勬簮璇诲啓宸ュ叿 =====
+		// ===== Apoli资源读写工具 =====
 
 	private static int getResourceValue(ServerPlayer player, ResourceLocation resourceId) {
 		return PowerUtils.getResourceValue(player, resourceId);
@@ -272,8 +272,8 @@ public class AllaySPGroupHeal {
 	}
 
 		/**
-	 * 璁剧疆璧勬簮鍊间絾涓嶅悓姝ュ埌瀹㈡埛绔紝閬垮厤閲嶇疆椋樻诞绛塸ower鐨勫唴閮ㄨ鏃跺櫒
-	 * 浠呯敤浜庝笉闇€瑕佸鎴风鎰熺煡鐨勫唴閮ㄨЕ鍙戝櫒锛堝 heal_execute锛?
+	 * 设置资源值但不同步到客户端，避免重置飘浮等power的内部计时器
+	 * 仅用于不需要客户端感知的内部触发器（如 heal_execute?
 	 */
 	private static void setResourceValueNoSync(ServerPlayer player, ResourceLocation resourceId, int value) {
 		PowerUtils.setResourceValue(player, resourceId, value);

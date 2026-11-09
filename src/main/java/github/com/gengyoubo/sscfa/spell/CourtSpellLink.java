@@ -7,7 +7,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
-/** 鐜嬪涵褰㈡€佸崗鍚屽崰浣嶃€?*/
+/** 王庭形态协同占位?*/
 public final class CourtSpellLink {
     private CourtSpellLink() {}
 

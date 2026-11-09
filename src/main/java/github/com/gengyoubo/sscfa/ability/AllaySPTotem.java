@@ -25,18 +25,18 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AllaySPTotem {
 
 	private static final String ACTIVE_TAG = "ssc_totem_active";
-	// 婵€娲诲浘鑵惧綊灞炴爣璁帮紙2026-10-20锛氱韬け鏁堣鍒?R3锛涚寮€ SP 鎮︾伒鏈汉鑳屽寘鍗虫竻闄ゆ縺娲伙級
+	// 激活图腾归属标记（2026-10-20：离身失效规?R3；离开 SP 悦灵本人背包即清除激活）
 	private static final String OWNER_TAG = "ssc_totem_owner";
-	// 婵€娲诲喎鍗达紙R1锛夛細榛樿 20 绉掞紱balance 鍙鐩栵紙abilities.allay_sp_totem.activate_cooldown_ticks锛?
+	// 激活冷却（R1）：默认 20 秒；balance 可覆盖（abilities.allay_sp_totem.activate_cooldown_ticks?
 	private static final int ACTIVATE_COOLDOWN_TICKS = 400;
-	// 鍥捐吘鏁戞彺鑼冨洿锛氶粯璁?20 鏍硷紱杩愯鏃朵粠 balance 蹇収璇诲彇锛坅bilities.allay_sp_totem锛?
+	// 图腾救援范围：默?20 格；运行时从 balance 快照读取（abilities.allay_sp_totem?
 	private static final double RANGE = 20.0;
-	// 浣跨敤UUID杩借釜鎸佹湁婵€娲诲浘鑵剧殑鐜╁锛岄伩鍏嶅瓨鍌ㄥ疄浣撳紩鐢ㄥ鑷磋法缁村害/閲嶈繛鍚庡紩鐢ㄨ繃鏈?
+	// 使用UUID追踪持有激活图腾的玩家，避免存储实体引用导致跨维度/重连后引用过?
 	private static final Set<UUID> playersWithActiveTotems = ConcurrentHashMap.newKeySet();
-	// 婵€娲诲喎鍗磋褰曪紙R1锛歶uid -> 鏈€杩戜竴娆℃縺娲荤殑涓栫晫鏃堕棿锛涗細璇濈骇锛屾柇绾?閲嶅惎娓呴浂浠呮崯澶辨渶闀?0绉掑喎鍗达級
+	// 激活冷却记录（R1：uuid -> 最近一次激活的世界时间；会话级，断?重启清零仅损失最?0秒冷却）
 	private static final java.util.Map<UUID, Long> ACTIVATE_COOLDOWNS = new ConcurrentHashMap<>();
 
-	// 闃舵 5锛氭湇鍔＄鏉冨▉蹇収璇诲彇锛堝揩鐓ф湭鍒濆鍖栧洖閫€榛樿甯搁噺锛?
+	// 阶段 5：服务端权威快照读取（快照未初始化回退默认常量?
 	private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL =
 			new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.allay_sp_totem");
 
@@ -51,25 +51,25 @@ public class AllaySPTotem {
 	}
 
 	private static void onServerTick(MinecraftServer server) {
-		// 姣?0tick锛?绉掞級妫€鏌ヤ竴娆★紝骞宠　鍝嶅簲鎬у拰鎬ц兘
+		// ?0tick?秒）检查一次，平衡响应性和性能
 		long currentTick = server.overworld().getGameTime();
 		if (currentTick % 40 != 0) {
 			return;
 		}
 
-		// 浣跨敤Iterator瀹夊叏閬嶅巻骞剁Щ闄わ紝閬垮厤ConcurrentModificationException
+		// 使用Iterator安全遍历并移除，避免ConcurrentModificationException
 		Iterator<UUID> it = playersWithActiveTotems.iterator();
 		while (it.hasNext()) {
 			UUID uuid = it.next();
 			ServerPlayer player = server.getPlayerList().getPlayer(uuid);
 
-			// 鐜╁绂荤嚎鎴栦笉瀛樺湪锛岀Щ闄よ拷韪?
+			// 玩家离线或不存在，移除追?
 			if (player == null) {
 				it.remove();
 				continue;
 			}
 
-			// 妫€鏌ユ槸鍚︿粛鎸佹湁婵€娲荤殑鍥捐吘锛圧3锛氬繀椤讳粛鍦ㄦ湰浜虹殑鑳屽寘/鎵嬩笂锛?
+			// 检查是否仍持有激活的图腾（R3：必须仍在本人的背包/手上?
 			boolean stillHasActiveTotem = false;
 
 			for (ItemStack stack : player.getInventory().items) {
@@ -93,7 +93,7 @@ public class AllaySPTotem {
 				continue;
 			}
 
-			// 涓嶅啀鏄疭P鎮︾伒鏃讹細鍏抽棴鍥捐吘骞剁Щ闄よ拷韪?
+			// 不再是SP悦灵时：关闭图腾并移除追?
 			if (!isSpAllay(player)) {
 				deactivateAllTotems(player);
 				it.remove();
@@ -128,7 +128,7 @@ public class AllaySPTotem {
 	}
 
 	/**
-	 * R2锛氱帺瀹舵暣涓儗鍖咃紙涓昏儗鍖?鍓墜锛夊唴鏄惁宸叉湁浠讳竴婵€娲诲浘鑵撅紙涓嶇湅褰掑睘鈥斺€斿埆浜虹殑婵€娲诲浘鑵句篃浼氬湪鏈?tick 琚竻锛夈€?
+	 * R2：玩家整个背包（主背?副手）内是否已有任一激活图腾（不看归属——别人的激活图腾也会在?tick 被清）?
 	 */
 	private static boolean hasAnyActiveTotem(Player player) {
 		for (ItemStack stack : player.getInventory().items) {
@@ -140,7 +140,7 @@ public class AllaySPTotem {
 		return false;
 	}
 
-	/** 鏃ф。鍏煎锛氭竻鎺夎儗鍖呭唴銆屾湁 ACTIVE 鏃?OWNER銆嶇殑鏃ф牸寮忔爣璁帮紙鏀瑰姩鍓嶆縺娲荤殑鍥捐吘鑷劧闄嶇骇涓烘櫘閫氬浘鑵撅級銆?*/
+	/** 旧档兼容：清掉背包内「有 ACTIVE ?OWNER」的旧格式标记（改动前激活的图腾自然降级为普通图腾）?*/
 	private static void purgeLegacyMarks(Player player) {
 		for (ItemStack stack : player.getInventory().items) {
 			if (isActiveTotem(stack) && !stack.getTag().hasUUID(OWNER_TAG)) deactivateTotem(stack);
@@ -175,7 +175,7 @@ public class AllaySPTotem {
 		CompoundTag nbt = stack.getOrCreateTag();
 		boolean isActive = nbt.getBoolean(ACTIVE_TAG);
 
-		// 鏃ф。鍏煎锛氭竻闄よ儗鍖呭唴閬楃暀鐨勬棫鏍煎紡婵€娲绘爣璁帮紙鏃?OWNER_TAG 鐨?ACTIVE 鏍囪涓嶅啀鏈夋晥锛?
+		// 旧档兼容：清除背包内遗留的旧格式激活标记（?OWNER_TAG ?ACTIVE 标记不再有效?
 		purgeLegacyMarks(player);
 
 		if (isActive) {
@@ -189,10 +189,10 @@ public class AllaySPTotem {
 				updateActiveTotemTracking(serverPlayer, false);
 			}
 		} else {
-			// 婵€娲伙細涓夋潯鏂拌鍒欙紙2026-10-20锛?
-			//   R1 婵€娲诲喎鍗?20 绉掞紙浼氳瘽绾ч潤鎬?Map锛屾寜鏈嶅姟鍣ㄤ笘鐣屾椂闂磋鏃讹級
-			//   R2 鑳屽寘鍏ㄥ眬鍞竴锛氬凡鎸佹湁浠讳竴婵€娲诲浘鑵惧垯鎷掔粷婵€娲荤浜屼釜
-			//   R3 绂昏韩澶辨晥锛氭縺娲绘椂鎵?owner 鏍囪锛涙帀钀界墿/瀛樺鍣ㄧ粡 mixin 娓呴櫎锛泃ick 鏍￠獙褰掑睘
+			// 激活：三条新规则（2026-10-20?
+			//   R1 激活冷?20 秒（会话级静?Map，按服务器世界时间计时）
+			//   R2 背包全局唯一：已持有任一激活图腾则拒绝激活第二个
+			//   R3 离身失效：激活时?owner 标记；掉落物/存容器经 mixin 清除；tick 校验归属
 			long now = player.level().getGameTime();
 			long cooldownTicks = BAL.i("activate_cooldown_ticks", ACTIVATE_COOLDOWN_TICKS);
 			Long lastActivate = ACTIVATE_COOLDOWNS.get(player.getUUID());
@@ -202,7 +202,7 @@ public class AllaySPTotem {
 				return InteractionResultHolder.fail(stack);
 			}
 
-			// R2 鑳屽寘鍏ㄥ眬鍞竴锛氬凡鎸佹湁浠讳竴婵€娲诲浘鑵惧垯鎷掔粷婵€娲荤浜屼釜
+			// R2 背包全局唯一：已持有任一激活图腾则拒绝激活第二个
 			if (hasAnyActiveTotem(player)) {
 				player.displayClientMessage(Component.translatable("message.ssc_addon.totem.already_active"), true);
 				player.playNotifySound(SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.5f, 1.0f);
@@ -215,7 +215,7 @@ public class AllaySPTotem {
 
 			// Glint is derived from our activation marker; original enchantments and HideFlags remain owned by the item.
 
-			// R1 鍐峰嵈鍐欏叆
+			// R1 冷却写入
 			ACTIVATE_COOLDOWNS.put(player.getUUID(), now);
 
 			player.displayClientMessage(Component.translatable("message.ssc_addon.totem.activated"), true);
@@ -238,7 +238,7 @@ public class AllaySPTotem {
 	public static boolean tryUseAllayTotem(LivingEntity entity) {
 		if (entity.level().isClientSide) return false;
 
-		// Get nearby players within range锛坆alance 蹇収鍙鐩栨晳鎻磋寖鍥达級
+		// Get nearby players within range（balance 快照可覆盖救援范围）
 		AABB box = entity.getBoundingBox().inflate(BAL.d("range", RANGE));
 		List<Player> nearbyPlayers = entity.level().getEntitiesOfClass(Player.class, box, p -> p instanceof ServerPlayer);
 
@@ -248,9 +248,9 @@ public class AllaySPTotem {
 			// a. Check if they are SP Allay
 			if (!isSpAllay(serverPlayer)) continue;
 
-			// b. Check whitelist锛氳嚜鎴戞晳鎻存€绘槸鍏佽锛涙晳浠栦汉缁熶竴璧?isBuffTarget
-			//   - whitelistEnabled = false锛氫粎浣滅敤浜庨潪鎬墿/闈炴晫瀵圭敓鐗?
-			//   - whitelistEnabled = true锛氱櫧鍚嶅崟绌烘椂鐜╁/椹湇瀹犵墿/owner-tag锛涢潪绌烘椂浠呯櫧鍚嶅崟鎴愬憳
+			// b. Check whitelist：自我救援总是允许；救他人统一?isBuffTarget
+			//   - whitelistEnabled = false：仅作用于非怪物/非敌对生?
+			//   - whitelistEnabled = true：白名单空时玩家/驯服宠物/owner-tag；非空时仅白名单成员
 			if (entity != serverPlayer) {
 				if (!github.com.gengyoubo.sscfa.util.WhitelistUtils.isBuffTarget(serverPlayer, entity)) {
 					continue;
@@ -285,7 +285,7 @@ public class AllaySPTotem {
 	}
 
 	private static ItemStack findActiveTotem(ServerPlayer player) {
-		// R3锛氬彧璁ゃ€屾湰浜烘縺娲汇€嶇殑鍥捐吘锛堟崱鍒?杞潵鐨勫埆浜烘縺娲诲浘鑵句笉浼氱粰鏁戞彺鏁堟灉锛?
+		// R3：只认「本人激活」的图腾（捡?转来的别人激活图腾不会给救援效果?
 		if (isOwnedActiveTotem(player.getMainHandItem(), player)) return player.getMainHandItem();
 		if (isOwnedActiveTotem(player.getOffhandItem(), player)) return player.getOffhandItem();
 
@@ -305,21 +305,21 @@ public class AllaySPTotem {
 		return false;
 	}
 
-	/** R3锛氭縺娲诲浘鑵?+ 褰掑睘鏍￠獙锛坥wner 鏍囪蹇呴』绛変簬璇ョ帺瀹?uuid锛夈€?*/
+	/** R3：激活图?+ 归属校验（owner 标记必须等于该玩?uuid）?*/
 	private static boolean isOwnedActiveTotem(ItemStack stack, Player player) {
 		return isActiveTotem(stack)
 				&& stack.getTag().hasUUID(OWNER_TAG)
 				&& stack.getTag().getUUID(OWNER_TAG).equals(player.getUUID());
 	}
 
-	// ---- R3 闈欐€佹竻闄ゅ叆鍙ｏ紙mixin 璋冪敤锛氭帀钀界墿 tick / 瀹瑰櫒 setStack锛?---
+	// ---- R3 静态清除入口（mixin 调用：掉落物 tick / 容器 setStack?---
 
-	/** 鏄惁涓烘縺娲诲浘鑵撅紙mixin 鐢紱鍙湅鏍囪锛屼笉鐪嬪綊灞炩€斺€旂韬満鏅竴寰嬫竻闄わ級銆?*/
+	/** 是否为激活图腾（mixin 用；只看标记，不看归属——离身场景一律清除）?*/
 	public static boolean isMarkedActiveTotem(ItemStack stack) {
 		return isActiveTotem(stack);
 	}
 
-	/** 娓呴櫎鍥捐吘婵€娲绘爣璁帮紙mixin 鐢紱鍚屾娓?owner 涓庡厜鏁?NBT锛夈€?*/
+	/** 清除图腾激活标记（mixin 用；同步?owner 与光?NBT）?*/
 	public static void clearTotemMark(ItemStack stack) {
 		if (stack.is(Items.TOTEM_OF_UNDYING) && stack.hasTag()) {
 			deactivateTotem(stack);

@@ -9,7 +9,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.BlockHitResult;
 
-/** 鏈堢粐铔?璺宠洓褰㈡€佸崗鍚屽崰浣嶏細淇濈暀鎶曞皠鐗╃粐缃戞帴鍙ｅ舰鐘躲€?*/
+/** 月织?跳蛛形态协同占位：保留投射物织网接口形状?*/
 public final class SpiderSpellLink {
     private SpiderSpellLink() {}
 

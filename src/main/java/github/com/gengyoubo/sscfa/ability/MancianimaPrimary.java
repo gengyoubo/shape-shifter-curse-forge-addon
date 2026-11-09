@@ -24,19 +24,19 @@ import net.minecraft.world.phys.Vec3;
 import github.com.gengyoubo.sscfa.spell.DomainManager;
 
 /**
- * 婵傛垹浼?- 娑撴槒顩﹂幎鈧懗鏂ょ窗娑撳顔岄弽鍥唶閵?
+ * 契??- 主要技能：三段标记??
  *
- * 濞堝吀缍呴敍?
+ * 段位?
  * <ol>
- *   <li>閺冪姵鐖ｇ拋?/ 閺堝绮?濮楁瑦鐖ｇ拋棰佺稻閸戝棙妲︽稉宥呮躬鐠囥儳娲伴弽?閳?閺嶅洩顔囬弬鎵窗閺嶅浄绱欐鍕剁礆閵?
- *       濞戝牐鈧?15 mana閿涙稑鍣弰鐔告￥閻㈢喓澧?閳?5 mana fizzle閿涙稖袝閸?5s CD閿涘牅绮庢＃鏍偧閿涘鈧?/li>
- *   <li>濮楁瑦鐖ｉ惃鍕倱娑撯偓閻╊喗鐖ｉ崷銊ュ櫙閺勭喍绗?閳?閸楀洨楠囨稉铏瑰閼硅绱欓幁鎰劤 + 閸戝娴傞崣顐礉1s 鐟欙箑褰傞梻鎾閿涘奔绗夌粻?CD閿涘鈧?/li>
- *   <li>瀹稿弶婀佺痪銏＄垼閿涘本妫ょ拋鍝勫櫙閺勭喎婀崫?閳?閸氼垰濮?2s 瀵洖顕遍敍灞界穿鐎靛吋鍨氶崝鐔奉嚠缁俱垺鐖ｉ惄顔界垼闁姵鍨?
- *       20% 閸撯晙缍戦悽鐔锋嚒閻喍婵€閿涘牅绗傞梽?20閿? 鐟欏棜顫庨悥鍡欏仮閿涙保D +15s閵?/li>
+ *   <li>无标?/ 有??橙标记但准星不在该目???标记新目标（黄）??
+ *       消??15 mana；准星无生????5 mana fizzle；触??5s CD（仅首次）??/li>
+ *   <li>橙标的同一目标在准星????升级为红色（恐惧 + 凋零叫，1s 触发间隔，不?CD）??/li>
+ *   <li>已有红标，无论准星在???启??2s 引导，引导成功对红标目标造??
+ *       20% 剩余生命真伤（上?20?? 视觉爆炸；CD +15s??/li>
  * </ol>
  *
- * 閻ц棄鎮曢崡鏇窗姒涙顓婚張鍝勫煑閿涘澖@link WhitelistUtils#isProtected}閿涘绱濋惂钘夋倳閸楁洘鍨氶崨?鐞氼偊鈹嬮張宥呯枃閻椻晙绗夐懗鍊燁潶閺嶅洩顔囬妴?
- * 閸氬本妞傜粋浣诡剾閺嶅洩顔囬崝顐ｅ脯闂冧絻鎯€閿涚噦绱欑拋鎯х暰閺傚洣娆㈢拠?閺冪姵纭剁€电懓濮幒鐘绘█閽€銉ф晸閻椻晙濞囬悽?閳ユ柡鈧柨鐫橀崺铏诡攨鐞氼偄濮╅敍灞炬拱閺堢喐娈忔稉宥呬粵閹凤附鍩呴妴鍌︾礆
+ * 白名单：默认机制（{@link WhitelistUtils#isProtected}），白名单成?被驯服宠物不能被标记?
+ * 同时禁止标记劫掠阵营？（设定文件?无法对劫掠阵营生物使?——属基础被动，本期暂不做拦截。）
  */
 public final class MancianimaPrimary {
 
@@ -50,34 +50,34 @@ public final class MancianimaPrimary {
 	public static final int MARK_MANA_COST = 15;
 	public static final int FIZZLE_MANA_COST = 5;
 	public static final String SKILL_ID = "my_addon:form_familiar_fox_mancianima_contract_mark";
-	public static final int RED_TRIGGER_INTERVAL = 20;       // 1s 鐟欙箑褰傞梻鎾閿涘牓妲绘潻鐐靛仯閸楀洨瀛╅敍?
+	public static final int RED_TRIGGER_INTERVAL = 20;       // 1s 触发间隔（防连点升红?
 	public static final double MARK_RANGE = 32.0;
 	public static final double RED_LOCK_RANGE = 24.0;
-	public static final int CHANNEL_DAMAGE_TICKS = 40;       // 2s 瀵洖顕?
+	public static final int CHANNEL_DAMAGE_TICKS = 40;       // 2s 引??
 	public static final double DAMAGE_PERCENT = 0.20;
 	public static final float DAMAGE_MIN = 2.0f;
 	public static final float DAMAGE_CAP = 37.0f;
 	public static final int MANA_REGEN_PAUSE_TICKS = 100;    // 5s
 	private static final net.minecraft.resources.ResourceLocation MANA_REGEN_PAUSE_RES =
 			new net.minecraft.resources.ResourceLocation("my_addon", "form_familiar_fox_sp_mana_regen_regen_pause_timer");
-	// 闂冭埖顔?5閿涙俺绻嶇悰灞炬韫囶偆鍙庣拠璇插絿閿涘潊bilities.mancianima_primary閿涙稑鎻╅悡褎婀崚婵嗩潗閸栨牕娲栭柅鈧妯款吇鐢悂鍣洪敍?
+	// 阶??5：运行时快照读取（abilities.mancianima_primary；快照未初始化回退默认常量?
 	private static final BalanceReader BAL = new BalanceReader("abilities.mancianima_primary");
-	/** 鐎广垺鍩涚粩顖涘瘻闁款喛鐨熼悽銊ф畱閸忋儱褰涢妴?*/
+	/** 客户端按键调用的入口?*/
 	public static void execute(ServerPlayer player) {
 		if (!isMancianima(player)) return;
 		ServerLevel world = (ServerLevel) player.level();
 		long now = world.getGameTime();
 
-		// 瀵洖顕辨稉顓ㄧ吹閸愬秵顐奸幐澶愭暛 = 閸欐牗绉烽敍鍫ｎ啎鐎规碍婀弰搴ゎ嚛閿涘矂绮拋銈堫攽娑撶尨绱版稉宥呮惙鎼存棑绱辨潻娆撳櫡娣囨繃瀵旀稉宥呮惙鎼存棑绱?
+		// 引导中？再次按键 = 取消（设定未明说，默认行为：不响应；这里保持不响应??
 		if (MancianimaMarkManager.CHANNELING.containsKey(player.getUUID())) return;
 
 		MancianimaMarkManager.Mark mark = MancianimaMarkManager.getMark(player.getUUID());
 
-		// 濞?3閿涙艾鍑￠張澶屽閺?閳?瀵洖顕?2s 閻喍婵€
+		// ??3：已有红????引??2s 真伤
 		if (mark != null && mark.color == MancianimaMarkManager.MarkColor.RED) {
 			LivingEntity tgt = findLivingByUuid(world, mark.targetUuid);
 			if (tgt == null || !tgt.isAlive() || DomainManager.blocksTargeting(player, tgt)) return;
-			// 闂冭埖顔岄崘宄板祱閿涙氨瀛╅弽鍥у灠閸楀洨楠囬崥搴ㄦ付缁?3s 閹靛秷鍏樺鏇犲瀻閿涘牐顕?MarkManager 娓氀冩倱 scope 閸欏倹鏆熸禒銉ょ箽閹镐礁鎮撴稉鈧崐纭风礆
+			// 阶段冷却：红标刚升级后需??3s 才能引爆（??MarkManager 侧同 scope 参数以保持同一值）
 			int stageGate = MancianimaMarkManager.stageGateTicks();
 			if (now - mark.colorSetTick < stageGate) {
 				int secLeft = (int) Math.max(1L, (long) Math.ceil((stageGate - (now - mark.colorSetTick)) / 20.0));
@@ -85,25 +85,25 @@ public final class MancianimaPrimary {
 				playMarkFailSound(player);
 				return;
 			}
-			// 娑撳秵绉烽懓?mana 缁斿宓嗗鈧慨瀣穿鐎电》绱盋D 閸︺劌绱╃€靛吋鍨氶崝鐔锋倵閸?15s
+			// 不消?mana 立即开始引导；CD 在引导成功后??15s
 			MancianimaMarkManager.CHANNELING.put(player.getUUID(),
 					new MancianimaMarkManager.ChannelState(mark.targetUuid, now + BAL.i("channel_damage_ticks", CHANNEL_DAMAGE_TICKS), 1));
 			player.displayClientMessage(Component.translatable("message.ssc_addon.mancianima.primary.channeling"), true);
-			// 閸忋劌婧€娴ｅ骸鎼烽拑鍕閸★繝绂忛敍鍫ｎ唨缁楊兛绗侀弬瑙勬箒閹碘偓閹扮喓鐓￠敍?
+			// 全场低响蓄力嗡鸣（让第三方有所感知?
 			MancianimaMarkManager.broadcastSoundAtEntity(world, player, SoundEvents.BEACON_POWER_SELECT, 0.6f, 1.5f);
-			// marker 缁変浇浜伴敍姘閺勫墽娈?閸氼垰濮?閸欏秹顩敍鍫滅矌閼奉亜绻侀懗钘夋儔鐟欎緤绱?
+			// marker 私聊：明显??启??反馈（仅自己能听见??
 			MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.BEACON_ACTIVATE, 1.0f, 1.4f);
 			MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 0.4f);
 			return;
 		}
 
-		// 濞?1/2閿涙aycast 閹靛墽娲伴弽?
+		// ??1/2：raycast 找目?
 		LivingEntity target = raycastLiving(player, BAL.d("mark_range", MARK_RANGE));
 
-		// 濞?2閿涙碍顭堕弽鍥╂畱閸氬奔绔撮惄顔界垼
+		// ??2：橙标的同一目标
 		if (mark != null && mark.color == MancianimaMarkManager.MarkColor.ORANGE
 				&& target != null && target.getUUID().equals(mark.targetUuid)) {
-			// 闂冭埖顔岄崘宄板祱閿涙岸顩诲▎鈩冪垼鐠佹澘鎮楅棁鈧粵?3s 閹靛秷鍏橀崡鍥╁閿涘牐顕?MarkManager 娓氀冩倱 scope 閸欏倹鏆熸禒銉ょ箽閹镐礁鎮撴稉鈧崐纭风礆
+			// 阶段冷却：首次标记后需?3s 才能升红（??MarkManager 侧同 scope 参数以保持同一值）
 			int stageGate = MancianimaMarkManager.stageGateTicks();
 			if (now - mark.colorSetTick < stageGate) {
 				int secLeft = (int) Math.max(1L, (long) Math.ceil((stageGate - (now - mark.colorSetTick)) / 20.0));
@@ -111,20 +111,20 @@ public final class MancianimaPrimary {
 				playMarkFailSound(player);
 				return;
 			}
-			// 1s 鐟欙箑褰傞梻鎾闁俺绻?SP_PRIMARY_CD 閺勵垰鎯?0 閺夈儲顥呭ù瀣剁窗娴ｅ棙顒濆▓鍏哥瑝鎼存梻鏁?CD 閳?閻劌宕熼悪顒冪カ濠ф劒绗夋径顏勫灊缁犳ぜ鈧?
-			// 缁犫偓閸栨牭绱伴懟銉ょ瑐濞嗭紕瀛╅崡鍥ㄦ闂傚瓨婀崚甯礄閻?RED_LOCKOUT閿涘绱濋悽?upgradeToRed 閸愬懘鍎撮崚銈呯暰閵?
+			// 1s 触发间隔通??SP_PRIMARY_CD 是??0 来检测：但此段不应??CD ??用单独资源不太划算??
+			// 简化：若上次红升时间未到（??RED_LOCKOUT），?upgradeToRed 内部判定??
 			boolean ok = MancianimaMarkManager.upgradeToRed(player, target);
 			if (!ok) {
 				player.displayClientMessage(Component.translatable("message.ssc_addon.mancianima.primary.red_locked"), true);
 				return;
 			}
-			// 娴笺倕顔婃稉搴ㄧ叾閺?
-			// 缁俱垹宕岄幋鎰 - marker 婢舵艾鐪伴崣鐘插閸欏秹顩棅绛圭礄娑擃亙姹夐崥顒冾潌閿涘本绔婚弲鐗堝絹缁€铏诡儑娴滃本顐奸崨鎴掕厬閿?
+			// 伤害与音??
+			// 红升成功 - marker 多层叠加反馈音（个人听见，清晰提示第二次命中??
 			MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 0.6f);
 			MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.NOTE_BLOCK_BELL.value(), 1.0f, 0.7f);
 			MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.LODESTONE_COMPASS_LOCK, 0.8f, 0.9f);
 			MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.RESPAWN_ANCHOR_CHARGE, 0.6f, 1.4f);
-			// 閻╊喗鐖ｆ径鍕瘍楠炴寧鎸辨稉鈧稉瀣剁礉鐠佲晛褰堥崙鏄忊偓鍛挤閸涖劌娲块悳鈺侇啀閼宠棄鎯夌憴浣风癌濞堥潧宕岀痪?
+			// 目标处也广播一下，让受击者及周围玩家能听见二段升?
 			MancianimaMarkManager.broadcastSoundAtEntity(world, target, SoundEvents.RESPAWN_ANCHOR_CHARGE, 0.5f, 1.4f);
 			if (target instanceof ServerPlayer sp) {
 				MancianimaMarkManager.playSoundToPlayer(sp, SoundEvents.ENDER_DRAGON_GROWL, 1.0f, 1.0f);
@@ -132,19 +132,19 @@ public final class MancianimaPrimary {
 			} else {
 				MancianimaMarkManager.broadcastSoundAtEntity(world, target, SoundEvents.WITHER_AMBIENT, 0.7f, 1.0f);
 			}
-			// 濞?2 娑撳秵绉烽懓?CD閵嗕椒绗夊☉鍫ｂ偓?mana
+			// ??2 不消?CD、不消?mana
 			return;
 		}
 
-		// 濞?1閿涙碍鐖ｇ拋鐗堟煀閻╊喗鐖ｉ敍鍫熷灗瑜版挸澧犲▽鈩冩箒娴犺缍嶉弽鍥唶閿?
-		// 濡偓閺?CD閿涘牆顩ч弸婊冪秼閸撳秴婀?CD 娑擃叏绱濈粭顑跨濞堢數娲块幒銉﹀珕缂佹繐绱?
+		// ??1：标记新目标（或当前没有任何标记??
+		// 检??CD（如果当前??CD 中，第一段直接拒绝??
 		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.ready(player, SKILL_ID)) {
 			playMarkFailSound(player);
 			return;
 		}
 
 		if (target == null) {
-			// 閺冪姷娲伴弽?fizzle
+			// 无目?fizzle
 			int fizzleCost = BAL.i("fizzle_mana_cost", FIZZLE_MANA_COST);
 			github.com.gengyoubo.sscfa.compat.ManaComponent mana = github.com.gengyoubo.sscfa.compat.ManaUtils.getManaComponent(player);
 			if (mana == null || mana.getMana() < fizzleCost) {
@@ -159,7 +159,7 @@ public final class MancianimaPrimary {
 			return;
 		}
 
-		// 閻ц棄鎮曢崡?/ 娑撳秷鍏橀弽鍥唶閼奉亜绻?
+		// 白名?/ 不能标记自??
 		if (target == player) { playMarkFailSound(player); return; }
 		if (WhitelistUtils.isProtected(player, target)) {
 			player.displayClientMessage(Component.translatable("message.ssc_addon.mancianima.target_protected"), true);
@@ -180,7 +180,7 @@ public final class MancianimaPrimary {
 		MancianimaMarkManager.setMark(player, target, MancianimaMarkManager.MarkColor.YELLOW);
 		github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.instant(player, SKILL_ID);
 
-		// 閺嶅洩顔囬幋鎰 - 娴?marker 閼奉亜绻侀懗钘夋儔閸掓壆娈戦崣宥夘洯闂婄绱欐径姘湴閸欑姴濮為敍灞筋杻瀵搫褰叉潏銊ㄧ槕鎼达讣绱?
+		// 标记成功 - ??marker 自己能听到的反馈音（多层叠加，增强可辨识度??
 		MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 1.6f);
 		MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.NOTE_BLOCK_CHIME.value(), 0.7f, 1.8f);
 		MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.LODESTONE_COMPASS_LOCK, 0.6f, 1.4f);
@@ -192,18 +192,18 @@ public final class MancianimaPrimary {
 		}
 	}
 
-	/** 閻?MancianimaMarkManager 瀵洖顕?tick 閺堫偄鐔拫鍐暏閿涙碍澧界悰宀€婀℃导銈勭瑢閻栧棛鍋㈤悧瑙勬櫏閵?*/
+	/** ??MancianimaMarkManager 引??tick 末尾调用：执行真伤与爆炸特效??*/
 	public static void executeChannelComplete(ServerPlayer marker, LivingEntity target) {
 		if (target == null || !target.isAlive() || WhitelistUtils.isProtected(marker, target) || DomainManager.blocksTargeting(marker, target)) return;
 		ServerLevel world = (ServerLevel) marker.level();
-		// 閻喍婵€鐠侊紕鐣?
+		// 真伤计??
 		float remainingHealth = target.getHealth();
 		float dmg = channelDamage(marker, target, remainingHealth);
-		// 娴笺倕顔婅ぐ鎺戠潣閿涙矮濞囬悽?indirectMagic 娴?marker 娑撶儤鏁鹃崙鏄忊偓鍜冪礄閻㈢喓澧挎导姘矆7楠炶泛鐢?tag bypasses_armor娑撳秷顫﹂幎銈囨暢閸戝繐鍘ら敍?
+		// 伤害归属：使?indirectMagic ??marker 为攻击者（生物会什7并??tag bypasses_armor不被护甲减免?
 		DamageSource src = world.damageSources().indirectMagic(marker, marker);
 		target.hurt(src, dmg);
 
-		// AOE閿涙矮浜?target 娑撹桨鑵戣箛?3 閺嶇厧宕愬鍕敶閻ㄥ嫬鍙炬禒鏍晸閻椻晛褰堥崚?50% 娴笺倕顔婇敍鍫ｇ儲鏉?marker 閼奉亜绻?+ 娑撹崵娲伴弽?+ 閻ц棄鎮曢崡鏇礆
+		// AOE：??target 为中?3 格半径内的其他生物受?50% 伤害（跳??marker 自??+ 主目?+ 白名单）
 		double aoeRadius = 3.0;
 		AABB aoeBox = new AABB(
 				target.getX() - aoeRadius, target.getY() - aoeRadius, target.getZ() - aoeRadius,
@@ -217,15 +217,15 @@ public final class MancianimaPrimary {
 			le.hurt(src, channelDamage(marker, le, remainingHealth) * 0.5f);
 		}
 
-		// 閻栧棛鍋㈢憴鍡氼潕閿涘牅绗夐柅鐘冲灇鐎圭偤妾导銈咁唺閿?
+		// 爆炸视觉（不造成实际伤害??
 		double cx = target.getX(), cy = target.getY() + target.getBbHeight() / 2.0, cz = target.getZ();
-		// 娑撹崵鍨庨悙闈╃礄婢堆冪€烽敍?
+		// 主爆炸（大型?
 		world.sendParticles(ParticleTypes.EXPLOSION_EMITTER, cx, cy, cz, 2, 0.3, 0.3, 0.3, 0);
-		// 閻忕敻鐡婇悜鍫㈠姍閻炲喛绱欑槐顐︾拨婵傛垹浼掓稉濠氼暯閿?
+		// 灵魂烈焰球（紫黑契灵主题??
 		world.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, cx, cy, cz, 80, 1.5, 1.5, 1.5, 0.15);
 		world.sendParticles(ParticleTypes.SCULK_SOUL, cx, cy, cz, 30, 1.2, 1.2, 1.2, 0.1);
 		world.sendParticles(ParticleTypes.DRAGON_BREATH, cx, cy, cz, 40, 1.5, 0.8, 1.5, 0.05);
-		// AOE 鏉堝湱绱幐鍥┿仛閿? 閺嶇厧宕愬鍕噯閸ュ骞嗚ぐ銏㈢煈鐎涙劧绱?
+		// AOE 边缘指示?? 格半径周围环形粒子??
 		double aoeR = 3.0;
 		for (int i = 0; i < 32; i++) {
 			double a = i * Math.PI * 2.0 / 32.0;
@@ -238,16 +238,16 @@ public final class MancianimaPrimary {
 				SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0f, 1.0f);
 		world.playSound(null, target.getX(), target.getY(), target.getZ(),
 				SoundEvents.WITHER_BREAK_BLOCK, SoundSource.PLAYERS, 0.8f, 0.8f);
-		// 姒瑦灏熺紙鍛寸叾閺佸牞绱版禒?marker 娑撹桨鑵戣箛鍐ㄧ畭閹绢叏绱濆〒鍙夌厠閳ユ粍鏌€閺夆偓閳ユ繃鐨靛?
+		// 龙振翅音效：?marker 为中心广播，渲染“斩杀”气?
 		world.playSound(null, marker.getX(), marker.getY(), marker.getZ(),
 				SoundEvents.ENDER_DRAGON_FLAP, SoundSource.PLAYERS, 1.2f, 0.8f);
 		// 閹存劕濮?CD +15s
 		github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.force(marker, SKILL_ID,
 				github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.remaining(marker, SKILL_ID)
 						+ github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.extra(marker, SKILL_ID, "channel_success"));
-		// 閺傗晜娼冪€瑰本鍨氶敍姘乘夊?mana 閼充粙鍣?
+		// 斩杀完成：补?mana 能??
 		github.com.gengyoubo.sscfa.compat.ManaUtils.setPlayerMana(marker, github.com.gengyoubo.sscfa.compat.ManaUtils.getPlayerMaxMana(marker));
-		// 缁俱垺鐖ｆ担鍨嚒鏉堢偓鍨?閳?濞撳懘娅庨敍鍫濆嚒闁姵鍨氭导銈咁唺閿涘矁绻橀崗銉ょ瑓娑撯偓鏉烆噯绱?
+		// 红标使命达????清除（已造成伤害，进入下一轮??
 		MancianimaMarkManager.clearMark(world.getServer(), marker.getUUID());
 	}
 
@@ -262,22 +262,22 @@ public final class MancianimaPrimary {
 		PowerUtils.setResourceValueAndSync(player, MANA_REGEN_PAUSE_RES, BAL.i("mana_regen_pause_ticks", MANA_REGEN_PAUSE_TICKS));
 	}
 
-	/** 閺嶅洩顔囨径杈Е閹绘劗銇氶棅绛圭礄娴?marker 閼奉亜绻侀崥顒€鍩岄敍宀€绮烘稉鈧弽鐓庣础閿?*/
+	/** 标记失败提示音（??marker 自己听到，统一格式??*/
 	private static void playMarkFailSound(ServerPlayer player) {
 		MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.FIRE_EXTINGUISH, 0.7f, 1.0f);
 		MancianimaMarkManager.playSoundToPlayer(player, SoundEvents.NOTE_BLOCK_BASS.value(), 0.5f, 0.6f);
 	}
 
-	/** 閸戝棙妲﹂柨銉ヨ埌缁便垺鏅敍姘躬閸撳秵鏌?5鎼达箒瀵栭崶鏉戝敶鐎电粯澹橀張鈧潻鎴犳畱閸欘垱鐖ｇ拋鎵窗閺嶅洢鈧?*/
+	/** 准星锥形索敌：在前??5度范围内寻找最近的可标记目标??*/
 	private static LivingEntity raycastLiving(ServerPlayer player, double maxRange) {
 		Vec3 eye = player.getEyePosition();
 		Vec3 look = player.getLookAngle().normalize();
 		ServerLevel world = (ServerLevel) player.level();
 
-		// 15鎺?闁裤儱鑸伴崡濠咁潡閻ㄥ嫪缍戝锕傛閸婄》绱檆os(7.5鎺?閿?
+		// 15??锥形半角的余弦阈值（cos(7.5????
 		double cosHalfAngle = Math.cos(Math.toRadians(7.5));
 
-		// 闁裤儱鑸版潻婊咁伂閻愮櫢绱欓悽銊ょ艾閺嬪嫬缂撻幖婊呭偍閸栧懎娲块惄鎺炵礆
+		// 锥形远端点（用于构建搜索包围盒）
 		Vec3 end = eye.add(look.scale(maxRange));
 		double r = Math.max(0.5, maxRange * Math.tan(Math.toRadians(7.5)));
 		AABB searchBox = new AABB(eye, end).inflate(r);
@@ -289,18 +289,18 @@ public final class MancianimaPrimary {
 			if (!(e instanceof LivingEntity le) || !le.isAlive()) continue;
 			if (DomainManager.blocksTargeting(player, le)) continue;
 
-			// 閸欐牕鐤勬担鎾茶厬閻?
+			// 取实体中??
 			Vec3 entityCenter = le.position().add(0, le.getBbHeight() / 2.0, 0);
 			Vec3 toEntity = entityCenter.subtract(eye);
 			double dist = toEntity.length();
 			if (dist > maxRange) continue;
 
-			// 15鎼达箓鏁熻ぐ銏ｅ瘱閸ユ潙鍨界€规熬绱伴弬鐟版倻閸氭垿鍣烘稉搴ゎ潒缁惧灝銇欑憴?閳?7.5鎺?
+			// 15度锥形范围判定：方向向量与视线夹???7.5??
 			Vec3 toEntityNorm = toEntity.normalize();
 			double dot = look.dot(toEntityNorm);
 			if (dot < cosHalfAngle) continue;
 
-			// 鐟欏棝鍣归柆顔藉皡濡偓閺屻儻绱版禒搴ｆ簜閻稑鍩岀€圭偘缍嬫稉顓犲仯閸嬫艾鐨犵痪鍖＄礉閻妲搁崥锕侇潶閺傜懓娼￠幐鈥虫躬鐎圭偘缍嬮崜?
+			// 视野遮挡检查：从眼睛到实体中点做射线，看是否被方块挡在实体?
 			BlockHitResult blockHit = world.clip(new ClipContext(
 					eye, entityCenter,
 					ClipContext.Block.COLLIDER,
@@ -308,11 +308,11 @@ public final class MancianimaPrimary {
 					player));
 			if (blockHit.getType() != HitResult.Type.MISS) {
 				double blockDistSq = eye.distanceToSqr(blockHit.getLocation());
-				// 閺傜懓娼￠崨鎴掕厬閻愯鐦€圭偘缍嬫潻?閳?鐞氼偅鏌熼崸妤呬紕閹?
+				// 方块命中点比实体???被方块遮??
 				if (blockDistSq + 0.5 < dist * dist) continue;
 			}
 
-			// 鐠哄疇绻冮惂钘夋倳閸?
+			// 跳过白名??
 			if (WhitelistUtils.isProtected(player, le)) continue;
 
 			if (dist < bestDist) {
@@ -326,7 +326,7 @@ public final class MancianimaPrimary {
 	private static LivingEntity findLivingByUuid(ServerLevel world, java.util.UUID uuid) {
 		Entity e = world.getEntity(uuid);
 		if (e instanceof LivingEntity le) return le;
-		// 闁秴宸婚幍鈧張澶屾樊鎼?
+		// 遍历所有维??
 		if (world.getServer() != null) {
 			for (ServerLevel w : world.getServer().getAllLevels()) {
 				Entity en = w.getEntity(uuid);

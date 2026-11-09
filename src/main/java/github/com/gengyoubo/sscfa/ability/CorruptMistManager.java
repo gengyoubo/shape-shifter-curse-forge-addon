@@ -13,11 +13,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 閼垫劘娈屾稊瀣禈閹镐胶鐢婚崠鍝勭厵缂佹挾鐣婚敍鍧朼ckcooper閿涘本婀囬崝锛勵伂閺夊啫鈻夐敍澶堚偓鍌涚槨娑擃亝鏌﹀▔鏇♀偓鍛板殾婢舵矮绔撮崶銏ゆ禈
- * 閿涘牓鍣告径宥嗘煢閺€鎯у煕閺傛媽顩惄鏍电礆閿涘矂娴橀梾蹇旀煢濞夋洝鈧懐些閸旑煉绱欐禒銉︽煢濞夋洝鈧懍璐熼崷鍡楃妇閿涘鈧?
+ * 腐蚀之雾持续区域结算（jackcooper，服务端权威）。每个施法者至多一团雾
+ * （重复施放刷新覆盖），雾随施法者移动（以施法者为圆心）??
  *
- * <p>濮?INTERVAL tick 鐎靛綊娴橀崘鍛櫕娴滅尨绱版稉顓熺槰 I閿涘湧OISON_TICKS閿? 缂傛捇鈧?I閿?s閿涘绱?
- * 閻ц棄鎮曢崡鏇炲綀娣囨繃濮㈤惄顔界垼閸忓秴褰堥妴鍌涙焽缁炬寧绔婚悶鍡愨偓?/p>
+ * <p>??INTERVAL tick 对雾内敌人：中毒 I（POISON_TICKS?? 缓??I??s）??
+ * 白名单受保护目标免受。断线清理?/p>
  */
 public final class CorruptMistManager {
 	private static final List<Mist> MISTS = new ArrayList<>();
@@ -56,7 +56,7 @@ public final class CorruptMistManager {
 			this.ticksToNextPulse = intervalTicks;
 			this.level = level;
 			this.castId = castId;
-			int basePoisonTicks = github.com.gengyoubo.sscfa.spell.spells.CorruptMistSpell.poisonTicks(); // 鏉╂劘顢戦弮璺烘彥閻撗嗩嚢閸欐牭绱檚pells.corrupt_mist.poison_ticks閿?
+			int basePoisonTicks = github.com.gengyoubo.sscfa.spell.spells.CorruptMistSpell.poisonTicks(); // 运行时快照读取（spells.corrupt_mist.poison_ticks??
 			boolean venomAffinity = castId != null && github.com.gengyoubo.sscfa.util.FormUtils.isForm(
 					caster, github.com.gengyoubo.sscfa.util.FormIdentifiers.SPIDER_SALTICIDAE);
 			this.poisonTicks = github.com.gengyoubo.sscfa.spell.research.RuneCastContext.current().duration((castId == null ? basePoisonTicks
@@ -75,7 +75,7 @@ public final class CorruptMistManager {
 			Iterator<Mist> it = MISTS.iterator();
 			while (it.hasNext()) {
 				Mist mist = it.next();
-				// 閺傝姤纭堕懓鍛瀲缁?鐞氼偆些闂?閳?闂嗙偓绉烽弫锝忕礄DISCONNECT 瀹告彃鍘规惔鏇礉鏉╂瑩鍣烽梼鍙夊壈婢舵牕绱╅悽顭掔礆
+				// 施法者离??被移????雾消散（DISCONNECT 已兜底，这里防意外引用）
 				if (mist.caster.isRemoved() || !mist.caster.isAlive()) {
 					ParametricVisuals.stop(mist.visualId, ParametricVisuals.Kind.CORRUPT_MIST);
 					it.remove();
@@ -91,7 +91,7 @@ public final class CorruptMistManager {
 						mist.casterId, mist.caster.position(), true,
 						mist.caster.level().getGameTime() - (mist.durationTicks - mist.ticksRemaining),
 						mist.durationTicks, mist.visualExtent, mist.visualParams);
-				// 濮ｅ繗鐑︾紒鎾剁暬
+				// 每跳结算
 				if (--mist.ticksToNextPulse <= 0) {
 					mist.ticksToNextPulse = mist.intervalTicks;
 					pulse(mist);
@@ -102,7 +102,7 @@ public final class CorruptMistManager {
 				removeMist(handler.player.getUUID()));
 	}
 
-	/** 閺傝姤鏂?閸掗攱鏌婃稉鈧崶銏ゆ禈閿涘牆鎮撻弬鑺ョ《閼板懏妫梿鎹愵潶鐟曞棛娲婇敍澶堚偓?*/
+	/** 施??刷新一团雾（同施法者旧雾被覆盖）?*/
 	public static void start(ServerPlayer caster, double radius, int durationTicks,
 	                         int intervalTicks, int level, UUID castId) {
 		removeMist(caster.getUUID());
@@ -117,14 +117,14 @@ public final class CorruptMistManager {
 		});
 	}
 
-	/** 閸楁洝鐑︾紒鎾剁暬閿涙岸娴橀崘鍛櫕娴滆桨鑵戝В?+ 缂傛捇鈧噦绱欓惂钘夋倳閸楁洖鍘ら崣妤嬬幢L4+ 娑擃厽鐦?II閿涘鈧?*/
+	/** 单跳结算：雾内敌人中?+ 缓速（白名单免受；L4+ 中??II）??*/
 	private static void pulse(Mist mist) {
 		if (!(mist.caster.level() instanceof ServerLevel serverWorld)) {
 			return;
 		}
-		// 妤傛鐡戠痪褎鐦ㄩ弴瀛樼箒閿涙瓈4+ 娑擃厽鐦?II閿涘牏浼?濮楁瑥宓庢潪杈剧礆
+		// 高等级毒更深：L4+ 中??II（??橙卷轴）
 		int poisonAmplifier = mist.level >= 4 ? 1 : 0;
-		// 闂嗘崘鐑︾紓鎾烩偓鐕傜窗L5 閸?II 缁狙嶇礄2026-09-17 閻劍鍩涚€规氨顭堥敍?
+		// 雾跳缓速：L5 ??II 级（2026-09-17 用户定稿?
 		int slownessAmplifier = mist.level >= 5 ? 1 : 0;
 		List<LivingEntity> targets = serverWorld.getEntitiesOfClass(LivingEntity.class,
 				mist.caster.getBoundingBox().inflate(mist.radius), e -> e != mist.caster && e.isAlive());
@@ -132,7 +132,7 @@ public final class CorruptMistManager {
 			if (target.distanceTo(mist.caster) > mist.radius) {
 				continue;
 			}
-			// 妫板棗鐓欓梾鏃傤瀲閿涙氨娲伴弽鍥潶娴犺绔存０鍡楃厵婢规娊娈у鈧敍鍫滅瑢閺傝姤纭堕懓鍛瀻鐏炵偛鍞存径鏍电礆閳?娑撳秳鑵戝В鎺嶇瑝缂傛捇鈧?
+			// 领域隔离：目标被任一领域壳隔开（与施法者分属内外）??不中毒不缓??
 			if (github.com.gengyoubo.sscfa.spell.DomainManager.blocksTargeting(mist.caster, target)) {
 				continue;
 			}

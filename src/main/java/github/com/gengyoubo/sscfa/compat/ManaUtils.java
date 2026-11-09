@@ -3,7 +3,7 @@ package github.com.gengyoubo.sscfa.compat;
 import net.minecraft.world.entity.player.Player;
 import net.onixary.shapeShifterCurseForge.power.FormActivePowerService;
 
-/** 法力资源兼容层：映射到 Forge SSC 的 FormActivePowerService。 */
+/** 娉曞姏璧勬簮鍏煎灞傦細鏄犲皠鍒?Forge SSC 鐨?FormActivePowerService銆?*/
 public final class ManaUtils {
     private ManaUtils() {}
 
@@ -31,6 +31,10 @@ public final class ManaUtils {
         } else {
             FormActivePowerService.consumeMana(player, (float) (cur - clamped));
         }
+    }
+
+    public static String getPlayerManaTypeID(Player player) {
+        return "";
     }
 
     public static void gainPlayerMana(Player player, double amount) {

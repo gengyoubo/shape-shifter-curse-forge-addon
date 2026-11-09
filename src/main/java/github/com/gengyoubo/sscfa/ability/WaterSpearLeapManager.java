@@ -19,32 +19,32 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 杩涘寲缇庤タ铻堛€屾姇鎺锋按鐭涖€嶄富鎶€鑳斤紙sp_primary锛夆€斺€?鏈嶅姟绔姸鎬佹満銆?
+ * 进化美西螈「投掷水矛」主技能（sp_primary）—?服务端状态机?
  *
- * <p>鎸変富鎶€鑳介敭锛?b>涓嶅線鑳屽寘鏀句换浣曠墿鍝?/b>锛屼粎鍚屾銆岃搫鍔涗腑銆嶇姸鎬佺粰瀹㈡埛绔?鈫?
- * 鐢辨覆鏌?mixin 绾覆鏌撳湪鎵嬩笂鐢诲嚭 3D 姘寸煕妯″瀷 + 涓剧煕杩囪偐濮垮娍锛坽@code getArmPose}/绗竴浜虹О鐭╅樀 mixin锛?
- * 闈?{@code CustomModelData=1} 鎭掑畾 3D锛屼笉渚濊禆 vanilla銆屾鍦ㄤ娇鐢ㄧ墿鍝併€嶇姸鎬併€佷笉鍔ㄧ帺瀹惰儗鍖咃級銆?
- * 鍚屾椂鍐查噺鏂滃悗涓婅穬骞?b>鏃犻噸鍔涙偓娴?/b>锛涜搫鍔?1.35 绉掑悗鏈濆噯鏄熸姇鍑虹洿绾挎按鐭涖€?
- * 鐩村嚮 12 鐗╃悊 + 2 鏍煎崐寰?5 鐐?AOE锛岃€?6% 婀挎鼎搴︼紙18 air锛夛紝CD 8 绉掋€?/p>
+ * <p>按主技能键?b>不往背包放任何物?/b>，仅同步「蓄力中」状态给客户??
+ * 由渲?mixin 纯渲染在手上画出 3D 水矛模型 + 举矛过肩姿势（{@code getArmPose}/第一人称矩阵 mixin?
+ * ?{@code CustomModelData=1} 恒定 3D，不依赖 vanilla「正在使用物品」状态、不动玩家背包）?
+ * 同时冲量斜后上跃?b>无重力悬?/b>；蓄?1.35 秒后朝准星投出直线水矛?
+ * 直击 12 物理 + 2 格半?5 ?AOE，?6% 湿润度（18 air），CD 8 秒?/p>
  *
- * <p>闆惰儗鍖呮薄鏌擄細鍏ㄧ▼涓嶇敓鎴?鏇挎崲浠讳綍鐗╁搧锛屾姇鍑?/ 鍙栨秷 / 姝讳骸 / 褰㈡€佷涪澶?/ 鏂嚎 鍙渶鎭㈠閲嶅姏 + 缁撴潫娓叉煋銆?/p>
+ * <p>零背包污染：全程不生?替换任何物品，投?/ 取消 / 死亡 / 形态丢?/ 断线 只需恢复重力 + 结束渲染?/p>
  */
 public final class WaterSpearLeapManager {
 
-	// 浠ヤ笅鍧囦负榛樿鍊硷紱杩愯鏃朵粠 balance 蹇収璇诲彇锛坅bilities.water_spear_leap锛?
-	private static final int CHARGE_TICKS = 27;    // 钃勫姏 ~1.35 绉掑悗鎶曠煕
-	// CD锛? 绉掞級鐢辩粺涓€鍐峰嵈鏈嶅姟 + power JSON 閰嶇疆绠＄悊锛屽師 CD_TICKS 甯搁噺宸插垹
+	// 以下均为默认值；运行时从 balance 快照读取（abilities.water_spear_leap?
+	private static final int CHARGE_TICKS = 27;    // 蓄力 ~1.35 秒后投矛
+	// CD? 秒）由统一冷却服务 + power JSON 配置管理，原 CD_TICKS 常量已删
 	private static final int AIR_COST = 18;        // 6% 婀挎鼎搴?
-	private static final double LEAP_BACK = 0.80;  // 璧疯穬鍚戝悗鍐查噺锛堟洿鏂滃悗锛?
-	private static final double LEAP_UP = 0.62;    // 璧疯穬鍚戜笂鍐查噺锛堣烦鏇撮珮锛?
-	private static final double DECAY = 0.80;       // 姣?tick 閫熷害琛板噺锛堢紦鍏ョ紦鍑?+ 鏀舵潫鍒版偓娴級
+	private static final double LEAP_BACK = 0.80;  // 起跃向后冲量（更斜后?
+	private static final double LEAP_UP = 0.62;    // 起跃向上冲量（跳更高?
+	private static final double DECAY = 0.80;       // ?tick 速度衰减（缓入缓?+ 收束到悬浮）
 
-	/** balance 蹇収璇诲彇锛堝揩鐓ф湭鍒濆鍖栧洖閫€榛樿甯搁噺锛?*/
+	/** balance 快照读取（快照未初始化回退默认常量?*/
 	private static final BalanceReader BAL = new BalanceReader("abilities.water_spear_leap");
-	/** 缁熶竴鍐峰嵈鏈嶅姟鐨勭ǔ瀹氭妧鑳?ID锛堢綉缁滃寘瑙﹀彂鍨嬶級銆?*/
+	/** 统一冷却服务的稳定技?ID（网络包触发型）?*/
 	private static final String SKILL_ID = "my_addon:form_upgrade_axolotl_water_spear";
 
-	/** HUD 闂ㄦ鍚屾簮锛氭按鐭涚┖姘旀秷鑰楋紙balance 鍙皟锛汬UD 灞曠ず鐢級銆?*/
+	/** HUD 门槛同源：水矛空气消耗（balance 可调；HUD 展示用）?*/
 	public static int airCostForHud() { return BAL.i("air_cost", AIR_COST); }
 	public static int airCostForHud(Player player) { return UpgradeAxolotlPerks.spearAirCost(player, airCostForHud()); }
 
@@ -58,15 +58,15 @@ public final class WaterSpearLeapManager {
 	private WaterSpearLeapManager() {
 	}
 
-	/** 瀹㈡埛绔寜涓绘妧鑳介敭锛堟棤 payload锛夈€傛湇鍔＄鏍￠獙銆佹崲姘寸煕骞惰捣璺冩偓娴€?*/
+	/** 客户端按主技能键（无 payload）。服务端校验、换水矛并起跃悬浮?*/
 	public static void onKeyPress(ServerPlayer player) {
 		if (github.com.gengyoubo.sscfa.util.AbilityUseGuard.blocked(player)) return;
-		if (STATES.containsKey(player.getUUID())) return; // 鏂芥硶涓笉鍙噸鍏?
+		if (STATES.containsKey(player.getUUID())) return; // 施法中不可重?
 		if (!FormUtils.isUpgradeAxolotl(player)) return;
 		if (!RegEvolutionComponent.EVOLUTION.get(player).isUnlocked(AxolotlTree.NODE_WATER_SPEAR)) return;
 		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.ready(player, SKILL_ID)) return; // CD 涓?
 		int airCost = airCostForHud(player);
-		if (player.getAirSupply() < airCost) return; // 婀挎鼎搴︿笉瓒?
+		if (player.getAirSupply() < airCost) return; // 湿润度不?
 		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.begin(player, SKILL_ID)) return;
 
 		player.setAirSupply(player.getAirSupply() - airCost);
@@ -75,10 +75,10 @@ public final class WaterSpearLeapManager {
         s.castId = github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.currentCastId(player, SKILL_ID);
 		STATES.put(player.getUUID(), s);
 
-		// 鍚屾銆岃搫鍔涗腑銆嶁啋 瀹㈡埛绔函娓叉煋锛氭墜涓婃覆鏌?3D 姘寸煕妯″瀷锛堜笉寰€鑳屽寘鏀句换浣曠墿鍝侊級+ 涓剧煕杩囪偐濮垮娍
+		// 同步「蓄力中」→ 客户端纯渲染：手上渲?3D 水矛模型（不往背包放任何物品）+ 举矛过肩姿势
 		SscAddonNetworking.syncSpearChargeState(player, true);
 
-		// 鏃犻噸鍔?+ 涓€娆℃€у啿閲忔枩鍚庝笂璺冿紙瑙嗙嚎鍙嶆柟鍚?+ 涓婏級锛岄殢鍚庤“鍑忓埌绌轰腑鎮诞
+		// 无重?+ 一次性冲量斜后上跃（视线反方?+ 上），随后衰减到空中悬浮
 		PlayerGravityLease.acquire(player, SKILL_ID);
 		Vec3 look = player.getLookAngle();
 		double leapBack = BAL.d("leap_back", LEAP_BACK);
@@ -91,7 +91,7 @@ public final class WaterSpearLeapManager {
 		player.fallDistance = 0.0f;
 
 		ServerLevel sw = (ServerLevel) player.level();
-		// 璧锋墜钃勫姏闊虫晥锛氭捣鏅舵牳婵€娲伙紙榄旀硶姘存秾锛岄煶閲忔媺澶у仛鏄庢樉锛? 楂橀€熸按鑺?+ 缇庤タ铻堝叆姘达紙鍏ㄥ憳鍙椈 null锛?
+		// 起手蓄力音效：海晶核激活（魔法水涌，音量拉大做明显? 高速水?+ 美西螈入水（全员可闻 null?
 		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.CONDUIT_ACTIVATE, SoundSource.PLAYERS, 2.0f, 1.2f);
 		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -102,12 +102,12 @@ public final class WaterSpearLeapManager {
 				30, 0.4, 0.2, 0.4, 0.3);
 	}
 
-	/** 姣忔湇鍔＄ tick 瀵规瘡涓湪绾跨帺瀹惰皟鐢ㄣ€?*/
+	/** 每服务端 tick 对每个在线玩家调用?*/
 	public static void tick(ServerPlayer player) {
 		LeapState s = STATES.get(player.getUUID());
 		if (s == null) return;
 		if (player.isDeadOrDying() || !FormUtils.isUpgradeAxolotl(player)) {
-			cancel(player); // 姝讳骸 / 褰㈡€佷涪澶?鈫?鍙栨秷骞跺綊杩樼墿鍝併€佹仮澶嶉噸鍔?
+			cancel(player); // 死亡 / 形态丢??取消并归还物品、恢复重?
 			return;
 		}
 		s.tick++;
@@ -116,7 +116,7 @@ public final class WaterSpearLeapManager {
 		double decay = BAL.d("decay", DECAY);
 
 		if (s.tick < chargeTicks) {
-			// 鏃犻噸鍔涗笅閫熷害琛板噺锛氳捣璺冨啿閲忓钩婊戞敹鏉熷埌 0 鈫?璺冭捣鍚庢偓娴湪绌轰腑锛堜笉钀斤級
+			// 无重力下速度衰减：起跃冲量平滑收束到 0 ?跃起后悬浮在空中（不落）
 			Vec3 v = player.getDeltaMovement();
 			player.setDeltaMovement(v.x * decay, v.y * decay, v.z * decay);
 			player.hurtMarked = true;
@@ -125,7 +125,7 @@ public final class WaterSpearLeapManager {
 				github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(sw, player, ParticleTypes.FALLING_WATER, player.getX(), player.getY() + 1.0, player.getZ(),
 						6, 0.4, 0.4, 0.4, 0.0);
 			}
-			// 钃勫姏闊虫晥锛氭瘡 5 tick 涓€澹颁笂鍗囨皵娉★紙闊宠皟闅忚搫鍔涜繘搴?0.8鈫?.7锛岃惀閫犺兘閲忚仛闆嗘劅锛?
+			// 蓄力音效：每 5 tick 一声上升气泡（音调随蓄力进?0.8?.7，营造能量聚集感?
 			if (s.tick % 5 == 0) {
 				float progress = (float) s.tick / (float) chargeTicks;
 				float pitch = 0.8f + progress * 0.9f;
@@ -134,19 +134,19 @@ public final class WaterSpearLeapManager {
 				sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 						SoundEvents.GENERIC_SPLASH, SoundSource.PLAYERS, 0.35f, pitch);
 			}
-			// 钃勬弧鍓嶇灛闂达紙鏈€鍚?3 tick锛夛細娴锋櫠鏍哥煭楦ｆ彁绀恒€屽嵆灏嗘姇鍑恒€?
+			// 蓄满前瞬间（最?3 tick）：海晶核短鸣提示「即将投出?
 			if (s.tick == chargeTicks - 3) {
 				sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 						SoundEvents.CONDUIT_AMBIENT_SHORT, SoundSource.PLAYERS, 0.9f, 1.4f);
 			}
 		} else {
-			// 鎶曠煕锛氭仮澶嶉噸鍔涖€佹湞鍑嗘槦鍙戝皠鐩寸嚎姘寸煕
+			// 投矛：恢复重力、朝准星发射直线水矛
 			throwSpear(player, s);
 			finish(player);
 		}
 	}
 
-	/** 鏈濆噯鏄熸柟鍚戞姇鍑虹洿绾挎按鐭涖€?*/
+	/** 朝准星方向投出直线水矛?*/
 	private static void throwSpear(ServerPlayer player, LeapState s) {
 		ServerLevel sw = (ServerLevel) player.level();
 		Vec3 dir = player.getLookAngle().normalize();
@@ -154,15 +154,15 @@ public final class WaterSpearLeapManager {
 		spear.setPos(player.getX() + dir.x * 0.6, player.getEyeY() - 0.1 + dir.y * 0.6, player.getZ() + dir.z * 0.6);
 		spear.shoot(dir.x, dir.y, dir.z, 1.5f, 0.0f);
 		sw.addFreshEntity(spear);
-		// 涓?swingHand锛氫笌 vanilla 姘寸煕锛堜笁鍙夋垷锛夋姇鎺蜂竴鑷粹€斺€旂煕浠庝妇鐭涜搫鍔涘Э鍔跨洿鎺ラ鍑恒€佹墜鑷傝惤鍥炴甯革紝
-		// 鑰岄潪鏅€氭敾鍑绘尌鎵嬶紙TridentItem.onStoppedUsing 鍚屾牱涓嶆尌鎵嬶級銆?
+		// ?swingHand：与 vanilla 水矛（三叉戟）投掷一致——矛从举矛蓄力姿势直接飞出、手臂落回正常，
+		// 而非普通攻击挥手（TridentItem.onStoppedUsing 同样不挥手）?
 		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.TRIDENT_THROW, SoundSource.PLAYERS, 1.2f, 1.1f);
 		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.PLAYER_SPLASH, SoundSource.PLAYERS, 1.0f, 0.9f);
 	}
 
-	/** 鎶曠煕瀹屾垚锛氭仮澶嶉噸鍔涖€佺粨鏉熻搫鍔涙覆鏌撱€佽繘鍏?CD锛堢粺涓€鏈嶅姟 on_release 缁撶畻锛夊苟娓呯悊鐘舵€併€?*/
+	/** 投矛完成：恢复重力、结束蓄力渲染、进?CD（统一服务 on_release 结算）并清理状态?*/
 	private static void finish(ServerPlayer player) {
         LeapState s = STATES.remove(player.getUUID());
         if (s == null) return;
@@ -171,7 +171,7 @@ public final class WaterSpearLeapManager {
 		github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.completed(player, SKILL_ID, s.castId);
 	}
 
-	/** 鍙栨秷锛堜笉杩?CD銆佷笉鎶曠煕锛夛細鎭㈠閲嶅姏銆佺粨鏉熻搫鍔涙覆鏌撱€?*/
+	/** 取消（不?CD、不投矛）：恢复重力、结束蓄力渲染?*/
 	public static void cancel(ServerPlayer player) {
 		LeapState s = STATES.remove(player.getUUID());
 		github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.cancelled(player, SKILL_ID, s == null ? -1 : s.castId);
@@ -181,12 +181,12 @@ public final class WaterSpearLeapManager {
 		}
 	}
 
-	/** 璇ョ帺瀹讹紙鎸?UUID锛夋槸鍚﹀浜庢姇鎺锋按鐭涜搫鍔涗腑锛堟湇鍔＄鏉冨▉锛岀敤浜庤搫鍔涙湡绂佺敤鍙抽敭浜や簰锛夈€?*/
+	/** 该玩家（?UUID）是否处于投掷水矛蓄力中（服务端权威，用于蓄力期禁用右键交互）?*/
 	public static boolean isCharging(java.util.UUID id) {
 		return STATES.containsKey(id);
 	}
 
-	/** 鏂嚎锛氭仮澶嶉噸鍔涘苟娓呯悊銆?*/
+	/** 断线：恢复重力并清理?*/
 	public static void onPlayerDisconnect(ServerPlayer player) {
         cancel(player);
 	}

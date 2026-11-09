@@ -30,20 +30,20 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 瀵勭敓鏋滆潬涓绘妧鑳姐€岀伒鏋滃瘎鐢熴€嶈惤鍦扮瀛愬湀绠＄悊鍣ㄣ€?
+ * 寄生果蝠主技能「灵果寄生」落地种子圈管理器?
  * <p>
- * 鎶曟幏鐗╂湭鍛戒腑鐢熺墿銆佽惤鍦版椂鐢熸垚涓€涓€岀伒鏋滅瀛愬湀銆嶏細鍦伴潰缁胯壊娣峰嚌鍦熸牳蹇冿紙block_marker 绮掑瓙锛屼笉鏀逛笘鐣屾柟鍧楋級
- * + 缁胯壊娌荤枟鐜矑瀛愶紙瀛?RC4 healing_crystal 骞剁豢鑹插寲锛夛紱鍗婂緞 1 鍐呬换鎰忕帺瀹惰蛋鍏ュ嵆鎷惧彇锛?
- * 鑾峰緱瀵勭敓鏁堟灉锛堟椂闀?= 鏈€澶ф椂闀?鈭?宸茶惤鍦版椂闀匡紝鐢辨柦娉曡€呮寔鏈夌殑 power 鏂藉姞锛屽弸/鏁屾灉瀹炶嚜鍔ㄥ垽瀹氾級锛?
- * 瀵垮懡鑰楀敖鎴栬鎷惧彇鍚庢秷澶憋紝娑堝け鏃跺柗缁胯壊绮掑瓙銆?
+ * 投掷物未命中生物、落地时生成一个「灵果种子圈」：地面绿色混凝土核心（block_marker 粒子，不改世界方块）
+ * + 绿色治疗环粒子（?RC4 healing_crystal 并绿色化）；半径 1 内任意玩家走入即拾取?
+ * 获得寄生效果（时?= 最大时??已落地时长，由施法者持有的 power 施加，友/敌果实自动判定）?
+ * 寿命耗尽或被拾取后消失，消失时喷绿色粒子?
  * <p>
- * 鎷惧彇鐢辨湇鍔＄鍒ゅ畾锛涙寔缁矑瀛愪笌鏍稿績鑷浆鐢卞鎴风鎸夋湇鍔＄鏃堕棿杞寸敓鎴愩€?
+ * 拾取由服务端判定；持续粒子与核心自转由客户端按服务端时间轴生成?
  */
 public final class ParasiticSeedFieldManager {
-    /** 鎷惧彇 / 娌荤枟鐜崐寰勶紙鏍硷級锛氶粯璁ゅ€硷紱杩愯鏃朵粠 balance 蹇収璇诲彇锛坅bilities.parasitic_seed_system锛?*/
+    /** 拾取 / 治疗环半径（格）：默认值；运行时从 balance 快照读取（abilities.parasitic_seed_system?*/
     public static final double FIELD_RADIUS = 1.0;
 
-    /** balance 蹇収璇诲彇锛堝揩鐓ф湭鍒濆鍖栧洖閫€榛樿甯搁噺锛?*/
+    /** balance 快照读取（快照未初始化回退默认常量?*/
     private static final BalanceReader BAL = new BalanceReader("abilities.parasitic_seed_system");
 
     private static final CopyOnWriteArrayList<SeedField> FIELDS = new CopyOnWriteArrayList<>();
@@ -86,10 +86,10 @@ public final class ParasiticSeedFieldManager {
         });
     }
 
-    /** 鎶曟幏鐗╄惤鍦版椂璋冪敤锛氬湪钀界偣鐢熸垚涓€涓伒鏋滅瀛愬湀锛屽鍛?= lifeTicks銆傚弻鐢熺鑽锋椂鏍稿績鍥炬爣涓哄弻鐢熺鑽枫€?*/
+    /** 投掷物落地时调用：在落点生成一个灵果种子圈，寿?= lifeTicks。双生种荷时核心图标为双生种荷?*/
     public static void spawnField(ServerPlayer caster, ServerLevel world, Vec3 pos, int lifeTicks, boolean twinPod) {
         long now = world.getGameTime();
-        // 鎮诞鐨勬牳蹇冨浘鏍囷紙small armor_stand 澶存埓锛屼豢 RC4 healing_crystal锛夛細鍙岀敓绉嶈嵎鏃朵负鍙岀敓绉嶈嵎锛屽惁鍒欑伀鎶婅姳绉嶅瓙
+        // 悬浮的核心图标（small armor_stand 头戴，仿 RC4 healing_crystal）：双生种荷时为双生种荷，否则火把花种子
         ArmorStand stand = new ArmorStand(world, pos.x, pos.y, pos.z);
         stand.setInvisible(true);
         stand.setNoGravity(true);
@@ -120,7 +120,7 @@ public final class ParasiticSeedFieldManager {
         for (SeedField f : FIELDS) {
             if (!f.worldKey.equals(world.dimension())) continue;
 
-            // 鍒版湡娑堝け + 缁胯壊绮掑瓙
+            // 到期消失 + 绿色粒子
             if (now >= f.endTick) {
                 killStand(world, f);
                 spawnDisappearParticles(world, f.pos);
@@ -128,13 +128,13 @@ public final class ParasiticSeedFieldManager {
                 continue;
             }
 
-            // 瑙嗚锛氱豢鑹叉贩鍑濆湡鏍稿績 + 鏃嬭浆缁胯壊娌荤枟鐜?
+            // 视觉：绿色混凝土核心 + 旋转绿色治疗?
             drawField(world, f, now);
 
-            // 鍗婂緞 1 鍐呬换鎰忓瓨娲荤敓鐗╄Е鍙戯紙鐜╁+鎬墿+鍔ㄧ墿锛屽弸/鏁屾灉鐢辩櫧鍚嶅崟鍒ゅ畾锛夛紱鎺掗櫎绉嶅瓙鍦?armor_stand銆?
-            // 鍏佽鏂芥硶鑰呮湰浜鸿Е鍙戯紙瀹㈡満鍙悆鑷繁绉嶅瓙锛夛紝浣嗛渶绉嶅瓙钀藉湴 鈮?0t 鍚庯紝閬垮厤鍒氭墧鍑鸿鑷繁绔嬪嵆韪╁彂
+            // 半径 1 内任意存活生物触发（玩家+怪物+动物，友/敌果由白名单判定）；排除种子?armor_stand?
+            // 允许施法者本人触发（客机可吃自己种子），但需种子落地 ?0t 后，避免刚扔出被自己立即踩发
             ServerPlayer caster = server.getPlayerList().getPlayer(f.casterUuid);
-            if (caster == null) continue;   // 鏂芥硶鑰呯绾垮垯淇濈暀绉嶅瓙鍦堬紝绛夊叾涓婄嚎鎴栬嚜鐒跺埌鏈?
+            if (caster == null) continue;   // 施法者离线则保留种子圈，等其上线或自然到?
             boolean casterArmed = now - f.spawnTick >= 10;
             double fieldRadius = BAL.d("field_radius", FIELD_RADIUS);
             AABB box = new AABB(f.pos.subtract(fieldRadius, fieldRadius, fieldRadius),
@@ -163,7 +163,7 @@ public final class ParasiticSeedFieldManager {
         }
     }
 
-    /** 缁胯壊娣峰嚌鍦熸牳蹇?+ 鏃嬭浆缁胯壊娌荤枟鐜紙瀛?RC4 healing_crystal 骞剁豢鑹插寲锛屽崐寰?1锛夈€?*/
+    /** 绿色混凝土核?+ 旋转绿色治疗环（?RC4 healing_crystal 并绿色化，半?1）?*/
     private static void drawField(ServerLevel world, SeedField f, long now) {
         Entity stand = world.getEntity(f.standUuid);
         if (stand != null) {
@@ -185,7 +185,7 @@ public final class ParasiticSeedFieldManager {
         world.sendParticles(ParticleTypes.HAPPY_VILLAGER, pos.x, pos.y + 0.2, pos.z, 10, 0.4, 0.3, 0.4, 0.0);
     }
 
-    /** 绉婚櫎绉嶅瓙鍦堢殑鎮诞鏂瑰潡 armor_stand銆?*/
+    /** 移除种子圈的悬浮方块 armor_stand?*/
     private static void killStand(ServerLevel world, SeedField f) {
         Entity stand = world.getEntity(f.standUuid);
         if (stand != null) stand.discard();

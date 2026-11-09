@@ -43,31 +43,31 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 濂戠伒琚姩琛屼负缁熶竴澶勭悊鍣紙鏈嶅姟绔級銆?
+ * 契灵被动行为统一处理器（服务端）?
  * 鑱岃矗锛?
- *  - mana 鑷劧鎭㈠ + 鍛ㄥ洿鍔帬鐢熺墿 bonus锛堟瘡 3s +min(count,5)锛?
- *  - 25% 姒傜巼鏉戝簞琚嚮浜嬩欢瑙﹀彂涓庡畬鎴愬鍔?
- *  - 鏉戞皯/鍟嗕汉閬鐏靛嚮鏉€鐨勭墿鍝佹帀钀?
- *  - 鏉戞皯/鍟嗕汉閫冭窇鍒ゅ畾锛堢櫧鍚嶅崟鍐呯殑濂戠伒涓嶄細鍚撹窇锛?
+ *  - mana 自然恢复 + 周围劫掠生物 bonus（每 3s +min(count,5)?
+ *  - 25% 概率村庄袭击事件触发与完成奖?
+ *  - 村民/商人遭契灵击杀的物品掉?
+ *  - 村民/商人逃跑判定（白名单内的契灵不会吓跑?
  *
- * 娉細鎶椾激鎭㈠ / 鎴樻枟鐘舵€?鐢?MancianimaMarkManager 澶勭悊锛?
- *     鑽按鍏嶇柅 鐢?form_familiar_fox_mancianima_no_buff_effect.json 澶勭悊銆?
+ * 注：抗伤恢复 / 战斗状??MancianimaMarkManager 处理?
+ *     药水免疫 ?form_familiar_fox_mancianima_no_buff_effect.json 处理?
  */
 public final class MancianimaPassive {
 	private MancianimaPassive() {}
 
 	private static final Map<UUID, AssaultData> ASSAULTS = new ConcurrentHashMap<>();
-	private static final long ASSAULT_ROLL_COOLDOWN = 24000L; // 1 MC 澶╁唴鍙兘琚嚮 1 娆★紙璺ㄩ噸鍚寔涔呭寲锛屼粎鍦ㄢ€滄垚鍔熷畬鎴愨€濆悗璁板叆锛?
-	private static final double ASSAULT_ABORT_DISTANCE_SQ = 96.0 * 96.0; // 瓒呰繃璧风偣 96 鏍煎垯涓
-	private static final int ASSAULT_PREPARE_TICKS = 200; // 璇绘潯 10s
+	private static final long ASSAULT_ROLL_COOLDOWN = 24000L; // 1 MC 天内只能袭击 1 次（跨重启持久化，仅在“成功完成”后记入?
+	private static final double ASSAULT_ABORT_DISTANCE_SQ = 96.0 * 96.0; // 超过起点 96 格则中止
+	private static final int ASSAULT_PREPARE_TICKS = 200; // 读条 10s
 	private static final int RAIDER_PILLAGER_COUNT = 4;
 	private static final int RAIDER_VINDICATOR_COUNT = 2;
-	private static final int RAIDER_LINGER_MIN_TICKS = 1200; // 琚嚮缁撴潫鍚庡湪鏉戝簞閫楃暀鏈€灏?1 鍒嗛挓
-	private static final int RAIDER_LINGER_MAX_TICKS = 6000; // 鏈€澶?5 鍒嗛挓
-	private static final int RAIDER_MARCH_DESPAWN_DISTANCE_SQ = 128 * 128; // 琛屽啗闃舵瓒呰繃 128 鏍兼棤鐜╁鍒欐竻鐞?
-	private static final int RAIDER_MARCH_DISTANCE = 200; // 琛屽啗鐩爣锛氳繙绂绘潙搴?200 鏍肩殑浣嶇疆
+	private static final int RAIDER_LINGER_MIN_TICKS = 1200; // 袭击结束后在村庄逗留最?1 分钟
+	private static final int RAIDER_LINGER_MAX_TICKS = 6000; // 最?5 分钟
+	private static final int RAIDER_MARCH_DESPAWN_DISTANCE_SQ = 128 * 128; // 行军阶段超过 128 格无玩家则清?
+	private static final int RAIDER_MARCH_DISTANCE = 200; // 行军目标：远离村?200 格的位置
 
-	/** 鍔帬鍐涢槦浼嶏細璺熻釜琚嚮 spawn 鍑虹殑 raider锛岃礋璐?linger 鈫?march 鈫?鑴遍€傚悗娓呯悊銆?*/
+	/** 劫掠军队伍：跟踪袭击 spawn 出的 raider，负?linger ?march ?脱适后清理?*/
 	private enum RaiderPhase { ACTIVE, LINGER, MARCH }
 	private static class RaiderGroup {
 		final Set<UUID> raiderUuids = ConcurrentHashMap.newKeySet();
@@ -80,46 +80,46 @@ public final class MancianimaPassive {
 			this.villageCenter = center;
 		}
 	}
-	/** key = 鐜╁ UUID锛堝悓涓€鐜╁鍚屾椂鍙兘鎷ユ湁涓€缁勫姭鎺犲啗锛夈€?*/
+	/** key = 玩家 UUID（同一玩家同时只能拥有一组劫掠军）?*/
 	private static final Map<UUID, RaiderGroup> RAIDER_GROUPS = new ConcurrentHashMap<>();
 
-	// 鈥滆鍚涗复鈥濊繕鍦ㄧ敓鏁堢殑鏉戞皯/鍟嗕汉 UUID + 涓婃鍒锋柊 tick
+	// “被君临”还在生效的村民/商人 UUID + 上次刷新 tick
 	private static final Map<UUID, Long> FLEE_AFFECTED = new ConcurrentHashMap<>();
 	private static final UUID MANCIANIMA_FEAR_SLOW_UUID = UUID.fromString("7f3e2c4a-3b16-4ad2-9d4d-2bf1d8a5d111");
 	private static final double FLEE_RADIUS = 12.0;
-	private static final int FLEE_LINGER_TICKS = 60; // 绂诲紑鍚?3s 鎵嶆竻闄?debuff
+	private static final int FLEE_LINGER_TICKS = 60; // 离开?3s 才清?debuff
 
 	private static final Random RNG = new Random();
 
 	public static void tick(ServerPlayer player) {
-		// 蹇€熻矾寰勶細琚嚮璇绘潯姣?tick 鎺ㄨ繘锛坆ossbar 鐧惧垎姣斿埛鏂伴渶瑕侊級锛屽厛鐢ㄥ粔浠?map 鏌ヨ鎷︽埅娲昏穬浼氳瘽锛?
-		// 鏃犳椿璺冭鍑绘椂鍏朵綑閫昏緫鍏ㄤ负鍛ㄦ湡鎬э紙%10/%60锛夛紝闄嶉鍒?%10 鍐嶅仛 CCA 褰㈡€佹煡璇紝
-		// 闈炲鐏电帺瀹舵瘡 tick 鍙姳涓€娆?isEmpty/鍙栦綑锛堝師姣?tick 閮借繃涓€娆″舰鎬佹煡璇級
+		// 快速路径：袭击读条?tick 推进（bossbar 百分比刷新需要），先用廉?map 查询拦截活跃会话?
+		// 无活跃袭击时其余逻辑全为周期性（%10/%60），降频?%10 再做 CCA 形态查询，
+		// 非契灵玩家每 tick 只花一?isEmpty/取余（原?tick 都过一次形态查询）
 		if (!ASSAULTS.isEmpty() && ASSAULTS.containsKey(player.getUUID())) {
 			tickAssaultPrepare(player);
 		}
 		if (player.tickCount % 10 != 0) return;
 		if (!FormUtils.isForm(player, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) return;
-		// 椹遍€冮€昏緫锛氭瘡 10t 妫€涓€娆★紝浣庡紑閿€
+		// 驱逃逻辑：每 10t 检一次，低开销
 		tickFlee(player);
-		// 琚嚮璇绘潯鎺ㄨ繘锛堟瘡 tick锛屾椿璺冧細璇濆凡鍦ㄤ笂鏂瑰揩閫熻矾寰勫鐞嗭級
-		// 琚嚮瓒呭嚭鑼冨洿妫€鏌ワ紙姣?20t锛?
+		// 袭击读条推进（每 tick，活跃会话已在上方快速路径处理）
+		// 袭击超出范围检查（?20t?
 		if (player.tickCount % 20 == 0) checkAssaultRange(player);
 		if (player.tickCount % 60 != 0) return;
-		// 1. mana 鍔帬 bonus锛堟瘡 3s锛?
+		// 1. mana 劫掠 bonus（每 3s?
 		int raiderCount = countNearbyRaiders(player, 10.0);
 		if (raiderCount > 0) {
 			github.com.gengyoubo.sscfa.compat.ManaUtils.gainPlayerMana(player, Math.min(raiderCount, 5));
 		}
-		// 2. 杩囨湡鍗歌浇椹遍€冧慨楗扮
+		// 2. 过期卸载驱逃修饰符
 		cleanupExpiredFlee(player.level().getGameTime());
 	}
 
-	/** 鏁烽紟琚嚮瑙﹀彂鍏ュ彛锛氭暦閽熷悗璋冪敤銆傝繑鍥炴槸鍚︽垚鍔熻Е鍙戙€?*/
+	/** 敷鼎袭击触发入口：敷钟后调用。返回是否成功触发?*/
 	public static boolean tryTriggerAssaultByBell(ServerPlayer player) {
 		if (!FormUtils.isForm(player, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) return false;
 		UUID pid = player.getUUID();
-		if (ASSAULTS.containsKey(pid)) return false; // 姝ｅ湪杩涜涓?
+		if (ASSAULTS.containsKey(pid)) return false; // 正在进行?
 		long now = player.level().getGameTime();
 		net.minecraft.server.MinecraftServer server = player.getServer();
 		MancianimaAssaultState state = server == null ? null : MancianimaAssaultState.get(server);
@@ -137,14 +137,14 @@ public final class MancianimaPassive {
 			player.displayClientMessage(Component.translatable("ssc_addon.mancianima.assault.no_villagers"), true);
 			return false;
 		}
-		// 浠呰嚜瀹氫箟琚嚮閫昏緫锛氫笉鏂藉姞 BAD_OMEN 涔熶笉鍙潵鍘熺増 raid锛岄伩鍏嶄笌鍘熺増琚嚮 bossbar 鍐茬獊
-		// 璁╅檮杩戦搧鍌€鍎′富鍔ㄨ拷鍑诲鐏?
+		// 仅自定义袭击逻辑：不施加 BAD_OMEN 也不召来原版 raid，避免与原版袭击 bossbar 冲突
+		// 让附近铁傀儡主动追击契?
 		for (IronGolem g : player.level().getEntitiesOfClass(IronGolem.class, markBox,
 				e -> e.isAlive() && !e.isRemoved())) {
 			g.setTarget(player);
 			g.setLastHurtByMob(player);
 		}
-		// 鍒涘缓璇绘潯 bossbar锛堥粍鑹诧紝10s鍚庡垏鎹负琚嚮 bossbar锛?
+		// 创建读条 bossbar（黄色，10s后切换为袭击 bossbar?
 		ServerBossEvent prepareBar = new ServerBossEvent(
 				Component.translatable("ssc_addon.mancianima.assault.preparing"),
 				BossEvent.BossBarColor.YELLOW, BossEvent.BossBarOverlay.PROGRESS);
@@ -154,7 +154,7 @@ public final class MancianimaPassive {
 				player.level().dimension().location(), player.position(), now);
 		data.prepareTicks = ASSAULT_PREPARE_TICKS;
 		ASSAULTS.put(pid, data);
-		// 娉細鍐峰嵈浠呭湪 onAssaultTargetDeath 琚嚮鎴愬姛瀹屾垚鍚庢墠璁板叆锛岃蛋杩?涓嬬嚎/閲嶅惎涓嶆壄鍐峰嵈
+		// 注：冷却仅在 onAssaultTargetDeath 袭击成功完成后才记入，走?下线/重启不扭冷却
 		player.displayClientMessage(Component.translatable("ssc_addon.mancianima.assault.preparing_msg", villagerTargets.size()), false);
 		if (player.level() instanceof ServerLevel sw) {
 			sw.playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -171,7 +171,7 @@ public final class MancianimaPassive {
 						&& (e instanceof Villager || e instanceof WanderingTrader));
 		for (AbstractVillager m : merchants) {
 			if (WhitelistUtils.isProtected(player, m)) continue;
-			// 绾€垫ⅵ鍚戦噺閫€閬?
+			// 纯逵梦向量退?
 			Vec3 away = m.position().subtract(player.position());
 			if (away.lengthSqr() < 1.0e-4) {
 				away = new Vec3(RNG.nextDouble() - 0.5, 0, RNG.nextDouble() - 0.5);
@@ -181,7 +181,7 @@ public final class MancianimaPassive {
 			if (m instanceof PathfinderMob) {
 				m.getNavigation().moveTo(target.x, m.getY(), target.z, 1.0);
 			}
-			// -25% 绉婚€燂紙涔樻硶淇グ锛屽箓绛夎　锛?
+			// -25% 移速（乘法修饰，幂等衡?
 			AttributeInstance attr = m.getAttribute(Attributes.MOVEMENT_SPEED);
 			if (attr != null && attr.getModifier(MANCIANIMA_FEAR_SLOW_UUID) == null) {
 				attr.addPermanentModifier(new AttributeModifier(MANCIANIMA_FEAR_SLOW_UUID,
@@ -192,7 +192,7 @@ public final class MancianimaPassive {
 		}
 	}
 
-	/** 瓒呰繃 linger 鏈埛鏂?鈫?绉婚櫎淇グ銆?*/
+	/** 超过 linger 未刷??移除修饰?*/
 	private static void cleanupExpiredFlee(long now) {
 		Iterator<Map.Entry<UUID, Long>> it = FLEE_AFFECTED.entrySet().iterator();
 		while (it.hasNext()) {
@@ -200,14 +200,14 @@ public final class MancianimaPassive {
 			if (now - e.getValue() <= FLEE_LINGER_TICKS) continue;
 			it.remove();
 		}
-		// 娉ㄦ剰锛歛ttr modifier 鐨勫疄闄呯Щ闄ら渶瑕佸湪 entity 瀛樺湪鏃舵墠鑳藉仛锛岀敱 onMerchantTickRemove 澶勭悊涓嶅彲琛屻€?
-		// 鏀逛负锛氫笅涓€杞?tickFlee 娌℃湁閲嶆柊鍔犲叆鏃讹紝渚濋潬涓嬮潰鐨?maybeRemoveFleeModifier 鍙嶅悜鎵弿銆?
+		// 注意：attr modifier 的实际移除需要在 entity 存在时才能做，由 onMerchantTickRemove 处理不可行?
+		// 改为：下一?tickFlee 没有重新加入时，依靠下面?maybeRemoveFleeModifier 反向扫描?
 	}
 
-	/** 澶栭儴璋冪敤锛堟瘡椹遍€?tick 鍚庯級锛氬涓嶅啀琚拷韪殑瀹炰綋绉婚櫎 modifier銆傝繖閲岀敱 SscAddon 姣忕鎵竴娆″叏涓栫晫涓嶇幇瀹烇紝
-	 * 	鏀逛负鍦?tickFlee 涓湪 +modifier 鍚屾椂璁板綍 last seen锛屾墜鍔ㄥ湪 LivingEntityTickEvent 涓鏌ャ€?
-	 * 	涓洪伩鍏嶉澶?mixin锛岃繖閲屾彁渚涗竴涓?static helper锛岀敱姝ｅ湪 tick 鐨勫晢浜鸿嚜宸辫皟鐢ㄣ€傘€傘€?
-	 * 	绠€鍖栵細杩欓噷涓嶄富鍔ㄥ嵏杞斤紱鏀圭敤 SscAddon 鏈嶅姟鍣?tick 涓皟鐢ㄤ笅闈㈢殑鏂规硶銆?*/
+	/** 外部调用（每驱?tick 后）：对不再被追踪的实体移除 modifier。这里由 SscAddon 每秒扫一次全世界不现实，
+	 * 	改为?tickFlee 中在 +modifier 同时记录 last seen，手动在 LivingEntityTickEvent 中检查?
+	 * 	为避免额?mixin，这里提供一?static helper，由正在 tick 的商人自己调用。。?
+	 * 	简化：这里不主动卸载；改用 SscAddon 服务?tick 中调用下面的方法?*/
 	public static void serverGlobalFleeCleanup(net.minecraft.server.MinecraftServer server) {
 		long now = server.overworld().getGameTime();
 		if (FLEE_AFFECTED.isEmpty()) return;
@@ -235,14 +235,14 @@ public final class MancianimaPassive {
 	private static class AssaultData {
 		final Set<UUID> targets;
 		final int initialCount;
-		ServerBossEvent bossBar; // 璇绘潯闃舵 = prepareBar锛泂pawn 鍚庡垏涓?mainBar
+		ServerBossEvent bossBar; // 读条阶段 = prepareBar；spawn 后切?mainBar
 		final net.minecraft.resources.ResourceLocation dimensionId;
 		final Vec3 origin;
-		int prepareTicks; // > 0 琛ㄧず璇绘潯涓紱鍒?0 鏃?spawn raider 骞跺垏鎹?bossbar
+		int prepareTicks; // > 0 表示读条中；?0 ?spawn raider 并切?bossbar
 		boolean raidersSpawned = false;
-		// 鈥斺€?绂诲紑/鏆傚仠鏈哄埗 鈥斺€?
-		boolean paused = false; // true锛氱帺瀹剁寮€鏉戝簞锛宐ossbar 鐏拌壊鏄剧ず
-		long expireTime;         // 瑙﹀彂鍚?24000 ticks锛堜竴鏃ワ級鍚庤嚜鍔ㄥけ璐?
+		// —?离开/暂停机制 —?
+		boolean paused = false; // true：玩家离开村庄，bossbar 灰色显示
+		long expireTime;         // 触发?24000 ticks（一日）后自动失?
 		AssaultData(Set<UUID> targets, ServerBossEvent bossBar,
 				net.minecraft.resources.ResourceLocation dimensionId, Vec3 origin, long startTime) {
 			this.targets = targets;
@@ -254,7 +254,7 @@ public final class MancianimaPassive {
 		}
 	}
 
-	/** 姣?tick 鎺ㄨ繘璇绘潯锛涘埌 0 鍒?spawn 鍔帬鍐涘苟鍒囨崲 涓?涓?bossbar銆?*/
+	/** ?tick 推进读条；到 0 ?spawn 劫掠军并切换 ??bossbar?*/
 	private static void tickAssaultPrepare(ServerPlayer player) {
 		AssaultData data = ASSAULTS.get(player.getUUID());
 		if (data == null || data.raidersSpawned) return;
@@ -263,7 +263,7 @@ public final class MancianimaPassive {
 			data.bossBar.setProgress(Math.max(0f, (float) data.prepareTicks / ASSAULT_PREPARE_TICKS));
 			return;
 		}
-		// 璇绘潯瀹屾垚锛氱Щ闄?prepareBar锛屽垱寤?main bossbar锛宻pawn raider
+		// 读条完成：移?prepareBar，创?main bossbar，spawn raider
 		data.bossBar.removeAllPlayers();
 		data.bossBar.setVisible(false);
 		ServerBossEvent mainBar = new ServerBossEvent(
@@ -281,14 +281,14 @@ public final class MancianimaPassive {
 		}
 	}
 
-	/** 浠ョ帺瀹堕潰鍚戜负鏂瑰悜锛屽湪闄勮繎鏉戝簞闆嗕細鐐瑰鍦堢敓鎴愬姭鎺犲啗锛涢殢鏈洪樀瀹癸紝甯︿竴闈笉绁ヤ箣鏃椼€?*/
+	/** 以玩家面向为方向，在附近村庄集会点外圈生成劫掠军；随机阵容，带一面不祥之旗?*/
 	private static void spawnRaiders(ServerPlayer player) {
 		if (!(player.level() instanceof ServerLevel world)) return;
 		BlockPos villageCenter = findVillageCenter(world, player);
 		BlockPos spawnPos = findRaiderSpawnPos(world, player, villageCenter);
 		RaiderGroup group = new RaiderGroup(world.dimension().location(), villageCenter);
 
-		// 闅忔満闃靛锛? Pillager + 2 Vindicator 涓哄熀纭€锛?0% 灏?1 鍙?Vindicator 鏇挎崲涓?Evoker锛?0% +1 Witch锛?0% +1 Ravager
+		// 随机阵容? Pillager + 2 Vindicator 为基础?0% ?1 ?Vindicator 替换?Evoker?0% +1 Witch?0% +1 Ravager
 		int pillagers = RAIDER_PILLAGER_COUNT;
 		int vindicators = RAIDER_VINDICATOR_COUNT;
 		int evokers = 0;
@@ -308,7 +308,7 @@ public final class MancianimaPassive {
 			p.setPersistenceRequired();
 			configureRaiderPatrol(p, villageCenter);
 			if (!leaderAssigned) {
-				// 棣栦綅 Pillager 甯︿笂涓嶇ゥ涔嬫棗浣滀负闃熼暱
+				// 首位 Pillager 带上不祥之旗作为队长
 				p.setPatrolLeader(true);
 				p.setItemSlot(EquipmentSlot.HEAD, Raid.getLeaderBannerInstance());
 				leaderAssigned = true;
@@ -363,7 +363,7 @@ public final class MancianimaPassive {
 
 		RAIDER_GROUPS.put(player.getUUID(), group);
 
-		// 鎻愮ず闄勮繎閾佸個鍎¤拷鍑荤帺瀹?
+		// 提示附近铁傀儡追击玩?
 		AABB markBox = player.getBoundingBox().inflate(64.0);
 		for (IronGolem g : world.getEntitiesOfClass(IronGolem.class, markBox,
 				e -> e.isAlive() && !e.isRemoved())) {
@@ -372,18 +372,18 @@ public final class MancianimaPassive {
 		}
 	}
 
-	/** 璁?raider 鍦ㄦ暣涓潙搴勮寖鍥村唴娲诲姩锛汸atrolEntity 璁?patrolTarget 骞舵縺娲诲贰閫?AI锛?
-	 *  璁╁姭鎺犺€呯湡姝ｆ湞鏉戝簞涓績绉诲姩鑰岄潪鍙湪鍑虹敓鐐瑰緲寰娿€?*/
+	/** ?raider 在整个村庄范围内活动；PatrolEntity ?patrolTarget 并激活巡?AI?
+	 *  让劫掠者真正朝村庄中心移动而非只在出生点徘徊?*/
 	private static void configureRaiderPatrol(net.minecraft.world.entity.monster.PatrollingMonster r, BlockPos center) {
-		// 鎶婃椿鍔ㄨ寖鍥存斁澶у埌 64 鏍硷紝瑕嗙洊鏁翠釜鏉戝簞锛汸atrolEntity 鍐呴儴 home 璺濈鍒ゅ畾涔熸嵁姝?
+		// 把活动范围放大到 64 格，覆盖整个村庄；PatrolEntity 内部 home 距离判定也据?
 		r.restrictTo(center, 64);
 		r.setPatrolTarget(center);
-		// 婵€娲诲贰閫?AI锛堥粯璁?patrolling=false锛孭atrolGoal 涓嶄細瑙﹀彂涓诲姩绉诲姩锛?
+		// 激活巡?AI（默?patrolling=false，PatrolGoal 不会触发主动移动?
 		((github.com.gengyoubo.sscfa.mixin.entity.PatrolEntityAccessor) r)
 				.invokeSetPatrolling(true);
 	}
 
-	/** 闈?PatrolEntity 鐨?raider锛圵itch / Evoker / Ravager锛夊彧闇€璁?home銆?*/
+	/** ?PatrolEntity ?raider（Witch / Evoker / Ravager）只需?home?*/
 	private static void configureRaiderHome(Mob m, BlockPos center, int range) {
 		m.restrictTo(center, range);
 	}
@@ -397,7 +397,7 @@ public final class MancianimaPassive {
 				.orElse(player.blockPosition());
 	}
 
-	/** 浠モ€滅帺瀹堕潰鍚戔€濅负鏂瑰悜鍦ㄦ潙搴勪腑蹇冨墠鏂?32 鏍间綅缃綔涓哄叆鍦虹偣锛涜繖鏍峰姭鎺犲啗浼氫粠鐜╁绉诲姩鏂瑰悜杩涙敾銆?*/
+	/** 以“玩家面向”为方向在村庄中心前?32 格位置作为入场点；这样劫掠军会从玩家移动方向进攻?*/
 	private static BlockPos findRaiderSpawnPos(ServerLevel world, ServerPlayer player, BlockPos villageCenter) {
 		Vec3 facing = player.getViewVector(1.0f);
 		double flatLen = Math.hypot(facing.x, facing.z);
@@ -422,24 +422,24 @@ public final class MancianimaPassive {
 			net.minecraft.world.level.block.state.BlockState belowState = world.getBlockState(below);
 			net.minecraft.world.level.block.state.BlockState atState = world.getBlockState(p);
 			net.minecraft.world.level.block.state.BlockState upState = world.getBlockState(p.above());
-			// 绔欑珛浣嶄笌涓婃柟蹇呴』涓虹┖姘旓紙閬垮厤鏂瑰潡鍐呴儴锛夛紝涓旈兘涓嶈兘鏄祦浣?
+			// 站立位与上方必须为空气（避免方块内部），且都不能是流?
 			if (!atState.isAir() || !upState.isAir()) continue;
 			if (!atState.getFluidState().isEmpty() || !upState.getFluidState().isEmpty()) continue;
-			// 鑴氫笅蹇呴』鏄浐浣撲笖涓嶆槸娴佷綋锛堟帓闄ゆ按闈?宀╂祮闈級
+			// 脚下必须是固体且不是流体（排除水?岩浆面）
 			if (!belowState.isRedstoneConductor(world, below)) continue;
 			if (!belowState.getFluidState().isEmpty()) continue;
 			return p;
 		}
-		// 鍏滃簳锛氬師濮嬩綅缃笂鏂?+ 1 鑷冲皯涓嶅湪鍦颁笅
+		// 兜底：原始位置上?+ 1 至少不在地下
 		return pos.above();
 	}
 
 	/**
-	 * 鐜╁璧板嚭琚嚮璧风偣杩囪繙鎴栬法缁村害锛氭殏鍋滆鍑汇€?
-	 * - 鏆傚仠鏃?bossbar 鍒囩伆鑹?(WHITE) 鏄剧ず"绂诲紑鍖哄煙"
-	 * - 鐜╁鍥炴潵 鈫?鑷姩鎭㈠ (鎭㈠ RED 棰滆壊, 鏄剧ず鍘?bossbar 鏂囨湰)
-	 * - 褰撳ぉ鍐?(24000 ticks) 鏈洖鏉?鈫?鏄剧ず"琚嚮澶辫触" 5 绉掑悗娓呯悊锛屽姭鎺犲啗 LINGER
-	 * 娉ㄦ剰锛氭殏鍋滄湡闂村姭鎺犲啗浠嶅湪鏀诲嚮鏉戞皯锛岃繘搴︿粛鍦ㄥ墠杩涳紝鐜╁鍥炴潵鏃朵細鐪嬪埌褰撳墠瀹為檯鍓╀綑鏉戞皯鏁般€?
+	 * 玩家走出袭击起点过远或跨维度：暂停袭击?
+	 * - 暂停?bossbar 切灰?(WHITE) 显示"离开区域"
+	 * - 玩家回来 ?自动恢复 (恢复 RED 颜色, 显示?bossbar 文本)
+	 * - 当天?(24000 ticks) 未回??显示"袭击失败" 5 秒后清理，劫掠军 LINGER
+	 * 注意：暂停期间劫掠军仍在攻击村民，进度仍在前进，玩家回来时会看到当前实际剩余村民数?
 	 */
 	private static void checkAssaultRange(ServerPlayer player) {
 		AssaultData data = ASSAULTS.get(player.getUUID());
@@ -450,7 +450,7 @@ public final class MancianimaPassive {
 		boolean outOfRange = differentDim || tooFar;
 
 		if (outOfRange) {
-			// 妫€鏌ヨ秴鏃讹紙涓€鏃ュ唴鏈洖 鈫?琚嚮澶辫触锛?
+			// 检查超时（一日内未回 ?袭击失败?
 			if (now > data.expireTime) {
 				data.bossBar.setColor(BossEvent.BossBarColor.WHITE);
 				data.bossBar.setName(Component.translatable("ssc_addon.mancianima.assault.failed"));
@@ -459,18 +459,18 @@ public final class MancianimaPassive {
 				data.bossBar.setVisible(false);
 				ASSAULTS.remove(player.getUUID());
 				player.displayClientMessage(Component.translatable("ssc_addon.mancianima.assault.failed_msg"), false);
-				// 鍔帬鍐涚户缁?LINGER 鈫?MARCH 鎾ょ
+				// 劫掠军继?LINGER ?MARCH 撤离
 				startLingerForGroup(player);
 				return;
 			}
-			// 杩涘叆鏆傚仠鐘舵€?
+			// 进入暂停状?
 			if (!data.paused) {
 				data.paused = true;
 				data.bossBar.setColor(BossEvent.BossBarColor.WHITE);
 				data.bossBar.setName(Component.translatable("ssc_addon.mancianima.assault.paused"));
 			}
 		} else {
-			// 鐜╁鍥炲埌鑼冨洿 鈫?鎭㈠
+			// 玩家回到范围 ?恢复
 			if (data.paused) {
 				data.paused = false;
 				if (data.raidersSpawned) {
@@ -487,7 +487,7 @@ public final class MancianimaPassive {
 		}
 	}
 
-	/** mob 姝讳骸鏃惰皟鐢細鑻ュ睘浜庢煇鐜╁鐨勮鍑荤洰鏍?鈫?绉婚櫎骞舵鏌ユ槸鍚﹀畬鎴愩€?*/
+	/** mob 死亡时调用：若属于某玩家的袭击目??移除并检查是否完成?*/
 	public static void onAssaultTargetDeath(LivingEntity dead) {
 		if (dead.level().isClientSide()) return;
 		UUID deadId = dead.getUUID();
@@ -496,26 +496,26 @@ public final class MancianimaPassive {
 			Map.Entry<UUID, AssaultData> e = it.next();
 			AssaultData data = e.getValue();
 			if (!data.targets.remove(deadId)) continue;
-			// 璇绘潯闃舵涓嶉€掑噺 bossbar锛堜絾浠嶄粠 targets 涓Щ闄わ紝閬垮厤閲嶅璁℃暟锛?
+			// 读条阶段不递减 bossbar（但仍从 targets 中移除，避免重复计数?
 			if (!data.raidersSpawned) continue;
-			// 鏇存柊 bossbar
+			// 更新 bossbar
 			int remaining = data.targets.size();
 			data.bossBar.setName(Component.translatable("ssc_addon.mancianima.assault.bossbar", remaining));
 			data.bossBar.setProgress(data.initialCount > 0 ? (float) remaining / data.initialCount : 0f);
 			if (remaining == 0) {
 				ServerPlayer p = dead.level().getServer() == null ? null
 						: dead.level().getServer().getPlayerList().getPlayer(e.getKey());
-				// 璺ㄧ淮搴﹂槻寰★細鑻ョ帺瀹朵笉鍦?dead 鎵€鍦ㄧ殑涓栫晫锛堟瘮濡傚凡浼犻€佽蛋锛夛紝涓嶅湪璇ヤ笘鐣岀粰濂栧姳/鎾煶锛?
-				// 浣嗕粛瑕佹竻闄よ鍑荤姸鎬侊紝閬垮厤鏁版嵁娈嬬暀
+				// 跨维度防御：若玩家不?dead 所在的世界（比如已传送走），不在该世界给奖励/播音?
+				// 但仍要清除袭击状态，避免数据残留
 				if (p != null && p.level() == dead.level()) {
-					// 琚嚮鎴愬姛瀹屾垚锛氬湪姝よ褰曞綋澶╁喎鍗达紙鎸佷箙鍖栵級
+					// 袭击成功完成：在此记录当天冷却（持久化）
 					net.minecraft.server.MinecraftServer srv = p.getServer();
 					if (srv != null) {
 						MancianimaAssaultState state = MancianimaAssaultState.get(srv);
 						state.lastRoll.put(p.getUUID(), p.level().getGameTime());
 						state.setDirty();
 					}
-					// 濂栧姳浠ュ疄浣撴帀钀界墿褰㈠紡鍑虹幇鍦ㄧ帺瀹?2 鏍煎崐寰勫唴锛堜笉鐩存帴杩涜儗鍖咃級
+					// 奖励以实体掉落物形式出现在玩?2 格半径内（不直接进背包）
 					dropAssaultRewards(p);
 					p.displayClientMessage(Component.translatable("ssc_addon.mancianima.assault.complete"), false);
 					if (p.level() instanceof ServerLevel sw) {
@@ -526,13 +526,13 @@ public final class MancianimaPassive {
 				data.bossBar.removeAllPlayers();
 				data.bossBar.setVisible(false);
 				it.remove();
-				// 琚嚮鎴愬姛鍚庡姭鎺犲啗杩涘叆 LINGER銆俴ey 涓虹帺瀹?UUID銆?
+				// 袭击成功后劫掠军进入 LINGER。key 为玩?UUID?
 				if (e.getKey() != null) startLingerForGroupByPlayerId(e.getKey(), dead.level() instanceof ServerLevel sw0 ? sw0 : null);
 			}
 		}
 	}
 
-	/** 鍦ㄧ帺瀹跺懆鍥?2 鏍煎崐寰勫唴浠ュ疄浣撻」鎺夎惤濂栧姳銆?*/
+	/** 在玩家周?2 格半径内以实体项掉落奖励?*/
 	private static void dropAssaultRewards(ServerPlayer p) {
 		dropAroundPlayer(p, new ItemStack(Items.EMERALD_BLOCK, 2));
 		dropAroundPlayer(p, new ItemStack(Items.TOTEM_OF_UNDYING, 1));
@@ -550,7 +550,7 @@ public final class MancianimaPassive {
 		p.level().addFreshEntity(ie);
 	}
 
-	/** 灏嗙帺瀹跺悕涓嬬殑 RaiderGroup 杞负 LINGER 闃舵銆?*/
+	/** 将玩家名下的 RaiderGroup 转为 LINGER 阶段?*/
 	private static void startLingerForGroup(ServerPlayer player) {
 		startLingerForGroupByPlayerId(player.getUUID(),
 				player.level() instanceof ServerLevel sw ? sw : null);
@@ -565,9 +565,9 @@ public final class MancianimaPassive {
 				+ RNG.nextInt(RAIDER_LINGER_MAX_TICKS - RAIDER_LINGER_MIN_TICKS);
 	}
 
-	/** 鏈嶅姟鍣ㄤ富绾跨▼瀹氭湡椹卞姩锛堝缓璁瘡绉掍竴娆★級銆傚鐞?RaiderGroup 鐨?LINGER 鈫?MARCH 鈫?鑴遍€傛竻鐞嗐€?*/
+	/** 服务器主线程定期驱动（建议每秒一次）。处?RaiderGroup ?LINGER ?MARCH ?脱适清理?*/
 	public static void tickRaiderGroups(net.minecraft.server.MinecraftServer server) {
-		// 鍏滃簳锛氭鏌ユ墍鏈夎繘琛屼腑琚嚮鏄惁宸茶秴鏃讹紙鐜╁涓嬬嚎鎯呭喌涓?checkAssaultRange 涓嶄細琚皟鐢級
+		// 兜底：检查所有进行中袭击是否已超时（玩家下线情况?checkAssaultRange 不会被调用）
 		if (!ASSAULTS.isEmpty()) {
 			ServerLevel ow = server.overworld();
 			long now = ow != null ? ow.getGameTime() : 0L;
@@ -591,7 +591,7 @@ public final class MancianimaPassive {
 			ServerLevel world = server.getLevel(net.minecraft.resources.ResourceKey.create(
 					net.minecraft.core.registries.Registries.DIMENSION, group.dimensionId));
 			if (world == null) { it.remove(); continue; }
-			// 鏀堕泦浠嶅瓨娲荤殑 raider 瀹炰綋
+			// 收集仍存活的 raider 实体
 			List<Mob> alive = new ArrayList<>();
 			Iterator<UUID> uit = group.raiderUuids.iterator();
 			while (uit.hasNext()) {
@@ -600,7 +600,7 @@ public final class MancianimaPassive {
 				if (ent instanceof Mob m && m.isAlive() && !m.isRemoved()) {
 					alive.add(m);
 				} else if (ent == null || ent.isRemoved()) {
-					// 瀹炰綋鍙兘鍦ㄦ湭鍔犺浇鍖哄潡锛涗繚鐣?UUID锛岀瓑鍖哄潡鍐嶆鍔犺浇鏃跺啀鍒?
+					// 实体可能在未加载区块；保?UUID，等区块再次加载时再?
 					if (ent == null) continue;
 					uit.remove();
 				}
@@ -608,17 +608,17 @@ public final class MancianimaPassive {
 			if (group.raiderUuids.isEmpty()) { it.remove(); continue; }
 			long now = world.getGameTime();
 			switch (group.phase) {
-				case ACTIVE -> { /* 鐢?onAssaultTargetDeath / abort 涓诲姩杞?LINGER */ }
+				case ACTIVE -> { /* ?onAssaultTargetDeath / abort 主动?LINGER */ }
 				case LINGER -> {
 					if (now >= group.phaseEndTime) {
-						// 杩涘叆 MARCH锛氶€変竴涓繙绂绘潙搴勬柟鍚?200 鏍肩殑 patrol 鐩爣
+						// 进入 MARCH：选一个远离村庄方?200 格的 patrol 目标
 						double ang = RNG.nextDouble() * Math.PI * 2;
 						BlockPos target = group.villageCenter.offset(
 								(int) (Math.cos(ang) * RAIDER_MARCH_DISTANCE), 0,
 								(int) (Math.sin(ang) * RAIDER_MARCH_DISTANCE));
 						group.phase = RaiderPhase.MARCH;
 						for (Mob m : alive) {
-							// 瑙ｉ櫎 home锛岃浠栦滑鑳界寮€鏉戝簞
+							// 解除 home，让他们能离开村庄
 							m.restrictTo(BlockPos.ZERO, -1);
 							if (m instanceof net.minecraft.world.entity.monster.PatrollingMonster pe) {
 								pe.setPatrolTarget(target);
@@ -627,7 +627,7 @@ public final class MancianimaPassive {
 					}
 				}
 				case MARCH -> {
-					// 妫€鏌ユ暣缁?raider 鏄惁閮戒笉鍦ㄤ换浣曠帺瀹?128 鏍间互鍐?鈫?鍏ㄥ憳娓呯悊
+					// 检查整?raider 是否都不在任何玩?128 格以??全员清理
 					boolean anyNearPlayer = false;
 					for (Mob m : alive) {
 						for (ServerPlayer sp : world.players()) {
@@ -647,7 +647,7 @@ public final class MancianimaPassive {
 		}
 	}
 
-	/** 鏉戞皯/鍟嗕汉姝讳骸鏃讹細濂戠伒鍑绘潃 鈫?鎺夎惤閮ㄥ垎鍙敭鍗栫墿鍝?+ 姒傜巼缁垮疂鐭炽€?*/
+	/** 村民/商人死亡时：契灵击杀 ?掉落部分可售卖物?+ 概率绿宝石?*/
 	public static void onMerchantKilledByMancianima(AbstractVillager merchant, ServerPlayer killer) {
 		MerchantOffers offers = merchant.getOffers();
 		boolean droppedSomething = false;
@@ -664,12 +664,12 @@ public final class MancianimaPassive {
 				droppedSomething = true;
 			}
 		}
-		// 鏃犱氦鏄撶殑鏉戞皯锛堟棤鑱屼笟/骞煎勾锛夊崰澶氭暟锛歠allback 鎺夌偣 base 鏉愭枡
+		// 无交易的村民（无职业/幼年）占多数：fallback 掉点 base 材料
 		if (!droppedSomething) {
 			merchant.spawnAtLocation(new ItemStack(Items.WHEAT, 1 + RNG.nextInt(3)));
 			merchant.spawnAtLocation(new ItemStack(Items.BREAD, 1 + RNG.nextInt(2)));
 		}
-		// 30% 棰濆缁垮疂鐭筹紙1-3锛?
+		// 30% 额外绿宝石（1-3?
 		if (RNG.nextDouble() < 0.30) {
 			merchant.spawnAtLocation(new ItemStack(Items.EMERALD, 1 + RNG.nextInt(3)));
 		}
@@ -683,17 +683,17 @@ public final class MancianimaPassive {
 			}
 		}
 		ASSAULTS.clear();
-		// LAST_ASSAULT_ROLL 宸茶縼绉诲埌 MancianimaAssaultState锛堟寔涔呭寲锛夛紝姝ゅ鏃犻渶娓呯┖
+		// LAST_ASSAULT_ROLL 已迁移到 MancianimaAssaultState（持久化），此处无需清空
 		FLEE_AFFECTED.clear();
-		// raider 缁勫湪 server 閲嶅惎鏃朵涪寮冭窡韪紙瀹炰綋鏈韩宸插甫 Persistent 鎸佷箙鍖栵級锛岄伩鍏嶆偓绌虹姸鎬?
+		// raider 组在 server 重启时丢弃跟踪（实体本身已带 Persistent 持久化），避免悬空状?
 		RAIDER_GROUPS.clear();
 	}
 
 	/**
-	 * 鍗曚釜鐜╁閫€鏈嶆椂娓呯悊涓庡叾缁戝畾鐨勫唴瀛樼姸鎬侊紝閬垮厤闀挎湡绱Н銆?
-	 * - 鎾ら攢 raid bossBar 鐨勭帺瀹惰闃呭苟娓呯┖ ASSAULTS 涓鐜╁鐨勬潯鐩紱
-	 * - 绔嬪嵆涓㈠純 RAIDER_GROUPS 涓鐜╁鐨?group 璺熻釜锛坮aider 瀹炰綋鏈韩宸叉寔涔呭寲锛屼笘鐣屼細缁х画淇濈暀锛夈€?
-	 * 娉ㄦ剰锛氭湰鏂规硶浠呮竻鍐呭瓨绱㈠紩锛屼笉浼氱Щ闄や笘鐣屼腑宸茬敓鎴愮殑 raider 瀹炰綋銆?
+	 * 单个玩家退服时清理与其绑定的内存状态，避免长期累积?
+	 * - 撤销 raid bossBar 的玩家订阅并清空 ASSAULTS 中该玩家的条目；
+	 * - 立即丢弃 RAIDER_GROUPS 中该玩家?group 跟踪（raider 实体本身已持久化，世界会继续保留）?
+	 * 注意：本方法仅清内存索引，不会移除世界中已生成的 raider 实体?
 	 */
 	public static void onPlayerDisconnect(UUID uuid) {
 		AssaultData data = ASSAULTS.remove(uuid);

@@ -10,9 +10,9 @@ import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * 寄生果蝠次要技能专属「中毒」buff。
- * 效果与原版中毒一致：周期性扣血（amplifier 越高越频繁，最低保留 1 血不致死），
- * 图标/名字复用原版中毒。
+ * 寄生果蝠次要技能专属「中毒」buff??
+ * 效果与原版中毒一致：周期性扣血（amplifier 越高越频繁，最低保??1 血不致死）??
+ * 图??名字复用原版中毒??
  */
 public class BatPoisonEffect extends MobEffect {
     public BatPoisonEffect() {

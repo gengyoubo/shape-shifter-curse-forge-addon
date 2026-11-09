@@ -8,7 +8,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
 public class StunEffect extends MobEffect {
-	// 固定 UUID：暴露为常量，供 SscAddon 的「孤儿修正兜底清理」按 UUID 精确移除残留。
+	// 固??UUID：暴露为常量，供 SscAddon 的「孤儿修正兜底清理」??UUID 精确移除残留??
 	public static final UUID SPEED_MODIFIER_UUID = UUID.fromString("7107DE5E-7CE8-4030-940E-514C1F160890");
 	public static final UUID ATTACK_MODIFIER_UUID = UUID.fromString("22653B89-116E-49DC-9B6B-9971489B5C0A");
 

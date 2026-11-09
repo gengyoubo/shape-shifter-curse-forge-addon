@@ -20,48 +20,48 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 閵嗗苯鍤弶鈧挧瀣厴閵嗗秶娈戦柌濠冩杹娓氀嶇礄SP娴ｅ潡鐡?/ 缁俱垹鐖奸拃鎴掑▏姒勬棑绱濋張宥呭缁旑垽绱氶妴?
+ * 「击杀赋能」的释放侧（SP使??/ 红堕落使魔，服务端）?
  *
- * <p>鐠у鍏樺┑鈧ú缁樻埂闂傚鏁遍崢鐔烘晸娑撹濮╅幎鈧懗钘夊弳閸欙絽婀張宥呭缁旑垶鈧瀚ㄦ稉?濞嗏剝濡ч懗鏂ょ窗
+ * <p>赋能激活期间由原生主动技能入口在服务端选择?次技能：
  * <ul>
- *   <li>娑撶粯濡ч懗?= 鐠у鍏橀悘顐ゅ箚閿涙艾鍙忛崨銊︽埂閸忓秷鎽戦敍灞肩瑢濮濓絽鐖堕悘顐ゅ箚娴滄帗鏋奸敍鍫㈠Ц閹焦婧€鐟?{@link #tryCastRing}閿涘鈧?/li>
- *   <li>濞嗏剝濡ч懗?= SP 閸氭劖浼呴幋?Red 閻忣偆鎮嗛敍姘帳閽冩縿鈧礁鍘ら弲顕€鈧艾鍠庨崡鎾櫞閺€鍙ョ濞喡扳偓?/li>
+ *   <li>主技?= 赋能火环：全周期免蓝，与正常火环互斥（状态机??{@link #tryCastRing}）??/li>
+ *   <li>次技?= SP 吐息?Red 火球：免蓝、免普通冷却释放一次?/li>
  * </ul>
- * 闁插﹥鏂侀崡铏Х閼版ぞ绔村▎陇绁撮懗鑺ユ簚娴兼熬绱濋悘顐ゅ箚閹镐胶鐢婚弮鍫曟？閻欘剛鐝涚拋锛勭暬閵?
+ * 释放即消耗一次赋能机会，火环持续时间独立计算??
  */
 public final class KillEmpowerCast {
 
 	private KillEmpowerCast() {}
 
-	// 鐠у鍏橀崥鎰紖閸欏倹鏆熼敍姘剁帛鐠併倓绗?power JSON 鐢瓕顫夐崥鎰紖娑撯偓閼疯揪绱? 閺?/ 6 娴?鑴抽棃鐐靛负鐎硅泛鈧秶宸?/ 閻忚偐鍎?5s閿涘绱辨潻鎰攽閺冩湹绮?balance 韫囶偆鍙庣拠璇插絿閿涘潊bilities.kill_empower_cast閿?
+	// 赋能吐息参数：默认??power JSON 常规吐息一致?? ??/ 6 ??×非玩家倍??/ 灼??5s）；运行时??balance 快照读取（abilities.kill_empower_cast??
 	private static final float BREATH_DISTANCE = 8.0f;
 	private static final float BREATH_DAMAGE = 6.0f;
-	private static final float BREATH_NON_PLAYER_MULT_SP = 3.0f;   // 姒涙顓婚敍姹糚娴ｅ潡鐡?閸氭劖浼呯€佃鈧亜鈧秶宸奸敍鍫滅瑢濮濓絽鐖堕悧?JSON 鑴? 鐎靛綊缍堥敍?
-	private static final float BREATH_NON_PLAYER_MULT_RED = 1.5f;  // 姒涙顓婚敍娑氬閸洝鎯?閸氭劖浼呯€佃鈧亜鈧秶宸奸敍鍫濇倱濠?鑴?.5閿?
+	private static final float BREATH_NON_PLAYER_MULT_SP = 3.0f;   // 默认；SP使??吐息对怪倍率（与正常?JSON ?? 对齐?
+	private static final float BREATH_NON_PLAYER_MULT_RED = 1.5f;  // 默认；红堕??吐息对怪倍率（同????.5??
 	private static final int BURN_DURATION = 100;
 
-	// 闂冭埖顔?5閿涙碍婀囬崝锛勵伂閺夊啫鈻夎箛顐ゅ弾鐠囪褰囬敍鍫濇彥閻撗勬弓閸掓繂顫愰崠鏍ф礀闁偓姒涙顓荤敮鎼佸櫤閿?
+	// 阶??5：服务端权威快照读取（快照未初始化回退默认常量??
 	private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL =
 			new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.kill_empower_cast");
 
-	/** 鐠у鍏橀悘顐ゅ箚娴笺倕顔婄捄绛圭礄KillEmpowerManager 濮?16t 鐠嬪啰鏁ゆ稉鈧▎鈽呯幢娑撳孩顒滅敮鍝ュ箚 effects_loop 閸氬矁濡總蹇撴倱閸楀﹤绶為敍澶堚偓?*/
+	/** 赋能火环伤害跳（KillEmpowerManager ??16t 调用一次；与正常环 effects_loop 同节奏同半径）?*/
 	public static void tickEmpowerRing(ServerPlayer player) {
 		ServerLevel world = (ServerLevel) player.level();
 		boolean redForm = FormUtils.isForm(player, FormIdentifiers.FAMILIAR_FOX_RED);
-		// 閽冩繄浼€閹躲倗顑佹穱顔筋劀閿涘牊鐦＄捄鍐茬杽閺冩儼顕伴崣鏍电礉閹?閹芥ê宓嗛弮鍓佹晸閺佸牞绱氶敍姘縺鐎?+4閵嗕浇瀵栭崶?-40%
+		// 蓝火护符修正（每跳实时读取，??摘即时生效）：伤??+4、范?-40%
 		boolean amulet = TrinketUtils.isWearing(player, github.com.gengyoubo.sscfa.init.AddonItems.BLUE_FIRE_AMULET.get());
 		final float base;
-		if (redForm) base = amulet ? 9.0f : 5.0f; else base = amulet ? 8.0f : 4.0f;	// Red 閻滎垰鐔€娴?5閳?閿涙奔P 閻滎垰鐔€娴?4閳?閿涘牊濮㈢粭?+4閿?
+		if (redForm) base = amulet ? 9.0f : 5.0f; else base = amulet ? 8.0f : 4.0f;	// Red 环基??5??；SP 环基??4??（护?+4??
 		final double ringRadius = amulet ? 3.6 : 6.0;
 		AABB box = player.getBoundingBox().inflate(ringRadius);
 		ResourceKey<DamageType> genericKey = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("minecraft", "generic"));
 		world.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive() && !e.isSpectator()).forEach(e -> {
 			if (WhitelistUtils.isProtected(player, e)) return;
 			if (player.distanceToSqr(e) > ringRadius * ringRadius) return;
-			float dmg = e instanceof net.minecraft.world.entity.player.Player ? base : base * 2.0f;	// 鐎靛綊娼悳鈺侇啀閿涘湤PC/閹亞澧块敍澹?
-			e.invulnerableTime = 0;	// 閸涙垝鑵戦崜宥嗙閿涙矮绗夌悮顐ｆ珮閺€缁樻￥閺佸苯鎶氶崥?
+			float dmg = e instanceof net.minecraft.world.entity.player.Player ? base : base * 2.0f;	// 对非玩家（NPC/怪物??
+			e.invulnerableTime = 0;	// 命中前清：不被普攻无敌帧?
 			if (e.hurt(new net.minecraft.world.damagesource.DamageSource(e.level().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE).getHolderOrThrow(genericKey), player, player), dmg)) {
-				e.invulnerableTime = 0;	// 閸涙垝鑵戦崥搴㈢閿涙矮绗夐悾娆愭￥閺佸苯鎶氶崣宥呮偠閺咁喗鏁?
+				e.invulnerableTime = 0;	// 命中后清：不留无敌帧反吞普??
 				e.addEffect(new MobEffectInstance(github.com.gengyoubo.sscfa.init.AddonEffects.FOX_FIRE_BURN.get(), redForm ? 80 : 60, 0), player);
 				KillEmpowerManager.trackBurn(player, e, redForm ? 80 : 60, false);
 				e.setRemainingFireTicks(redForm ? 80 : 60);
@@ -69,23 +69,23 @@ public final class KillEmpowerCast {
 		});
 	}
 
-	/** 閸掋倖鏌囧锝呯埗閻忣偆骞嗛敍鍫ユ姜鐠у鍏橀悳顖ょ礆閺勵垰鎯佸锝呮躬闁插﹥鏂侀敍姘劀鐢摜骞嗗鈧弮?toggle_state=1閿涙稖绁撮懗鐣屽箚娑撳秶鐤?toggle閵嗗倸顓归幋椋庮伂閸欘垵顕伴妴?*/
+	/** 判断正常火环（非赋能环）是否正在释放：正常环开?toggle_state=1；赋能环不??toggle。客户端可读?*/
 	public static boolean isNormalRingActive(net.minecraft.world.entity.player.Player player) {
 		boolean red = FormUtils.isForm(player, FormIdentifiers.FAMILIAR_FOX_RED);
-		// 4 娑?Identifier 娑撴椽娼ら幀浣哥埗闁?
+		// 4 ??Identifier 为静态常??
 		ResourceLocation toggleId = red ? TOGGLE_RED : TOGGLE_SP;
 		ResourceLocation amuletToggleId = red ? AMULET_TOGGLE_RED : AMULET_TOGGLE_SP;
 		return PowerUtils.getClientResourceValue(player, toggleId) == 1
 				|| PowerUtils.getClientResourceValue(player, amuletToggleId) == 1;
 	}
 
-	/** 閻忣偆骞?toggle 鐠у嫭绨?id 鐢悂鍣洪敍鍫㈠/SP 鑴?閺咁噣鈧?閹躲倗顑侀敍宀勪缉閸?HUD 濮ｅ繐鎶?new Identifier閿涘鈧?*/
+	/** 火??toggle 资??id 常量（红/SP ??普??护符，避??HUD 每??new Identifier）??*/
 	private static final ResourceLocation TOGGLE_SP = new ResourceLocation("my_addon", "form_familiar_fox_sp_blue_fire_ring_toggle_state");
 	private static final ResourceLocation TOGGLE_RED = new ResourceLocation("my_addon", "form_familiar_fox_red_blue_fire_ring_toggle_state");
 	private static final ResourceLocation AMULET_TOGGLE_SP = new ResourceLocation("my_addon", "form_familiar_fox_sp_blue_fire_ring_amulet_toggle_state");
 	private static final ResourceLocation AMULET_TOGGLE_RED = new ResourceLocation("my_addon", "form_familiar_fox_red_blue_fire_ring_amulet_toggle_state");
 
-	/** 鐎广垺鍩涚粩顖涘瘻娑撶粯濡ч懗浠嬫暛閿涘牐绁撮懗鑺モ偓渚婄礆閵嗗倽绻戦崶?true 鐞涖劎銇氬鎻掝槱閻炲棎鈧?*/
+	/** 客户端按主技能键（赋能态）。返?true 表示已处理??*/
 	public static boolean tryCastRing(ServerPlayer player) {
 		if (!KillEmpowerManager.isEmpowerForm(player)) return false;
 		KillEmpowerState state = KillEmpowerManager.readState(player);
@@ -102,7 +102,7 @@ public final class KillEmpowerCast {
 			return true;
 		}
 
-		// STATE_READY閿涙碍顒滅敮鍝ュ箚閿涘牆鎯堥幎銈囶儊閻滎垽绱氬鈧惈鈧?閳?閸忓牆鍙ч悳顖濈箻鐎电懓绨?CD閿涘牐绁撮懗鎴掔箽閻ｆ瑱绱濋柆顔惧兊娴犲秹娈ｉ挊蹇ョ礆閿涙稑鎯侀崚娆戞纯閹恒儱绱戠挧瀣厴閻?
+		// STATE_READY：正常环（含护符环）开????先关环进对??CD（赋能保留，遮罩仍隐藏）；否则直接开赋能??
 		boolean normalRingOn = player.hasEffect(github.com.gengyoubo.sscfa.init.AddonEffects.BLUE_FIRE_RING.get());
 		if (normalRingOn) {
 			player.removeEffect(github.com.gengyoubo.sscfa.init.AddonEffects.BLUE_FIRE_RING.get());
@@ -110,14 +110,14 @@ public final class KillEmpowerCast {
 			boolean amuletRingOn = PowerUtils.getResourceValue(player, new ResourceLocation("my_addon", ringPrefix + "_amulet_toggle_state")) == 1;
 			String ringPower = ringPrefix + (amuletRingOn ? "_amulet" : "");
 			PowerUtils.setResourceValueAndSync(player, new ResourceLocation("my_addon", ringPower + "_toggle_state"), 0);
-			// 閸忓啿鎽㈡總妤冨箚鐏忚鲸瀵滅拠銉т紑閻?JSON 閻?cooldown 鐠ч鐣?
+			// 关哪套环就按该火??JSON ??cooldown 起??
 			github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.completed(player, "my_addon:" + ringPower + "_key_activation");
 			world.playSound(null, player.getX(), player.getY(), player.getZ(),
 					SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.5f, 1.0f);
-			return true; // 閺堫剚顐奸幐澶愭暛閸欘亜鍙ч悳顖ょ幢鐠у鍏樻禒宥呮躬閿涘牅绗呭▎鈩冨瘻闁款喖绱戠挧瀣厴閻滎垽绱?
+			return true; // 本次按键只关环；赋能仍在（下次按键开赋能环??
 		}
 
-		// 閽冩繄浼€閹躲倗顑佹穱顔筋劀閿涙碍瀵旂紒顓熸闂?-15%閿涘牓鍣撮弨鍓х仜闂傜顕伴崣鏍电幢SP 232閳?97閵嗕阜ed 280閳?38閿?
+		// 蓝火护符修正：持续时??-15%（释放瞬间读取；SP 232??97、Red 280??38??
 		boolean amulet = TrinketUtils.isWearing(player, github.com.gengyoubo.sscfa.init.AddonItems.BLUE_FIRE_AMULET.get());
 		int fullRingTicks = redForm ? KillEmpowerManager.ringTicksRed() : KillEmpowerManager.ringTicksSp();
 		if (amulet) fullRingTicks = Math.round(fullRingTicks * 0.85f);
@@ -131,7 +131,7 @@ public final class KillEmpowerCast {
 		return true;
 	}
 
-	/** 鐎广垺鍩涚粩顖涘瘻濞嗏剝濡ч懗浠嬫暛閿涘牐绁撮懗鑺モ偓渚婄礆閵嗗倽绻戦崶?true 鐞涖劎銇氬鎻掝槱閻炲棴绱欑挧瀣厴閸氭劖浼呭鏌ュ櫞閺€鎾呯礆閵?*/
+	/** 客户端按次技能键（赋能态）。返?true 表示已处理（赋能吐息已释放）??*/
 	public static boolean tryCastBreath(ServerPlayer player) {
 		if (!KillEmpowerManager.isEmpowerForm(player)) return false;
 		KillEmpowerState state = KillEmpowerManager.readState(player);
@@ -139,7 +139,7 @@ public final class KillEmpowerCast {
 
 		ServerLevel world = (ServerLevel) player.level();
 		boolean redForm = FormUtils.isForm(player, FormIdentifiers.FAMILIAR_FOX_RED);
-		// balance 鏉╂劘顢戦弮璺哄棘閺佸府绱欓崥灞炬煙濞夋洖顦垮▎鈥插▏閻㈩煉绱濋崗鍫濆絿鐏炩偓闁劌褰夐柌蹇ョ礆
+		// balance 运行时参数（同方法多次使用，先取局部变量）
 		float nonPlayerMult = redForm
 				? (float) BAL.d("breath_mult_red", BREATH_NON_PLAYER_MULT_RED)
 				: (float) BAL.d("breath_mult_sp", BREATH_NON_PLAYER_MULT_SP);
@@ -148,7 +148,7 @@ public final class KillEmpowerCast {
 		float breathDamage = (float) BAL.d("breath_damage", BREATH_DAMAGE);
 		int burnDuration = BAL.i("burn_duration", BURN_DURATION);
 
-		// 濞戝牐鈧绁撮懗鏂ょ礄閺嶅洩顔囩挧瀣厴閸戠粯娼?閳?閺堫剚顐奸崥鎰紖閻ㄥ嫬鍤弶鈧稉宥埿曢崣鎴炴煀鐠у鍏橀敍?
+		// 消耗赋能（标记赋能击????本次吐息的击杀不触发新赋能?
 		KillEmpowerManager.writeState(player, state.consume());
 
 		if (redForm) {
@@ -160,7 +160,7 @@ public final class KillEmpowerCast {
 			return true;
 		}
 
-		// 閸忓秷鍨傞柌濠冩杹閿涙矮绗夐幍?mana閵嗕椒绗夊Λ鈧弻?CD/mana 閺夆€叉閿涙稑甯?CD 閼汇儱婀挧棰佺瑝閸欐濂栭崫宥忕礄娑撳秹鍣哥純顕嗙礆
+		// 免费释放：不?mana、不检?CD/mana 条件；??CD 若在走不受影响（不重置）
 		Vec3 eye = player.getEyePosition();
 		Vec3 look = player.getViewVector(1.0f);
 		ResourceKey<DamageType> magicKey = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("minecraft", "magic"));
@@ -170,9 +170,9 @@ public final class KillEmpowerCast {
 			Vec3 toT = t.position().add(0, t.getBbHeight() / 2.0, 0).subtract(eye).normalize();
 			if (look.dot(toT) > 0.8 && player.distanceToSqr(t) < breathDistSq) {
 				float dmg = t instanceof net.minecraft.world.entity.player.Player ? breathDamage : breathDamage * nonPlayerMult;
-				t.invulnerableTime = 0;	// 閸涙垝鑵戦崜宥嗙閿涙矮绗夌悮顐ｆ珮閺€缁樻￥閺佸苯鎶氶崥?
+				t.invulnerableTime = 0;	// 命中前清：不被普攻无敌帧?
 				if (t.hurt(new net.minecraft.world.damagesource.DamageSource(t.level().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE).getHolderOrThrow(magicKey), player, player), dmg)) {
-					t.invulnerableTime = 0;	// 閸涙垝鑵戦崥搴㈢閿涙矮绗夐悾娆愭￥閺佸苯鎶氶崣宥呮偠閺咁喗鏁?
+					t.invulnerableTime = 0;	// 命中后清：不留无敌帧反吞普??
 				t.addEffect(new MobEffectInstance(github.com.gengyoubo.sscfa.init.AddonEffects.FOX_FIRE_BURN.get(), burnDuration, 0), player);
 				KillEmpowerManager.trackBurn(player, t, burnDuration, false);
 					if (t instanceof github.com.gengyoubo.sscfa.util.SscIgnitedEntityAccessor acc) {
@@ -181,7 +181,7 @@ public final class KillEmpowerCast {
 				}
 			}
 		});
-		// 鐞涖劎骞囨径宥呭煝 power JSON閿涙艾澧犻弬鐟邦樋鐏炲倿鐡婇悘顐ょ煈鐎?+ 閻忣偆鍔欓崗鍛板厴/閻欐劗瀚洪崣顐︾叾閺?
+		// 表现复刻 power JSON：前方多层魂火粒??+ 火焰充能/狐狸叫音??
 		for (int d = 1; d <= 5; d++) {
 			double spread = 0.2 * d;
 			github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(world, player, ParticleTypes.SOUL_FIRE_FLAME,

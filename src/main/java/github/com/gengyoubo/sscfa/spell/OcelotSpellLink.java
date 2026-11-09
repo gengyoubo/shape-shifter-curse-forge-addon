@@ -2,7 +2,7 @@ package github.com.gengyoubo.sscfa.spell;
 
 import net.minecraft.server.level.ServerPlayer;
 
-/** 鐠炲湱灏楅敍鍫ヮ棑閻忕绱氳ぐ銏♀偓浣稿礂閸氬苯宕版担宥冣偓?*/
+/** 豹猫（风灵）形态协同占位?*/
 public final class OcelotSpellLink {
     public static java.util.function.Predicate<net.minecraft.world.entity.player.Player> clientReleaseLocked = player -> false;
     private OcelotSpellLink() {}

@@ -1,6 +1,8 @@
 package github.com.gengyoubo.sscfa.ability;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.UUID;
 
@@ -18,5 +20,11 @@ public final class AnubisWolfSpDeathDomain {
 
     public static boolean isEnhancedDomain(UUID owner) {
         return false;
+    }
+
+    public static void clearPlayer(ServerPlayer player) {
+    }
+
+    public static void removeLegacyHealthReduction(LivingEntity entity) {
     }
 }

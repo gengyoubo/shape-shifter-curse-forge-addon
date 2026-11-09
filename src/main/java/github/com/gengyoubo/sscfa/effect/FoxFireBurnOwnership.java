@@ -4,7 +4,7 @@ import github.com.gengyoubo.sscfa.util.SscIgnitedEntityAccessor;
 import net.minecraft.world.entity.LivingEntity;
 import java.util.UUID;
 
-/** 狐火归因：明确记录的最新 UUID 优先，离线不会退回历史施法者。 */
+/** 狐火归因：明确记录的最??UUID 优先，离线不会退回历史施法者??*/
 public record FoxFireBurnOwnership(UUID uuid, boolean recorded) {
     private static final String BURN_PREFIX = "ssc_burn:";
     private static final String UNOWNED = BURN_PREFIX + "unowned";
@@ -29,7 +29,7 @@ public record FoxFireBurnOwnership(UUID uuid, boolean recorded) {
             } catch (IllegalArgumentException ignored) {
                 continue;
             }
-            // 旧存档可能积累多个 UUID；无先后信息时不猜测归属。
+            // 旧存档可能积累多??UUID；无先后信息时不猜测归属??
             if (owner != null && !owner.equals(candidate)) return new FoxFireBurnOwnership(null, true);
             owner = candidate;
         }
@@ -39,7 +39,7 @@ public record FoxFireBurnOwnership(UUID uuid, boolean recorded) {
     public static void record(LivingEntity target, UUID owner) {
         target.getTags().removeIf(tag -> tag.startsWith(BURN_PREFIX));
         if (target instanceof SscIgnitedEntityAccessor accessor) accessor.sscAddon$setIgniterUuid(owner);
-        // 保留 ssc_owner: 召唤物归属；狐火只写自己的专属前缀。
+        // 保???ssc_owner: 召唤物归属；狐火只写自己的专属前缀??
         target.addTag(owner == null ? UNOWNED : BURN_PREFIX + owner);
     }
 }

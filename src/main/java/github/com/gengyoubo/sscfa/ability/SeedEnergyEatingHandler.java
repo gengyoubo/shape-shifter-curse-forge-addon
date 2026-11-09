@@ -25,18 +25,18 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * 瀵勭敓鏋滆潬褰㈡€佸悆绉嶅瓙鏈哄埗锛?
- *   1. 澶嶇敤鍘熺増 SSC 鐨?{@code shape-shifter-curse:custom_edible} power锛坒orm_bat_parasitic_fruit_seed_eat.json锛?
- *      鎶婄瀛愮墿鍝佹爣璁版垚鍙悆椋熺墿锛屽師鐗堝悆椋熺墿鍔ㄧ敾鎺ョ"鎸佺画绾?1.6 绉掕繘搴?鐨勮瑙夎〃鐜帮紱
- *   2. 鐜╁闈㈠鏂瑰潡鏃?BlockItem.useOnBlock 榛樿浼氳Е鍙戠妞嶏紱鏈被鐢?UseBlockCallback 鍦ㄧ帺瀹舵綔琛?+ 鎸佺瀛?+
- *      瀵勭敓鏋滆潬褰㈡€佹椂鐩存帴杞皟 ItemStack.use(...)锛岀粫杩囩妞嶈蛋椋熺墿鍒嗘敮锛?
- *   3. 瀹為檯"鍔犺兘閲?+ 鎺ㄩ厤棰?鍦?{@link #onSeedEaten(ServerPlayer, ItemStack)} 涓畬鎴愶紝鐢?
- *      LivingEntity.eatFood 鐨?mixin 鍦ㄥ悆椋熺墿瀹屾垚鏃惰皟鐢紱
- *   4. 閰嶉锛氭瘡 3 鍒嗛挓鏈€澶氬悆 8 棰楋紝瓒呴鏃剁孩瀛?actionBar 鎻愮ず涓斾笉杩涘叆鍚冮娴佺▼銆?
+ * 寄生果蝠形态吃种子机制?
+ *   1. 复用原版 SSC ?{@code shape-shifter-curse:custom_edible} power（form_bat_parasitic_fruit_seed_eat.json?
+ *      把种子物品标记成可吃食物，原版吃食物动画接管"持续?1.6 秒进?的视觉表现；
+ *   2. 玩家面对方块?BlockItem.useOnBlock 默认会触发种植；本类?UseBlockCallback 在玩家潜?+ 持种?+
+ *      寄生果蝠形态时直接转调 ItemStack.use(...)，绕过种植走食物分支?
+ *   3. 实际"加能?+ 推配??{@link #onSeedEaten(ServerPlayer, ItemStack)} 中完成，?
+ *      LivingEntity.eatFood ?mixin 在吃食物完成时调用；
+ *   4. 配额：每 3 分钟最多吃 8 颗，超额时红?actionBar 提示且不进入吃食流程?
  */
 public final class SeedEnergyEatingHandler {
 
-    /** 瑙嗕负鍙?鍚?鐨勫師鐗堢瀛愮墿鍝侀泦鍚堬紙涓?form_bat_parasitic_fruit_seed_eat.json 鍒楄〃瀵归綈锛夈€?*/
+    /** 视为??的原版种子物品集合（?form_bat_parasitic_fruit_seed_eat.json 列表对齐）?*/
     public static final Set<net.minecraft.world.item.Item> EDIBLE_SEEDS = Set.of(
             Items.MELON_SEEDS,
             Items.PUMPKIN_SEEDS,
@@ -46,27 +46,27 @@ public final class SeedEnergyEatingHandler {
             Items.PITCHER_POD
     );
 
-    /** 閰嶉绐楀彛锛? 鍒嗛挓锛堟湭鐧昏锛屼笉寮€鏀撅級銆?*/
+    /** 配额窗口? 分钟（未登记，不开放）?*/
     private static final long QUOTA_WINDOW_TICKS = 60L * 20L * 3L;
-    /** 閰嶉涓婇檺锛? 鍒嗛挓鍐呮渶澶?8 娆★紱榛樿鍊硷紝杩愯鏃朵粠 balance 蹇収璇诲彇锛坅bilities.parasitic_seed_system锛夈€?*/
+    /** 配额上限? 分钟内最?8 次；默认值，运行时从 balance 快照读取（abilities.parasitic_seed_system）?*/
     private static final int QUOTA_LIMIT = 8;
-    /** 瓒呴鎻愮ず鑺傛祦锛堟湭鐧昏锛屼笉寮€鏀撅級銆?*/
+    /** 超额提示节流（未登记，不开放）?*/
     private static final int OVER_QUOTA_HINT_COOLDOWN_TICKS = 40;
 
-    /** balance 蹇収璇诲彇锛堝揩鐓ф湭鍒濆鍖栧洖閫€榛樿甯搁噺锛?*/
+    /** balance 快照读取（快照未初始化回退默认常量?*/
     private static final BalanceReader BAL = new BalanceReader("abilities.parasitic_seed_system");
 
-    /** 姣忎釜鐜╁杩戞湡瀹屾垚鏃堕棿鎴抽槦鍒楋紙3 鍒嗛挓婊戝姩绐楀彛閰嶉锛夈€?*/
+    /** 每个玩家近期完成时间戳队列（3 分钟滑动窗口配额）?*/
     private static final Map<UUID, Deque<Long>> RECENT_EATS = new HashMap<>();
-    /** 涓婃鍙戦€?鍚冧笉涓嬩簡"鎻愮ず鐨?tick锛岄伩鍏嶆瘡 tick 鍒峰睆銆?*/
+    /** 上次发?吃不下了"提示?tick，避免每 tick 刷屏?*/
     private static final Map<UUID, Long> LAST_OVER_QUOTA_HINT_TICK = new HashMap<>();
 
     private SeedEnergyEatingHandler() {
     }
 
     public static void register() {
-        // 鐜╁闈㈠鏂瑰潡鎸佺瀛愭椂锛屽師鐗堜細浼樺厛瑙﹀彂 BlockItem.useOnBlock 绉嶆锛?
-        // 鍦ㄥ瘎鐢熸灉铦犳綔琛屽満鏅笅锛屼富鍔ㄨ浆璋?ItemStack.use 杩涘叆椋熺墿鍒嗘敮
+        // 玩家面对方块持种子时，原版会优先触发 BlockItem.useOnBlock 种植?
+        // 在寄生果蝠潜行场景下，主动转?ItemStack.use 进入食物分支
         github.com.gengyoubo.sscfa.util.SscEvents.useBlock((player, world, hand, hitResult) -> {
             if (hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
             if (!player.isShiftKeyDown()) return InteractionResult.PASS;
@@ -74,7 +74,7 @@ public final class SeedEnergyEatingHandler {
             if (stack.isEmpty() || !EDIBLE_SEEDS.contains(stack.getItem())) return InteractionResult.PASS;
             if (!hasSeedEnergyPower(player)) return InteractionResult.PASS;
 
-            // 鏈嶅姟绔繘琛岄厤棰濋妫€鏌ワ紱瓒呴鍒欑孩瀛楁彁绀哄苟闃绘柇
+            // 服务端进行配额预检查；超额则红字提示并阻断
             if (player instanceof ServerPlayer sp) {
                 long now = sp.level().getGameTime();
                 int quotaLimit = BAL.i("quota_limit", QUOTA_LIMIT);
@@ -84,7 +84,7 @@ public final class SeedEnergyEatingHandler {
                     sendOverQuotaHint(sp, now);
                     return InteractionResult.FAIL;
                 }
-                // 鑳介噺宸叉弧鍒欎笉杩涘叆鍚冮娴佺▼锛岃鐜╁淇濈暀绉嶅瓙
+                // 能量已满则不进入吃食流程，让玩家保留种子
                 int current = github.com.gengyoubo.sscfa.resource.ResourceBars.get(sp,
                         github.com.gengyoubo.sscfa.resource.BarKeys.SEED);
                 int max = github.com.gengyoubo.sscfa.resource.ResourceBars.maxOf(sp,
@@ -92,13 +92,13 @@ public final class SeedEnergyEatingHandler {
                 if (max <= 0) max = 10;
                 if (current >= max) return InteractionResult.FAIL;
             }
-            // 杞皟 Item.use锛堝熀绫伙級璁?SSC 鐨?custom_edible mixin 鎶?isFood 鏀规垚 true锛岃繘鍏ュ悆椋熺墿鍔ㄧ敾
+            // 转调 Item.use（基类）?SSC ?custom_edible mixin ?isFood 改成 true，进入吃食物动画
             InteractionResultHolder<ItemStack> result = stack.use(world, player, hand);
             return result.getResult();
         });
 
-        // 鐜╁闈㈠绌烘皵鐩存帴鍙抽敭鏃朵篃浼氳繘鍏?Item.use 鈫?SSC custom_edible 椋熺墿鍒嗘敮锛?
-        // 姝ゅ缁熶竴鍦?UseItemCallback 鍋氶厤棰濋妫€鏌ワ紝瓒呴鏃剁洿鎺?FAIL锛岄樆姝㈣繘鍏ュ悆椋熺墿鍔ㄧ敾
+        // 玩家面对空气直接右键时也会进?Item.use ?SSC custom_edible 食物分支?
+        // 此处统一?UseItemCallback 做配额预检查，超额时直?FAIL，阻止进入吃食物动画
         github.com.gengyoubo.sscfa.util.SscEvents.useItem((player, world, hand) -> {
             if (hand != InteractionHand.MAIN_HAND) return InteractionResultHolder.pass(player.getItemInHand(hand));
             ItemStack stack = player.getItemInHand(hand);
@@ -119,8 +119,8 @@ public final class SeedEnergyEatingHandler {
     }
 
     /**
-     * 鐢?LivingEntity.eatFood 鐨?mixin 鍦ㄥ悆绉嶅瓙瀹屾垚鏃惰皟鐢ㄣ€?
-     * @return true 琛ㄧず璇ユ鍚冮鐗╁睘浜庢湰鏈哄埗锛坢ixin 涓嶉渶瑕佸啀鍋氶澶栧鐞嗭級銆?
+     * ?LivingEntity.eatFood ?mixin 在吃种子完成时调用?
+     * @return true 表示该次吃食物属于本机制（mixin 不需要再做额外处理）?
      */
     public static boolean onSeedEaten(ServerPlayer sp, ItemStack stack) {
         if (stack.isEmpty() || !EDIBLE_SEEDS.contains(stack.getItem())) return false;

@@ -20,25 +20,25 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * 缁绢澀濞囨?/ SP 瑜般垺鈧礁鎳嗛張鐔尖偓鏄忕帆缁狅紕鎮婇崳顭掔礄jackcooper閿涘鈧?
+ * 红使?/ SP 形态周期逻辑管理器（jackcooper）??
  *
- * <p>閸樼喍璐?{@code RedFormTickMixin} 鐎?{@code ServerPlayerEntity.tick} 閻?HEAD 濞夈劌鍙嗛敍鍫熺槨閻溾晛顔嶅В?tick閿涘绱?
- * 2026-09-09 鏉╀胶些閸?{@code ServerTickEvents.START_WORLD_TICK} 娑撴牜鏅痪褌绨ㄦ禒鍫曚憾閸樺棌鈧柡鈧?
- * 闁槒绶張顒€姘ㄧ敮?{@code player.age % 20 == 0} 娑撯偓缁夋帡妫幒褝绱濈悰灞艰礋闂嗚泛妯婂鍌︾礉閸掔姵甯€閺堚偓妤傛﹢顣跺▔銊ュ弳閻愬箍鈧?/p>
+ * <p>原??{@code RedFormTickMixin} ??{@code ServerPlayerEntity.tick} ??HEAD 注入（每玩家?tick）??
+ * 2026-09-09 迁移??{@code ServerTickEvents.START_WORLD_TICK} 世界级事件遍历—??
+ * 逻辑本就?{@code player.age % 20 == 0} 一秒门控，行为零差异，删掉最高频注入点??/p>
  *
- * <p>閼卞矁鐭楅敍鍫熺槨缁夋帊绔村▎鈽呯礉闁秴宸婚崥鍕瑯閻ｅ瞼甯虹€硅绱氶敍?/p>
+ * <p>职责（每秒一次，遍历各世界玩家）?/p>
  * <ul>
- *   <li>SP 娴ｅ潡鐡熺拠鍛嫽娑斿婀€ 5% 濮掑倻宸奸崣妯块煩缁绢澀濞囨鏃撶礄10 閸掑棝鎸撶搾鍛閸ョ偤鈧偓閿涘瞼鐭戠€涙劖甯洪幎銈忕礆閿?/li>
- *   <li>SP 閹妇浼掗懛顏勫З閸欐垶鏂?閸ョ偞鏁瑰▽鑽ゆ灍閺?濡?)娑撳骸鏁遍悧鍥ㄦ簚(濡?)閿?/li>
- *   <li>缁绢澀濞囨鏃囧殰閸斻劌褰傞弨?閸ョ偞鏁归懡顖涙寜鐞?濡?)閿涘牆娲栭弨鑸垫閸婃帒鍤崘鍛啇閻椻晪绱氶敍?/li>
- *   <li>缁绢澀濞囨鏃囩Т閺冭埖鐖ｇ粵鐐閻炲棔绗岄崶鐐衡偓鈧妴?/li>
+ *   <li>SP 使魔诅咒之月 5% 概率变身红使魔（10 分钟超时回退，粒子掩护）??/li>
+ *   <li>SP 悦灵自动发??回收治疗????)与唱片机(??)??/li>
+ *   <li>红使魔自动发?回收药水????)（回收时倒出内容物）?/li>
+ *   <li>红使魔超时标签清理与回退?/li>
  * </ul>
  */
 public final class RedFormTickManager {
 	private RedFormTickManager() {
 	}
 
-	// 闂冭埖顔?5閿涙碍婀囬崝锛勵伂閺夊啫鈻夎箛顐ゅ弾鐠囪褰囬敍鍫濇彥閻撗勬弓閸掓繂顫愰崠鏍ф礀闁偓姒涙顓婚崐纭风礆
+	// 阶??5：服务端权威快照读取（快照未初始化回退默认值）
 	private static final BalanceReader BAL = new BalanceReader("abilities.red_form");
 
 	public static void init() {
@@ -52,23 +52,23 @@ public final class RedFormTickManager {
 	}
 
 	public static void tick(ServerPlayer player) {
-		// 娑撯偓缁夋帡妫幒褝绱欐稉搴″斧 per-player tick 濞夈劌鍙嗘稉鈧懛杈剧礆
+		// 一秒门控（与原 per-player tick 注入一致）
 		if (player.tickCount % 20 != 0) {
 			return;
 		}
 
 		boolean isCursedMoon = net.onixary.shapeShifterCurseForge.other.cursedmoon.CursedMoonService.isCursedMoonDay(player.level());
 
-		// 闂堢偠鐦忛崪鎺嶇閺堝牊绔婚梽銈呭綁闊偄鐨剧拠鏇熺垼鐠?
+		// 非诅咒之月清除变身尝试标??
 		if (!isCursedMoon && player.getTags().contains("ssc_addon_red_attempted")) {
 			player.getTags().remove("ssc_addon_red_attempted");
 		}
 
-		// 閼筋垱鎸夌悮瀣偓鏄忕帆閺嶅洩顔?
+		// 药水袋逻辑标??
 		net.onixary.shapeShifterCurseForge.form.FormDefinition currentForm = FormUtils.getCurrentForm(player);
 		boolean isRedForm = currentForm != null && currentForm.id().equals(github.com.gengyoubo.sscfa.util.FormIdentifiers.FAMILIAR_FOX_RED);
 
-		// SP 瑜般垺鈧?+ 鐠囧懎鎷绘稊瀣箑閸欐闊╃痪顫▏姒勬棑绱?%閿?
+		// SP 形??+ 诅咒之月变身红使魔??%??
 		if (currentForm != null && currentForm.id().equals(github.com.gengyoubo.sscfa.util.FormIdentifiers.FAMILIAR_FOX_SP) && isCursedMoon && !player.getTags().contains("ssc_addon_red_attempted")) {
 			player.addTag("ssc_addon_red_attempted");
 			if (player.getRandom().nextFloat() < BAL.d("transform_chance", 0.05)) {
@@ -77,19 +77,19 @@ public final class RedFormTickManager {
 				if (redForm != null) {
 					net.onixary.shapeShifterCurseForge.form.TransformManager.immediatelyTransform(player, redForm.id());
 
-					// 10 閸掑棝鎸?= 12000 tick閿涘牓绮拋銈忕幢balance 閸欘垵顩惄?duration_ticks閿?
+					// 10 分??= 12000 tick（默认；balance 可覆?duration_ticks??
 					long expireTime = player.level().getGameTime() + BAL.i("duration_ticks", 12000);
 					player.addTag("ssc_addon_red_expire:" + expireTime);
 
 					player.displayClientMessage(Component.translatable("message.ssc_addon.red_transformation_special").withStyle(ChatFormatting.GREEN), false);
 					player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.0F, 1.0F);
-					return; // 閸欐闊╅幋鎰閸氬海娲块幒銉ㄧ箲閸?
+					return; // 变身成功后直接返??
 				}
 			}
 		}
 
-		// 娑撱倛鐤嗛悪顒傜彌閼冲苯瀵橀幍顐ｅ伎閸氬牆鑻熸稉鍝勫礋鏉烆噯绱欓崥灞肩濞嗏€虫儕閻滎垰鍞撮幐澶婅埌閹椒绗侀崗鍐槱閻炲棔绗佺猾鑽ゅ⒖閸濅緤绱氶敍?
-		// 濮?20t 鐏忔垶澹傛稉鈧弫纾嬬枂 41 閺嶇》绱辩悰灞艰礋缁涘鐜敍鍫滅瑏閻椻晛鎼ф禍鎺嶇瑝闁插秴褰旈敍灞芥礀閺€鍫曗偓鏄忕帆閻撗勬＋閿涘鈧?
+		// 两轮独立背包扫描合并为单轮（同一次循环内按形态三元处理三类物品）?
+		// ??20t 少扫一整轮 41 格；行为等价（三物品互不重叠，回收逻辑照旧）??
 		boolean isAllaySp = currentForm != null && currentForm.id().equals(github.com.gengyoubo.sscfa.util.FormIdentifiers.ALLAY_SP);
 		if (isAllaySp) {
 			placeFormItemSafe(player, 0, github.com.gengyoubo.sscfa.init.AddonItems.ALLAY_HEAL_WAND.get());
@@ -105,7 +105,7 @@ public final class RedFormTickManager {
 			}
 		}
 
-		// 缁绢澀濞囨鏃撶窗閼奉亜濮╅崣鎴炴杹閼筋垱鎸夌悮?8)閿涙盯娼拠銉ヨ埌閹礁鍨崶鐐存暪閿涘牆鈧帒鍤崘鍛啇閻椻晛鎮楃粔濠氭珟閿?
+		// 红使魔：自动发放药水?8)；非该形态则回收（倒出内容物后移除??
 		if (isRedForm) {
 			placeFormItemSafe(player, 8, github.com.gengyoubo.sscfa.init.AddonItems.POTION_BAG.get());
 		} else {
@@ -127,7 +127,7 @@ public final class RedFormTickManager {
 			}
 		}
 
-		// 缁绢澀濞囨鏃囩Т閺冭泛娲栭柅鈧?
+		// 红使魔超时回??
 		Set<String> tagsToRemove = new HashSet<>();
 		boolean shouldRevert = false;
 		long currentTime = player.level().getGameTime();
@@ -146,7 +146,7 @@ public final class RedFormTickManager {
 						tagsToRemove.add(tag);
 					}
 				} catch (NumberFormatException ignored) {
-					tagsToRemove.add(tag); // 閺冪姵鏅ラ弽鍥╊劮閻╁瓨甯寸粔濠氭珟
+					tagsToRemove.add(tag); // 无效标签直接移除
 				}
 			}
 		}
@@ -161,10 +161,10 @@ public final class RedFormTickManager {
 			ResourceLocation spFormId = github.com.gengyoubo.sscfa.util.FormIdentifiers.FAMILIAR_FOX_SP;
 			net.onixary.shapeShifterCurseForge.form.FormDefinition spForm = net.onixary.shapeShifterCurseForge.form.FormRegistry.get(spFormId);
 			if (spForm != null) {
-				// 閻?immediatelyTransform 闁灝鍘ら崝銊ф暰
+				// ??immediatelyTransform 避免动画
 				net.onixary.shapeShifterCurseForge.form.TransformManager.immediatelyTransform(player, spForm.id());
 
-				// 閻у€熷缁帒鐡欐径褔鍣虹憰鍡欐磰閻溾晛顔嶉敍鍧ner 閹垫挻鐖ｉ敍姘矌閺堫兛姹夌粭顑跨娴滆櫣袨闁儻顔€閿涘苯褰夐煬顐ｇ川閸戣桨绮禍楦款潒鐟欐帒甯弽鍑ょ礆
+				// 白色粒子大量覆盖玩家（owner 打标：仅本人第一人称避让，变身演出他人视角原样）
 				if (player.level() instanceof ServerLevel serverWorld) {
 					github.com.gengyoubo.sscfa.network.DecorationParticles.forced(serverWorld, player, ParticleTypes.CLOUD, player.getX(), player.getY() + 1.0, player.getZ(), 100, 0.5, 1.0, 0.5, 0.1, 512);
 					github.com.gengyoubo.sscfa.network.DecorationParticles.forced(serverWorld, player, ParticleTypes.POOF, player.getX(), player.getY() + 1.0, player.getZ(), 50, 0.5, 1.0, 0.5, 0.1, 512);
@@ -179,8 +179,8 @@ public final class RedFormTickManager {
 	}
 
 	/**
-	 * 鐎瑰鍙忛崷鐗堝Ω閹稿洤鐣捐ぐ銏♀偓浣哄⒖閸濅焦鏂佹潻娑樻祼鐎规碍蝎娴ｅ稄绱濋柆鍨帳鐟曞棛娲婇悳鈺侇啀閸樼喐婀侀悧鈺佹惂閿?
-	 * 閳剁姷娲伴弽鍥ㄐ鍙夋Ц鐠囥儳澧块崫浣稿灟娑撳秴濮╅敍娑掓喗閸樼喓澧块崫浣告値楠炴儼绻橀懗灞藉瘶閸氬瞼顫掗崼鍡幢閳躲垹澧挎担娆愬缁岀儤蝎閿涙稈鎳€娴犲秴澧挎担娆庢丢閸﹂绗傞敍宀€绮锋稉宥夋饯姒涙ê鍨归梽銈冣偓?
+	 * 安全地把指定形态物品放进固定槽位，避免覆盖玩家原有物品??
+	 * ①目标槽已是该物品则不动；②原物品合并进背包同种堆；③剩余找空槽；④仍剩余丢地上，绝不静默删除?
 	 */
 	private static void placeFormItemSafe(ServerPlayer player, int targetSlot, Item formItem) {
 		Inventory inv = player.getInventory();

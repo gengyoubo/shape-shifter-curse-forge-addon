@@ -9,15 +9,15 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 娴兼瑤鍗抽崗閬嶇娴笺倕顔婃晶鐐垫抄缁狅紕鎮婇崳顭掔礄jackcooper閿涘本婀囬崝锛勵伂閺夊啫鈻夐敍澶涚窗缂佹瑥鐤囬悧?閸欘剙鏁滈悧鈺傚瘯
- * 閵?2鑴崇粵澶岄獓 閺€璇插毊娴笺倕顔婇妴宥呯潣閹傛叏妤楁壆顑侀敍鍫濇祼鐎?UUID閿涘苯鎮撻惄顔界垼闁插秴顦查弬鑺ユ杹鐟曞棛娲婄仦鍌氬綌閸婄》绱氶敍?
- * 閸掔増婀￠懛顏勫З缁夊娅庨敍娑氭窗閺嶅洦顒存禍?閸楁瓕娴囬弮鍫曟鐎圭偘缍嬬仦鐐粹偓褌绔撮獮鑸电Х娴溾槄绱濋弮鐘崇暙閻ｆ瑣鈧?
+ * 伙伴共鸣伤害增益管理器（jackcooper，服务端权威）：给宠?召唤物挂
+ * ??2×等级 攻击伤害」属性修饰符（固??UUID，同目标重复施放覆盖层叠值）?
+ * 到期自动移除；目标死?卸载时随实体属性一并消亡，无残留??
  *
- * <p>閸ュ搫鐣?UUID 娣囶噣銈扮粭?+ 閸掔増婀?tick 濞撳懐鎮婇垾鏂衡偓鏂挎倱 StunEffect 閻ㄥ嫬顒濋崕澶告叏濮濓絽鍘规惔鏇熲偓婵婄熅閿?
- * 瀹曗晜婀?閺傤厾鏁搁弸浣侯伂閹懎鍠屾稉瀣畱濞堝鏆€閻㈤亶鍣告径宥嗘煢閺€鎹愵洬閻╂牔绗岀€圭偘缍嬮柌宥呯紦閼奉亞鍔у☉鍫Ｐ掗妴?/p>
+ * <p>固??UUID 修饰?+ 到??tick 清理——同 StunEffect 的孤儿修正兜底思路??
+ * 崩??断电极端情况下的残留由重复施放覆盖与实体重建自然消解?/p>
  */
 public final class CompanionResonanceManager {
-	/** 娴笺倕顔婃晶鐐垫抄娣囶噣銈扮粭锕€娴愮€?UUID閿涘牆鎮撴稉鈧€圭偘缍嬫稉濠傜畵缁涘绱伴柌宥咁槻閺傝姤鏂佺憰鍡欐磰閺佹澘鈧》绱氶妴?*/
+	/** 伤害增益修饰符固??UUID（同一实体上幂等：重复施放覆盖数值）?*/
 	public static final UUID DAMAGE_BONUS_UUID = UUID.fromString("8d2f6a34-1b5c-4e7a-9d3f-0a1b2c3d4e5f");
 
 	private static final List<Entry> ACTIVE = new ArrayList<>();
@@ -53,15 +53,15 @@ public final class CompanionResonanceManager {
 		});
 	}
 
-	/** 閺傝棄濮?閸掗攱鏌婃导銈咁唺婢х偟娉敍鍫濇倱閻╊喗鐖ｉ弮褑顓搁弮鏈电稊鎼寸噦绱濇穱顕€銈扮粭锔芥殶閸婅壈顩惄鏍电礆閵?*/
+	/** 施??刷新伤害增益（同目标旧计时作废，修饰符数值覆盖）??*/
 	public static void apply(LivingEntity target, int level, int durationTicks) {
-		// 閸ュ搫鐣?UUID閿涙艾鍘涚粔濠氭珟閺冄冪湴閿涘矂浼╅崗宥咁樋閺傝姤纭堕崣鐘插鐡掑懎鍤拋鎹愵吀
+		// 固??UUID：先移除旧层，避免多施法叠加超出设计
 		removeModifier(target);
 		ACTIVE.removeIf(e -> e.target == target);
 		double amount = 2.0 * level;
 		var attr = target.getAttribute(Attributes.ATTACK_DAMAGE);
 		if (attr == null) {
-			return; // 閺冪姵鏁鹃崙璁虫縺鐎瑰啿鐫橀幀褏娈戠€圭偘缍嬮敍鍫ュ劥閸掑棜顫﹂崝銊ф晸閻椻晪绱氱捄瀹犵箖
+			return; // 无攻击伤害属性的实体（部分被动生物）跳过
 		}
 		attr.addTransientModifier(new AttributeModifier(DAMAGE_BONUS_UUID,
 				"ssc_addon.companion_resonance_damage", amount,

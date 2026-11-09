@@ -14,11 +14,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
- * 变羊期间的行为封锁（服务端权威兜底，双端都会拦）：中招玩家无法对方块右键（放置方块、开门、用物品都不行）、
- * 无法破坏方块、无法攻击实体。
- *
- * <p>其余防线：{@code sheep_form} 效果把攻击伤害乘 0（属性层）；客户端输入层拦截与生物 AI 停机原先由 mixin 实现，
- * 随变羊能力一起迁移。</p>
+ * 变羊期间的行为封锁（服务端权威兜底，双端都会拦）：中招玩家无法对方块右键（放置方块、开门、用物品都不行）? * 无法破坏方块、无法攻击实体? *
+ * <p>其余防线：{@code sheep_form} 效果把攻击伤害乘 0（属性层）；客户端输入层拦截与生?AI 停机原先?mixin 实现? * 随变羊能力一起迁移?/p>
  */
 @Mod.EventBusSubscriber(modid = SscAddonForge.MOD_ID)
 public final class SheepFormGuard {
@@ -46,12 +43,12 @@ public final class SheepFormGuard {
 		if (isSheep(event.getEntity())) event.setCanceled(true);
 	}
 
-	/** 空手/非方块物品是否仍可使用（客户端预检用；当前设计：变羊期间全部禁止）。 */
+	/** 空手/非方块物品是否仍可使用（客户端预检用；当前设计：变羊期间全部禁止）?*/
 	public static boolean canUseItem(LivingEntity entity, ItemStack stack) {
 		return !entity.hasEffect(AddonEffects.SHEEP_FORM.get()) && !(stack.getItem() instanceof BlockItem);
 	}
 
-	/** 装备槽位占位检查（预留：变羊期间主副手只读）。 */
+	/** 装备槽位占位检查（预留：变羊期间主副手只读）?*/
 	public static boolean isSlotLocked(EquipmentSlot slot) {
 		return slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND;
 	}
