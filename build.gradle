@@ -17,6 +17,14 @@ java {
     withSourcesJar()
 }
 
+sourceSets {
+    // Game tests and their structure templates: loaded only by runGameTestServer, never packaged into the mod jar.
+    gametest {
+        compileClasspath += main.output + main.compileClasspath
+        runtimeClasspath += main.output + main.runtimeClasspath
+    }
+}
+
 minecraft {
     mappings channel: 'official', version: project.minecraft_version
     copyIdeResources = true
@@ -42,12 +50,23 @@ minecraft {
         server {
             args '--nogui'
         }
+
+        // Loads data packs headlessly (no EULA prompt), runs the game tests in src/gametest, then exits.
+        gameTestServer {
+            mods {
+                "${project.mod_id}" {
+                    source sourceSets.gametest
+                }
+            }
+        }
     }
 }
 
 repositories {
     mavenCentral()
     maven { url = 'https://maven.minecraftforge.net' }
+    // Unreleased SSC Forge builds (publishToMavenLocal in the SSC Forge repo) take precedence.
+    mavenLocal { content { includeGroup 'net.onixary' } }
     // Shape Shifter Curse Forge (published reobf jar).
     maven {
         name = 'SSC Forge'
@@ -66,6 +85,11 @@ repositories {
         url = 'https://cursemaven.com'
         content { includeGroup 'curse.maven' }
     }
+    maven {
+        name = 'Curios'
+        url = 'https://maven.theillusivec4.top/'
+        content { includeGroup 'top.theillusivec4.curios' }
+    }
 }
 
 dependencies {
@@ -74,6 +98,9 @@ dependencies {
     // Required
     implementation fg.deobf("net.onixary:shape_shifter_curse:${project.ssc_version}")
     implementation fg.deobf("software.bernie.geckolib:geckolib-forge-${project.minecraft_version}:${project.geckolib_version}")
+
+    // Optional: accessories are equipped through Curios when it is installed (same version SSC Forge builds against).
+    compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:5.9.1+1.20.1:api")
 
     // MixinExtras (@WrapOperation / @WrapMethod / @Local used by the addon mixins)
     compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${project.mixinextras_version}"))
@@ -150,3 +177,13 @@ jar {
     }
     finalizedBy 'reobfJar'
 }
+
+tasks.register('balanceTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'github.com.gengyoubo.sscfa.balance.BalanceTests'
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+check.dependsOn balanceTest

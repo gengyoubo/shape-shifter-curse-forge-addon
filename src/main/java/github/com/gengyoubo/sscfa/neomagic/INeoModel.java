@@ -90,6 +90,23 @@ public interface INeoModel {
         return risk(blueprint, current, quote, profile, 0);
     }
 
+    // ===== 施法会话（NeoSession）节奏与偏移后果 =====
+
+    /** 每隔多少 tick 记录一次检查点并抽一次偏移。 */
+    int checkpointInterval();
+
+    /** 报价按多少 tick 一期分期支付（准备结束时结清余数）。 */
+    int paymentInterval();
+
+    /** 偏移发生时该输出元素的效果衰减倍数；1 表示不衰减。 */
+    double attenuation(Core output);
+
+    /** 偏移发生时该输出元素反转的概率；0 表示不会反转（也不消耗随机数）。 */
+    double reversalChance(Core output, double excess, Profile profile);
+
+    /** 偏移发生时该载体打错目标的概率；0 表示不会（也不消耗随机数）。 */
+    double wrongTargetChance(Carrier carrier);
+
     /** 冷却（tick）。 */
     int cooldown(Blueprint blueprint);
 

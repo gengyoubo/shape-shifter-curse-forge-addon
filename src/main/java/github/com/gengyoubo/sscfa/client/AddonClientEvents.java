@@ -1,6 +1,8 @@
 package github.com.gengyoubo.sscfa.client;
 
 import github.com.gengyoubo.sscfa.SscAddonForge;
+import github.com.gengyoubo.sscfa.balance.BalanceClient;
+import github.com.gengyoubo.sscfa.balance.SscBalanceSchema;
 import github.com.gengyoubo.sscfa.client.renderer.EnergyStorageTankRenderer;
 import github.com.gengyoubo.sscfa.client.renderer.EnergyBottlerRenderer;
 import github.com.gengyoubo.sscfa.client.screen.EnergyBottlerScreen;
@@ -49,6 +51,9 @@ public final class AddonClientEvents {
     @SubscribeEvent
     public static void registerScreens(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            BalanceClient.init(SscBalanceSchema.create());
+            SkillCooldownClient.init();
+            AddonSkillKeys.init();
             MenuScreens.register(AddonMenus.ENERGY_BOTTLER.get(), EnergyBottlerScreen::new);
             MenuScreens.register(AddonMenus.POTION_STORAGE_BOX.get(), PotionStorageBoxScreen::new);
             var empty = new ResourceLocation(SscAddonForge.MOD_ID, "empty");

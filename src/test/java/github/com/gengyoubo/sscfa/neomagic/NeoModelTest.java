@@ -138,6 +138,120 @@ public final class NeoModelTest {
         boolean rejected=false;
         try{NeoModel.builder().build();}catch(IllegalStateException e){rejected=true;}
         require(rejected,"An incomplete rule table is rejected at build time");
+        verifyLegacyFormulas();
+        verifySessionRules();
+        verifyRules();
+        var custom=NeoModel.defaults().cooldown(100,10).mastery(5).certainFailure(3).masteryFloor(Control.MERGE,.2).build();
+        var merged=b(List.of(Control.SPLIT,Control.MERGE),40);
+        require(custom.cooldown(merged)==100+10*merged.tier()&&custom.masteryNeeded(merged)==5.0*merged.tier()*merged.tier(),"Builder sets cooldown and mastery");
+        require(custom.failureChance(merged,250,25,new Profile(100,1,1,1,1,false))<1&&M.failureChance(merged,250,25,new Profile(100,1,1,1,1,false))==1,"Builder moves the certain-failure multiple");
+        near(custom.quote(merged,1,custom.coefficients(Core.THERMAL)).floor(),.2,"Builder sets a control's mastery floor");
+        boolean noCurve=false;
+        try{NeoModel.defaults().failureCurve(null);}catch(NullPointerException e){noCurve=true;}
+        require(noCurve,"Curves cannot be cleared");
+    }
+    private static com.google.gson.JsonObject bundledRules() {
+        try(var in=NeoModelTest.class.getResourceAsStream("/data/ssca_neomagic/rules/defaults.json")) {
+            require(in!=null,"Bundled rules are on the classpath");
+            return com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(in,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+        } catch(java.io.IOException e){throw new AssertionError(e);}
+    }
+    private static boolean rejects(com.google.gson.JsonObject root) {
+        try{NeoRules.parse(root);return false;}catch(IllegalArgumentException|NullPointerException|IllegalStateException e){return true;}
+    }
+    /** 数据包规则：形态档案、消耗覆盖、法术调校、恢复参数与非法数据。 */
+    private static void verifyRules() {
+        var root=bundledRules();var rules=NeoRules.parse(root);
+        require(rules.profile("my_addon:axolotl_aling").safety()==180,"Bundled form profile");
+        require(rules.profile("my_addon:axolotl_sp").equals(rules.profile("my_addon:axolotl_abyssal_overlord")),"Legacy form ID resolves to the renamed profile");
+        require(rules.profile("minecraft:not_a_form")==NeoRules.DEFAULT_PROFILE,"Unconfigured forms use the reference profile");
+        require(rules.recoveryDelay()==120&&rules.recoveryRate()==.25,"Bundled recovery");
+        for(Core core:Core.values())require(rules.coefficients(core).equals(M.coefficients(core)),"Bundled costs match the model defaults");
+        var spell=b(List.of(),40);
+        require(rules.quote(spell,.5).equals(M.quote(spell,.5,M.coefficients(Core.THERMAL))),"Untuned quote equals the default model");
+        require(rules.cooldown(spell)==M.cooldown(spell)&&rules.masteryNeeded(spell)==M.masteryNeeded(spell),"Untuned cooldown and mastery");
+        var session=new NeoSession(rules,spell,rules.quote(spell,0));double c=0;
+        for(int tick=0;tick<=40;tick++)c+=session.advance(tick,c,rules.profile("my_addon:axolotl_aling"),new Random(5));
+        require(session.complete&&c==session.quote.actual(),"Rules drive a session as an INeoModel");
+
+        var tuned=root.deepCopy();
+        tuned.getAsJsonObject("costs").getAsJsonObject("THERMAL").addProperty("a",12);
+        var tune=new com.google.gson.JsonObject();tune.addProperty("cost",1.5);tune.addProperty("floor",.4);tune.addProperty("cooldown",300);tune.addProperty("mastery",50);
+        var banded=new com.google.gson.JsonObject();banded.addProperty("cooldown",500);
+        tuned.getAsJsonObject("spells").add(spell.identity(),tune);
+        tuned.getAsJsonObject("spells").add(spell.identity()+"#1",banded);
+        var custom=NeoRules.parse(tuned);
+        require(custom.coefficients(Core.THERMAL).equals(new Coefficients(12,18))&&custom.coefficients(Core.FROST).equals(M.coefficients(Core.FROST)),"Data pack overrides one core's costs");
+        var q=custom.quote(spell,1);
+        near(q.floor(),.4,"Spell tuning floor");near(q.normal(),1.5*M.quote(spell,0,new Coefficients(12,18)).normal(),"Spell tuning cost uses data-pack coefficients");
+        require(custom.cooldown(spell)==300&&custom.masteryNeeded(spell)==50,"Spell tuning cooldown and mastery");
+        var bigger=new Blueprint("",Core.THERMAL,Carrier.PROJECTILE,List.of(),Core.FROST,2,40,32);
+        require(custom.cooldown(bigger)==500&&custom.masteryNeeded(bigger)==M.masteryNeeded(bigger),"Band-specific tuning wins, unset fields fall back");
+
+        var both=root.deepCopy();var forms=both.getAsJsonObject("forms");
+        var legacy=forms.getAsJsonObject("my_addon:axolotl_abyssal_overlord").deepCopy();legacy.addProperty("safety",999);
+        forms.add("my_addon:axolotl_sp",legacy);
+        require(NeoRules.parse(both).profile("my_addon:axolotl_sp").safety()==120,"New ID wins over a legacy duplicate");
+
+        var badForm=root.deepCopy();badForm.getAsJsonObject("forms").getAsJsonObject("my_addon:axolotl_aling").addProperty("safety",-1);
+        var missingCost=root.deepCopy();missingCost.getAsJsonObject("costs").remove("VOID");
+        var badFloor=root.deepCopy();var floor=new com.google.gson.JsonObject();floor.addProperty("floor",.2);badFloor.getAsJsonObject("spells").add("x",floor);
+        var badRecovery=root.deepCopy();badRecovery.addProperty("recovery_per_tick",0);
+        require(rejects(badForm)&&rejects(missingCost)&&rejects(badFloor)&&rejects(badRecovery),"Invalid data packs are rejected");
+        require(NeoRules.current()==NeoRules.DEFAULT,"Parsing never replaces the live rules by itself");
+    }
+
+    /** 施法会话的节奏与偏移后果来自模型。 */
+    private static void verifySessionRules() {
+        var safe=new Profile(100000,1,1,1,1,false);var hot=new Profile(8000,0,1000,1,1,false);
+        var lunarLock=new Blueprint("",Core.LUNAR,Carrier.LOCK,List.of(),Core.FROST,1,40,16);
+        Quote q=M.quote(lunarLock,0,M.coefficients(Core.LUNAR));
+        // 旧版：月核心偏移衰减 0.75，反转概率 min(0.8, 超载/80)（负担 15000、N=8000 时约 0.656），锁定载体 0.4 打错目标
+        var low=new NeoSession(M,lunarLock,q);low.advance(0,15000,hot,new Draw(.3,0));
+        require(low.hasShifted&&low.attenuation==.75&&low.reversed&&low.wrongTarget,"Legacy lunar/lock deviation at draw 0.3");
+        var mid=new NeoSession(M,lunarLock,q);var midDraw=new Draw(.5,0);mid.advance(0,15000,hot,midDraw);
+        require(mid.hasShifted&&mid.reversed&&!mid.wrongTarget&&midDraw.draws==6,"Draw 0.5 reverses but hits the right target; failure+shift+yaw+pitch+reversal+target");
+        var thermal=new NeoSession(M,b(List.of(),40),q);var thermalDraw=new Draw(.3,0);thermal.advance(0,15000,hot,thermalDraw);
+        require(thermal.hasShifted&&thermal.attenuation==1&&!thermal.reversed&&!thermal.wrongTarget&&thermalDraw.draws==4,
+                "Elements without consequences consume no extra randomness");
+        var tuned=NeoModel.defaults().checkpointInterval(5).paymentInterval(1).attenuation(Core.LUNAR,.5)
+                .wrongTarget(Carrier.LOCK,0).build();
+        var t=new NeoSession(tuned,b(List.of(),40),q);double c=0;
+        for(int tick=0;tick<=40;tick++){double before=t.paid;c+=t.advance(tick,c,safe,new Random(3));if(tick>0&&tick<40)require(t.paid>before,"Per-tick payment");}
+        require(t.checkpoints.size()==9&&t.complete,"Five-tick checkpoints");near(c,q.actual(),"Per-tick payment still totals the quote");
+        var tl=new NeoSession(tuned,lunarLock,q);tl.advance(0,15000,hot,new Draw(.3,0));
+        require(tl.attenuation==.5&&!tl.wrongTarget,"Builder sets deviation consequences");
+        boolean badInterval=false;
+        try{NeoModel.defaults().checkpointInterval(0);}catch(IllegalArgumentException e){badInterval=true;}
+        require(badInterval,"Intervals must be positive");
+    }
+    /** 旧版硬编码公式逐位对照：构建器默认值必须给出完全相同的结果。 */
+    private static void verifyLegacyFormulas() {
+        var form=new Profile(100,.8,.9,1.1,1.2,false);
+        for(Core core:Core.values())for(double scale:new double[]{.5,1,2.5,4})for(int prep:new int[]{0,7,40,80})
+        for(double range:new double[]{1,16,32,64})for(var controls:List.of(List.<Control>of(),List.of(Control.SPLIT),
+                List.of(Control.SPLIT,Control.MERGE,Control.CONSTRAIN),List.of(Control.CONSTRAIN,Control.CONSTRAIN,Control.STORE))) {
+            var spell=new Blueprint("",core,Carrier.LOCK,controls,Core.FROST,scale,prep,range);
+            var c=M.coefficients(core);var p=M.plan(spell);
+            double path=range/16;if(core==Core.SPACE)path*=path;
+            double normal=c.a()*scale+c.b()*scale*scale/(prep/20.0+.5)+1.5*path+2*p.load();
+            double floor=controls.contains(Control.MERGE)?.35:controls.contains(Control.SPLIT)?.4:.5;
+            var quote=M.quote(spell,.6,c);
+            require(quote.normal()==normal&&quote.floor()==floor&&quote.actual()==normal*(1-(1-floor)*.6),"Legacy quote formula");
+            require(M.cooldown(spell)==60+20*spell.tier()&&M.masteryNeeded(spell)==20.0*spell.tier()*spell.tier(),"Legacy cooldown and mastery");
+            for(double current:new double[]{90,130,170,199.5,250})for(double q:new double[]{5,25,60}) {
+                double excess=Math.max(0,current-form.safety());double scaled=excess/Math.max(1,form.safety())*60;
+                double failure=excess==0?0:current>2*form.safety()?1
+                        :INeoModel.clamp(.03*Math.pow(scaled/10,1.3)*Math.pow(q/20,.7)*form.failureFor(spell),0,1);
+                require(M.failureChance(spell,current,q,form)==failure,"Legacy failure formula");
+                double constraint=Math.pow(.65,spell.count(Control.CONSTRAIN));
+                var risk=M.risk(spell,current,q,form,.25);
+                if(excess==0)require(risk.equals(new Risk(0,0,0,0)),"Legacy safe risk");
+                else require(risk.equals(new Risk(excess,.25,
+                        INeoModel.clamp(.08*(scaled/10)*Math.sqrt(q/20)*form.offset()*constraint,0,1),
+                        Math.min(12,.18*Math.pow(scaled,.7)*Math.pow(q/20,.35))*constraint)),"Legacy risk formula");
+            }
+        }
     }
     private static void verifySafetyWindows() {
         var body=new Profile(100,1,0,1,1,false);var spell=b(List.of(),40);

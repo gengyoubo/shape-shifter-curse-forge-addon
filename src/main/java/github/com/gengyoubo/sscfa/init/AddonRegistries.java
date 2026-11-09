@@ -26,6 +26,9 @@ public final class AddonRegistries {
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(AddonEffects::registerBrewing);
+        event.enqueueWork(() -> {
+            AddonEffects.registerBrewing();
+            AddonCriteria.init();
+        });
     }
 }

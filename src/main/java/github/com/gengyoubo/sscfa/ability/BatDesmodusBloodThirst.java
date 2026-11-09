@@ -1,0 +1,231 @@
+package github.com.gengyoubo.sscfa.ability;
+
+import github.com.gengyoubo.sscfa.init.AddonItems;
+import github.com.gengyoubo.sscfa.balance.BalanceReader;
+import github.com.gengyoubo.sscfa.util.FormIdentifiers;
+import github.com.gengyoubo.sscfa.util.FormUtils;
+import github.com.gengyoubo.sscfa.util.TrinketUtils;
+import github.com.gengyoubo.sscfa.util.WhitelistUtils;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * 吸血蝙蝠 - 血渴值（Blood Thirst）系统。
+ * 复用现有 Apoli 资源 my_addon:form_bat_desmodus_blood_resource (0~100)。
+ *
+ * 累积:
+ *   - 普攻命中非白名单生物 +8 (内部冷却 0.3s)
+ *   - 幽雾化形凝聚爆破命中非白名单生物 +12 / +6 / +3 (最多 3 个目标递减 50%)
+ *   - 击杀 +15（由 form_bat_desmodus_blood_kill.json 触发，无叠加上限）
+ *
+ * 衰减:
+ *   - 脱离战斗 12 秒后每秒 -4，直到再次进入战斗
+ *
+ * 战斗状态: 由 {@link BatDesmodusEvents} 在「玩家造成伤害」或「玩家受到伤害」时打点。
+ */
+public final class BatDesmodusBloodThirst {
+
+    /** 最大值（与 JSON resource 上限一致） */
+    public static final int MAX_BLOOD = 100;
+    /** 普攻命中获得 +8 */
+    private static final int ATTACK_HIT_GAIN = 8;
+    /** 普攻命中血渴值的内部冷却（tick），0.3s */
+    private static final long ATTACK_HIT_CD = 6L;
+    /** 凝聚爆破第一个目标 +12，每多一个 ×0.5 (12/6/3)，最多 3 个 */
+    private static final int SKILL_HIT_BASE = 12;
+    private static final int SKILL_HIT_MAX_TARGETS = 3;
+    /** 脱战衰减延迟（tick），12s */
+    private static final long OUT_OF_COMBAT_DELAY = 240L;
+    /** 衰减速率：每秒 -4 */
+    private static final int DECAY_PER_SEC = 4;
+
+    // 阶段 5：运行时快照读取（abilities.blood_thirst_resource；快照未初始化回退默认常量；
+    // ATTACK_HIT_CD 去抖与 getStage 阶段阈值 25/50/75 不迁移）
+    private static final BalanceReader BAL = new BalanceReader("abilities.blood_thirst_resource");
+
+    /** 玩家UUID -> 上次进入战斗的世界 tick */
+    private static final Map<UUID, Long> LAST_COMBAT_TICK = new ConcurrentHashMap<>();
+    /** 玩家UUID -> 上次普攻 +8 的世界 tick（用于内部CD） */
+    private static final Map<UUID, Long> LAST_ATTACK_HIT_TICK = new ConcurrentHashMap<>();
+    /** 玩家UUID -> 上次每秒结算（回血/衰减）tick */
+    private static final Map<UUID, Long> LAST_REGEN_TICK = new ConcurrentHashMap<>();
+
+    private BatDesmodusBloodThirst() {
+    }
+
+    /**
+     * 伤害加成抑制标志：在该标志为 true 期间发生的伤害
+     * 将不受 75-100 阶段 +15% 加成加成。合适使用于“被动/光环型”伤害（如血雾光环）。
+     * 仅服务端使用，在伤害调用前后以 try/finally 配对设置。
+     */
+    public static final ThreadLocal<Boolean> SUPPRESS_OUTGOING_BUFF = ThreadLocal.withInitial(() -> false);
+
+    // ==================== 通用 ====================
+
+    private static boolean isBat(ServerPlayer player) {
+        return player != null && FormUtils.isForm(player, FormIdentifiers.BAT_DESMODUS);
+    }
+
+    /** 是否装备渴血石榴石（gain ×1.5 / decay ×1.5 + 每秒被动流失 1；框架无关） */
+    private static boolean hasBloodGarnet(ServerPlayer player) {
+        return TrinketUtils.isWearing(player, AddonItems.BLOOD_GARNET.get());
+    }
+
+    /** 是否装备嗜血指环（满血吸血反噬 1 真伤/秒；吸血加成在 mixin 内处理；框架无关） */
+    public static boolean hasBloodlustRing(ServerPlayer player) {
+        return TrinketUtils.isWearing(player, AddonItems.BLOODLUST_RING.get());
+    }
+
+    /** 读取血渴值（仅蝙蝠形态有效）。经统一资源条门面（SSCA-ResourceKit）。 */
+    private static int getBlood(ServerPlayer player) {
+        return github.com.gengyoubo.sscfa.resource.ResourceBars.get(player,
+                github.com.gengyoubo.sscfa.resource.BarKeys.BAT_BLOOD);
+    }
+
+    /** 设置血渴值（自动夹取 0~MAX，并同步）。经统一资源条门面。 */
+    private static void setBlood(ServerPlayer player, int value) {
+        github.com.gengyoubo.sscfa.resource.ResourceBars.set(player,
+                github.com.gengyoubo.sscfa.resource.BarKeys.BAT_BLOOD, value);
+    }
+
+    private static void changeBlood(ServerPlayer player, int delta) {
+        if (delta == 0) return;
+        github.com.gengyoubo.sscfa.resource.ResourceBars.gain(player,
+                github.com.gengyoubo.sscfa.resource.BarKeys.BAT_BLOOD, delta);
+    }
+
+    /** 当前血渴值阶段：0=0-25, 1=25-50, 2=50-75, 3=75-100 */
+    public static int getStage(ServerPlayer player) {
+        if (!isBat(player)) return -1;
+        int b = getBlood(player);
+        if (b < 25) return 0;
+        if (b < 50) return 1;
+        if (b < 75) return 2;
+        return 3;
+    }
+
+    /** 战斗打点累积（命中/技能/击杀共用）。经统一门面 gain。 */
+    static void gainBlood(ServerPlayer player, int amount) {
+        github.com.gengyoubo.sscfa.resource.ResourceBars.gain(player,
+                github.com.gengyoubo.sscfa.resource.BarKeys.BAT_BLOOD, amount);
+    }
+
+    // ==================== 战斗打点 ====================
+
+    /** 标记玩家进入战斗（仅蝙蝠形态生效） */
+    public static void markCombat(ServerPlayer player) {
+        if (!isBat(player)) return;
+        LAST_COMBAT_TICK.put(player.getUUID(), player.level().getGameTime());
+    }
+
+    // ==================== 命中事件 ====================
+
+    /**
+     * 蝙蝠玩家普攻命中其它生物时调用。
+     * 仅当目标不在白名单内时累积 +8，并受 0.3s 内部冷却限制；
+     * 无论是否命中白名单都标记战斗状态。
+     */
+    public static void onAttackHit(ServerPlayer player, LivingEntity target) {
+        if (!isBat(player) || target == null) return;
+        markCombat(player);
+        if (WhitelistUtils.isProtected(player, target)) return;
+        long now = player.level().getGameTime();
+        Long last = LAST_ATTACK_HIT_TICK.get(player.getUUID());
+        if (last != null && now - last < ATTACK_HIT_CD) return;
+        LAST_ATTACK_HIT_TICK.put(player.getUUID(), now);
+        // 渴血石榴石：累积 +50%
+        int attackHitGain = BAL.i("attack_hit_gain", ATTACK_HIT_GAIN);
+        int gain = hasBloodGarnet(player) ? Math.round(attackHitGain * 1.5f) : attackHitGain;
+        changeBlood(player, gain);
+    }
+
+    /**
+     * 凝聚爆破命中事件：传入实际造成伤害的目标列表（已过滤白名单）。
+     * 对前 3 个非白名单目标按 12/6/3 累积，超过部分忽略。
+     */
+    public static void onSkillHit(ServerPlayer player, List<LivingEntity> hitTargets) {
+        if (!isBat(player) || hitTargets == null || hitTargets.isEmpty()) return;
+        markCombat(player);
+        int total = 0;
+        int count = Math.min(hitTargets.size(), BAL.i("skill_hit_max_targets", SKILL_HIT_MAX_TARGETS));
+        int gain = BAL.i("skill_hit_base", SKILL_HIT_BASE);
+        for (int i = 0; i < count; i++) {
+            total += gain;
+            gain = Math.max(1, gain / 2); // 12 -> 6 -> 3
+        }
+        // 渴血石榴石：累积 +50%
+        if (hasBloodGarnet(player)) total = Math.round(total * 1.5f);
+        if (total > 0) changeBlood(player, total);
+    }
+
+    // ==================== Tick ====================
+
+    /** 每 tick 处理战斗回血与脱战衰减（仅蝙蝠形态生效；结算周期 20t，%20 门控零行为差异） */
+    public static void tick(ServerPlayer player) {
+        // 周期门控前置：内部按「world time 差值 ≥ 20」每秒结算，%20 门控后结算时机不变；
+        // 非蝙蝠玩家每 tick 只花一次取余（原每 tick 都过一次 CCA 形态查询）
+        if (player.tickCount % 20 != 0) return;
+        if (!isBat(player)) return;
+        long now = player.level().getGameTime();
+        Long lastRegen = LAST_REGEN_TICK.get(player.getUUID());
+        if (lastRegen == null) {
+            LAST_REGEN_TICK.put(player.getUUID(), now);
+            return;
+        }
+        if (now - lastRegen < 20L) return; // 每秒结算一次
+
+        Long lastCombat = LAST_COMBAT_TICK.get(player.getUUID());
+        boolean inCombat = lastCombat != null && now - lastCombat <= BAL.i("out_of_combat_delay", (int) OUT_OF_COMBAT_DELAY);
+        boolean garnet = hasBloodGarnet(player);
+        // 嗜血指环：自身满血时吸血被反噬——每秒对自己造成 1 点真伤（你血太满装不下更多血）。
+        if (hasBloodlustRing(player) && player.getHealth() >= player.getMaxHealth()) {
+            player.hurt(player.damageSources().magic(), 1.0f);
+        }
+        // 渴血石榴石：不论是否在战斗，血渴值每秒被动流失 1 点（永远在“渴”）。
+        if (garnet) {
+            int cur = getBlood(player);
+            if (cur > 0) setBlood(player, cur - 1);
+        }
+        if (!inCombat) {
+            // 脱战（含从未进入战斗）：每秒 -4，直至 0；战斗中不自动回复
+            int b = getBlood(player);
+            if (b > 0) {
+                int decay = BAL.i("decay_per_sec", DECAY_PER_SEC);
+                // 头顶天空可见时按昼夜节奏调整（与 sun_weak/moon_buff power 的 time_of_day 判定一致）
+                net.minecraft.server.level.ServerLevel sw = player.serverLevel();
+                if (sw.canSeeSky(player.blockPosition())) {
+                    long tod = sw.getDayTime() % 24000L;
+                    boolean isNight = tod >= 13000L && tod <= 23000L;
+                    if (isNight) {
+                        decay = 2; // 月夜亢奋：衰减减半（4 -> 2）
+                    } else {
+                        decay = decay + decay / 2; // 日光虚弱：4 -> 6
+                    }
+                }
+                // 渴血石榴石：脱战衰减 +50%
+                if (garnet) decay = Math.round(decay * 1.5f);
+                if (decay > 0) setBlood(player, b - decay);
+            }
+        }
+        LAST_REGEN_TICK.put(player.getUUID(), now);
+    }
+
+    // ==================== 状态清理 ====================
+
+    public static void clearAll() {
+        LAST_COMBAT_TICK.clear();
+        LAST_ATTACK_HIT_TICK.clear();
+        LAST_REGEN_TICK.clear();
+    }
+
+    public static void clearPlayer(UUID playerUuid) {
+        if (playerUuid == null) return;
+        LAST_COMBAT_TICK.remove(playerUuid);
+        LAST_ATTACK_HIT_TICK.remove(playerUuid);
+        LAST_REGEN_TICK.remove(playerUuid);
+    }
+}

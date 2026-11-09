@@ -1,7 +1,6 @@
 package github.com.gengyoubo.sscfa.neomagic;
 
 import github.com.gengyoubo.sscfa.neomagic.INeoModel.Blueprint;
-import github.com.gengyoubo.sscfa.neomagic.INeoModel.Carrier;
 import github.com.gengyoubo.sscfa.neomagic.INeoModel.Checkpoint;
 import github.com.gengyoubo.sscfa.neomagic.INeoModel.Profile;
 import github.com.gengyoubo.sscfa.neomagic.INeoModel.Quote;
@@ -12,8 +11,8 @@ import java.util.List;
 import java.util.random.RandomGenerator;
 
 /**
- * 一次施法的准备过程：逐 tick 分期支付锁定的报价、整次只抽一次失败、每 10 tick 记录检查点并抽偏移。
- * 风险计算全部委托给构造时传入的 {@link INeoModel}。
+ * 一次施法的准备过程：按期分期支付锁定的报价、整次只抽一次失败、定期记录检查点并抽偏移。
+ * 支付与检查点节奏、风险、偏移后果全部由构造时传入的 {@link INeoModel} 决定。
  */
 public final class NeoSession {
     public final INeoModel model;
@@ -30,6 +29,8 @@ public final class NeoSession {
     private int failureAt = -1;
     private final int duration;
     private final int latestFailureTick;
+    private final int checkpointInterval;
+    private final int paymentInterval;
 
     public NeoSession(INeoModel model, Blueprint b, Quote q) {
         this(model, b, q, b.prep());
@@ -42,6 +43,8 @@ public final class NeoSession {
 
     public NeoSession(INeoModel model, Blueprint b, Quote q, int duration, int lockInTick) {
         this.model = model;
+        checkpointInterval = model.checkpointInterval();
+        paymentInterval = model.paymentInterval();
         blueprint = b;
         quote = q;
         this.duration = Math.max(0, duration);
@@ -53,7 +56,7 @@ public final class NeoSession {
 
     /** Only risk events need the current form; ordinary payment ticks need no profile allocation. */
     public boolean needsRisk(int age) {
-        return !failed && !complete && age > previous && (failureDraws == 0 || age % 10 == 0
+        return !failed && !complete && age > previous && (failureDraws == 0 || age % checkpointInterval == 0
                 || failureAt >= 0 && age >= failureAt && age <= latestFailureTick);
     }
 
@@ -73,9 +76,9 @@ public final class NeoSession {
         if (initial > safety || duration == 0) return 0;
         if (quote.actual() <= 0 || initial + quote.actual() <= safety) return Integer.MAX_VALUE;
         double crossing = (safety - initial) * duration / quote.actual();
-        int first = (int) Math.min(duration, (Math.floor(crossing / 2) + 1) * 2);
-        // Correct floating point equality at an exact two-tick payment boundary.
-        while (first < duration && initial + quote.actual() * first / duration <= safety) first = Math.min(duration, first + 2);
+        int first = (int) Math.min(duration, (Math.floor(crossing / paymentInterval) + 1) * paymentInterval);
+        // Correct floating point equality at an exact payment boundary.
+        while (first < duration && initial + quote.actual() * first / duration <= safety) first = Math.min(duration, first + paymentInterval);
         return first;
     }
 
@@ -93,7 +96,7 @@ public final class NeoSession {
             // Keep the result and scheduled time on the server; later C changes never redraw it.
             drawFailure(current, form, rng);
         }
-        int billed = age >= duration ? duration : age / 2 * 2;
+        int billed = age >= duration ? duration : age / paymentInterval * paymentInterval;
         double due = duration == 0 ? quote.actual() : quote.actual() * billed / duration;
         double delta = Math.max(0, due - paid);
         paid += delta;
@@ -101,22 +104,19 @@ public final class NeoSession {
         // but it can never fire while the live body is within its safety threshold.
         failed = failureAt >= 0 && age >= failureAt && age <= latestFailureTick
                 && form != null && current + delta > form.safety();
-        if (age % 10 == 0 || failed) {
+        boolean checkpoint = age % checkpointInterval == 0;
+        if (checkpoint || failed) {
             Risk r = model.risk(blueprint, current + delta, quote.actual(), form, failureProbability);
-            boolean shiftDraw = !failed && age % 10 == 0 && r.offset() > 0 && rng.nextDouble() < r.offset();
+            boolean shiftDraw = !failed && checkpoint && r.offset() > 0 && rng.nextDouble() < r.offset();
             if (!failed && shiftDraw) {
                 hasShifted = true;
                 yaw += (rng.nextDouble() * 2 - 1) * r.angle();
                 pitch += (rng.nextDouble() * 2 - 1) * r.angle();
-                switch (blueprint.output()) {
-                    case LUNAR -> {
-                        attenuation *= .75;
-                        if (rng.nextDouble() < Math.min(.8, 60 * r.excess() / Math.max(1, form.safety()) / 80)) reversed = true;
-                    }
-                    case SUMMON, SPACE -> attenuation *= .7;
-                    default -> { }
-                }
-                if (blueprint.carrier() == Carrier.LOCK && rng.nextDouble() < .4) wrongTarget = true;
+                attenuation *= model.attenuation(blueprint.output());
+                double reversal = model.reversalChance(blueprint.output(), r.excess(), form);
+                if (reversal > 0 && rng.nextDouble() < reversal) reversed = true;
+                double misfire = model.wrongTargetChance(blueprint.carrier());
+                if (misfire > 0 && rng.nextDouble() < misfire) wrongTarget = true;
             }
             checkpoints.add(new Checkpoint(age, current + delta, paid, r, failed, !failed && shiftDraw, yaw, pitch,
                     attenuation, reversed, wrongTarget));
