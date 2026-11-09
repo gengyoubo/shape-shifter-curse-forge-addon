@@ -49,6 +49,7 @@ public final class SscAddonForge {
         AddonNetwork.clientbound(SharedSpellCooldowns.SYNC);
         SpellChannelManager.init();
         SharedSpellCooldowns.init();
+        github.com.gengyoubo.sscfa.spell.pocket.PocketSpaceManager.init();
         SscAddonNetworking.registerServerReceivers();
         MinecraftForge.EVENT_BUS.addListener((AddReloadListenerEvent event) -> event.addListener(SpellRegistry.INSTANCE));
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent event) -> SpellDamageSource.bind(event.getServer()));
