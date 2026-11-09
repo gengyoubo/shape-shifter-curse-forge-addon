@@ -14,6 +14,8 @@ import net.minecraft.world.phys.Vec3;
 public final class FormSpellStyle {
     private static final ThreadLocal<FormSpellStyle> EFFECT = new ThreadLocal<>();
 
+    public static java.util.function.ToDoubleFunction<Player> clientRangeSnapshot = player -> Double.NaN;
+
     public interface HomingProjectile {
         void ssca$home(LivingEntity target, double range);
         Vec3 ssca$guidedVelocity(Vec3 ordinary);

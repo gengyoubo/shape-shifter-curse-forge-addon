@@ -6,4 +6,5 @@ import java.util.UUID;
 public final class SpellChargeSoundInstance {
     private SpellChargeSoundInstance() {}
     public static void stopFor(UUID caster) {}
+    public static void onChannelStart(net.minecraft.world.entity.Entity caster, int durationTicks) {}
 }

@@ -37,14 +37,14 @@ public final class AddonClientEvents {
         event.registerBlockEntityRenderer(AddonBlockEntities.ENERGY_STORAGE_TANK.get(), EnergyStorageTankRenderer::new);
         event.registerBlockEntityRenderer(AddonBlockEntities.ENERGY_BOTTLER.get(), EnergyBottlerRenderer::new);
         event.registerBlockEntityRenderer(AddonBlockEntities.POTION_STORAGE_BOX.get(), PotionStorageBoxRenderer::new);
-        // 瀹炰綋娓叉煋鍣ㄥ皻鏈縼绉伙細鍏堟敞鍐屼笉鍙鐨勫崰浣嶆覆鏌撳櫒锛堢己娓叉煋鍣ㄧ殑瀹炰綋涓€杩涘叆瑙嗛噹瀹㈡埛绔氨浼氬穿婧冿級
+        // 实体渲染器尚未迁移：先注册不可见的占位渲染器（缺渲染器的实体一进入视野客户端就会崩溃）
         AddonEntities.shellProjectiles().forEach(type -> event.registerEntityRenderer(type.get(), NoopRenderer::new));
         event.registerEntityRenderer(AddonEntities.SPELL_FIRE_BOLT.get(), ThrownItemRenderer::new);
-        event.registerEntityRenderer(AddonEntities.SPELL_FROST_SPIKE.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(AddonEntities.SPELL_FROST_SPIKE.get(), github.com.gengyoubo.sscfa.client.renderer.SpellFrostSpikeRenderer::new);
         event.registerEntityRenderer(AddonEntities.SPELL_METEOR.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(AddonEntities.SPELL_CURSE_MARK.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(AddonEntities.BEEP_SHEEP.get(), ThrownItemRenderer::new);
-        event.registerEntityRenderer(AddonEntities.SPELL_MOONLIGHT_ARROW.get(), NoopRenderer::new);
+        event.registerEntityRenderer(AddonEntities.SPELL_MOONLIGHT_ARROW.get(), github.com.gengyoubo.sscfa.client.renderer.MoonlightArrowRenderer::new);
         event.registerEntityRenderer(AddonEntities.LUNAR_SPIRIT.get(), NoopRenderer::new);
         event.registerEntityRenderer(AddonEntities.GHOST_CAT.get(), NoopRenderer::new);
         event.registerEntityRenderer(AddonEntities.WITCH_FAMILIAR.get(), NoopRenderer::new);
@@ -71,6 +71,7 @@ public final class AddonClientEvents {
             SpellcastClient.register();
             CastingVisualState.register();
             SpellbookStatusClient.init();
+            github.com.gengyoubo.sscfa.client.hud.SpellbookHudRenderer.register();
             MenuScreens.register(AddonMenus.ENERGY_BOTTLER.get(), EnergyBottlerScreen::new);
             MenuScreens.register(AddonMenus.POTION_STORAGE_BOX.get(), PotionStorageBoxScreen::new);
             var empty = new ResourceLocation(SscAddonForge.MOD_ID, "empty");
