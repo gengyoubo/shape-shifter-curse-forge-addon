@@ -1,0 +1,113 @@
+package github.com.gengyoubo.sscfa.ability;
+
+import github.com.gengyoubo.sscfa.util.FormIdentifiers;
+import github.com.gengyoubo.sscfa.balance.BalanceReader;
+import github.com.gengyoubo.sscfa.util.ParticleUtils;
+import github.com.gengyoubo.sscfa.util.PowerUtils;
+import github.com.gengyoubo.sscfa.util.WhitelistUtils;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * 金沙岚SP - 反噬冲击（被动）
+ *
+ * 被攻击时自动触发：
+ * - 对周围4格内的非白名单生物造成小幅击退
+ * - 附加凋零I效果5秒
+ * - 冷却15秒
+ *
+ * 白名单机制：默认白名单（白名单为空时玩家及其宠物/召唤物不受影响，非空时白名单内不受影响）
+ */
+public class GoldenSandstormCounterBurst {
+
+	// 以下常量均为默认值；运行时从 balance 快照读取（scope：abilities.golden_sandstorm_counter_burst）
+	/** 反噬冲击范围（格） */
+	private static final double BURST_RANGE = 4.0;
+	/** 击退力度 */
+	private static final double KNOCKBACK_STRENGTH = 0.5;
+	/** 凋零效果持续时间（tick） */
+	private static final int WITHER_DURATION = 100; // 5秒
+	/** 凋零效果等级（0 = I级） */
+	private static final int WITHER_AMPLIFIER = 0;
+	/** 冷却时间（tick） */
+	private static final int COOLDOWN_TICKS = 300; // 15秒
+
+	// 阶段 5：服务端权威快照读取（快照未初始化回退默认常量）
+	private static final BalanceReader BAL = new BalanceReader("abilities.golden_sandstorm_counter_burst");
+
+	private GoldenSandstormCounterBurst() {
+	}
+
+	/**
+	 * 执行反噬冲击
+	 * @param player 金沙岚SP玩家
+	 * @return 是否成功触发
+	 */
+	public static boolean execute(ServerPlayer player) {
+		// CD检查
+		int cd = PowerUtils.getResourceValue(player, FormIdentifiers.GOLDEN_SANDSTORM_COUNTER_BURST_CD);
+		if (cd > 0) return false;
+
+		if (!(player.level() instanceof ServerLevel serverWorld)) return false;
+
+		// 搜索范围内的实体（范围与击退力度取一次快照读取）
+		double burstRange = BAL.d("burst_range", BURST_RANGE);
+		double knockbackStrength = BAL.d("knockback_strength", KNOCKBACK_STRENGTH);
+		AABB searchBox = player.getBoundingBox().inflate(burstRange);
+		java.util.List<Entity> allEntities = serverWorld.getEntities(player, searchBox);
+
+		for (Entity entity : allEntities) {
+			if (!(entity instanceof LivingEntity living)) continue;
+			if (!living.isAlive()) continue;
+			if (living.getUUID().equals(player.getUUID())) continue;
+			// 白名单检查
+			if (WhitelistUtils.isProtected(player, living)) continue;
+
+			double distSq = living.distanceToSqr(player);
+			if (distSq > burstRange * burstRange) continue;
+
+			// 计算击退方向：从玩家指向目标
+			Vec3 direction = living.position().subtract(player.position());
+			double dist = direction.length();
+			if (dist > 0.01) {
+				direction = direction.normalize();
+				// 施加击退（水平+轻微上抛）
+				living.setDeltaMovement(living.getDeltaMovement().add(
+						direction.x * knockbackStrength,
+						0.15,
+						direction.z * knockbackStrength
+				));
+				living.hurtMarked = true;
+			}
+
+			// 施加凋零效果（传入 player 作为 source，使金沙岚回血系统可注册凋零来源）
+			living.addEffect(new MobEffectInstance(
+					MobEffects.WITHER, BAL.i("wither_duration", WITHER_DURATION), BAL.i("wither_amplifier", WITHER_AMPLIFIER), false, true, true
+			), player);
+		}
+
+		// 即使没有命中也进入CD（防止频繁触发检测）
+		PowerUtils.setResourceValueAndSync(player, FormIdentifiers.GOLDEN_SANDSTORM_COUNTER_BURST_CD, BAL.i("cooldown_ticks", COOLDOWN_TICKS));
+
+		// 音效和粒子（无论是否命中都播放，提示玩家触发了反噬）
+		serverWorld.playSound(null, player.getX(), player.getY(), player.getZ(),
+				SoundEvents.WITHER_SHOOT, SoundSource.PLAYERS, 0.5f, 1.2f);
+		ParticleUtils.spawnDecorationParticles(serverWorld, player, ParticleTypes.SOUL_FIRE_FLAME,
+				player.getX(), player.getY() + 1.0, player.getZ(),
+				25, 1.5, 0.5, 1.5, 0.05);
+		ParticleUtils.spawnDecorationParticles(serverWorld, player, ParticleTypes.SMOKE,
+				player.getX(), player.getY() + 0.5, player.getZ(),
+				15, 1.0, 0.3, 1.0, 0.05);
+
+		return true;
+	}
+}
