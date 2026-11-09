@@ -1,0 +1,172 @@
+package github.com.gengyoubo.sscfa.spell.spells;
+import github.com.gengyoubo.sscfa.spell.research.*;
+
+import github.com.gengyoubo.sscfa.balance.BalanceReader;
+import github.com.gengyoubo.sscfa.spell.Spell;
+import github.com.gengyoubo.sscfa.spell.SpellRarity;
+import github.com.gengyoubo.sscfa.util.WhitelistUtils;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
+import java.util.List;
+
+/**
+ * 恐惧低语（诅咒系，绿色基底，jackcooper）：向准星方向发出锥形恐惧波，
+ * 范围内敌人被虚弱 + 缓速 + 击退，零伤害纯控场。
+ *
+ * <p>数值外置 {@code data/ssc_addon/spells/dread_whisper.json}：
+ * 基准锥长 6 格 / 锥角 60° / 虚弱 I + 缓速 II 6s / cd 20s（L5 10s，每级 -2.5s）/ 耗蓝 18；
+ * 锥长按 speed_multiplier 缩放。</p>
+ */
+public class DreadWhisperSpell extends Spell {
+
+	/** 基础锥长（格）默认，实际 = 基础 × speed_multiplier(level)；运行时从 balance 快照读取。 */
+	private static final double BASE_RANGE = 6.0;
+	/** 锥形半角（度）。默认值；运行时从 balance 快照读取。 */
+	private static final double HALF_ANGLE_DEG = 30.0;
+	/** 控场时长（tick）：6s。默认值；运行时从 balance 快照读取。 */
+	private static final int DURATION_TICKS = 120;
+
+	// 阶段 5：运行时快照读取（spells.dread_whisper；快照未初始化回退上方默认常量）
+	private static final BalanceReader BAL = new BalanceReader("spells.dread_whisper");
+
+	public DreadWhisperSpell() {
+		super(new ResourceLocation("ssc_addon", "dread_whisper"), SpellRarity.GREEN);
+	}
+    @Override public boolean supportsCurseChain(){return true;}
+
+	@Override
+	public void cast(ServerPlayer caster, float power, boolean solo) {
+		cast(caster, power, solo, 1);
+	}
+
+	@Override
+	public void cast(ServerPlayer caster, float power, boolean solo, int level) {
+		if (!(caster.level() instanceof ServerLevel serverWorld)) {
+			return;
+		}
+		double range = RuneCastContext.current().scale(BAL.d("base_range", BASE_RANGE) * getSpeedMultiplier(level),RuneModifiers.Stat.DISTANCE);
+		// 锥形半角运行时读取（下方判定与演出共用局部变量，快照未初始化回退默认常量）
+		double halfAngleDeg = Math.min(85,RuneCastContext.current().scale(BAL.d("half_angle_deg", HALF_ANGLE_DEG),RuneModifiers.Stat.AREA));
+		// 控场时长：每级 +1s（L1=7s … L5=11s）；L3+ 升级为虚弱 II + 缓速 III
+		int duration = BAL.i("duration_ticks", DURATION_TICKS) + (level - 1) * 20;
+		if (!solo) duration = github.com.gengyoubo.sscfa.spell.FormAffinity.curseDurationTicks(caster, duration);
+		duration=RuneCastContext.current().duration(duration,RuneModifiers.Stat.NEGATIVE);
+        int weaknessAmp = level >= 3 ? 1 : 0;
+		int slownessAmp = level >= 3 ? 2 : 1;
+		Vec3 look = caster.getViewVector(1.0F).normalize();
+		Vec3 origin = caster.getEyePosition();
+		List<LivingEntity> targets = serverWorld.getEntitiesOfClass(LivingEntity.class,
+				caster.getBoundingBox().inflate(range), e -> e != caster && e.isAlive());
+        var link=github.com.gengyoubo.sscfa.spell.FormSpellStyle.currentAllay();
+        java.util.Set<java.util.UUID> originals=new java.util.HashSet<>();
+        if(link!=null&&link.kind==2)for(var candidate:targets){
+            Vec3 to=candidate.getBoundingBox().getCenter().subtract(origin);
+            if(to.length()<=range&&look.dot(to.normalize())>=Math.cos(Math.toRadians(halfAngleDeg))
+                    &&!WhitelistUtils.isProtected(caster,candidate)&&!github.com.gengyoubo.sscfa.spell.DomainManager.blocksTargeting(caster,candidate))originals.add(candidate.getUUID());
+        }
+        final int chainDuration=duration;
+		for (LivingEntity target : targets) {
+			// 锥形判定：距离 + 与视线夹角 ≤ 半角
+			Vec3 toTarget = target.position().add(0, target.getBbHeight() / 2, 0).subtract(origin);
+			if (toTarget.length() > range) {
+				continue;
+			}
+			double cosAngle = look.dot(toTarget.normalize());
+			if (cosAngle < Math.cos(Math.toRadians(halfAngleDeg))) {
+				continue;
+			}
+			// 领域隔离：目标被任一领域壳隔开（与施法者分属内外）→ 不变减益
+			if (github.com.gengyoubo.sscfa.spell.DomainManager.blocksTargeting(caster, target)) {
+				continue;
+			}
+			// 默认白名单：受保护目标免受控场
+			if (WhitelistUtils.isProtected(caster, target)) {
+				continue;
+			}
+			boolean hadHarmfulEffect = github.com.gengyoubo.sscfa.spell.FormCastingStyle.hasHarmfulEffect(target);
+			boolean applied = target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration, weaknessAmp));
+			applied |= target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, slownessAmp));
+            if (applied || github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.acceptedStatus(target,MobEffects.WEAKNESS,duration,weaknessAmp,false)
+                    || github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.acceptedStatus(target,MobEffects.MOVEMENT_SLOWDOWN,duration,slownessAmp,false))
+                github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.hit(caster,target);
+			if (applied) {
+				github.com.gengyoubo.sscfa.spell.FormCastingStyle.onSpellHit(caster, target,
+						github.com.gengyoubo.sscfa.spell.FormationElement.CURSE,
+						solo ? null : ssc_addon$getRefundCastId(), hadHarmfulEffect);
+			}
+            if(link!=null)link.chain(caster,target,originals,other->{
+                boolean before=github.com.gengyoubo.sscfa.spell.FormCastingStyle.hasHarmfulEffect(other);
+                boolean changed=other.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,chainDuration,weaknessAmp),caster);
+                changed|=other.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,chainDuration,slownessAmp),caster);
+                if(changed || github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.acceptedStatus(other,MobEffects.WEAKNESS,chainDuration,weaknessAmp,false)
+                        || github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.acceptedStatus(other,MobEffects.MOVEMENT_SLOWDOWN,chainDuration,slownessAmp,false))
+                    github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.hit(caster,other);
+                if(changed){
+                    Vec3 push=new Vec3(other.getX()-caster.getX(),.1,other.getZ()-caster.getZ()).normalize().scale(.6);
+                    other.push(push.x,push.y,push.z);other.hurtMarked=true;
+                    github.com.gengyoubo.sscfa.spell.FormCastingStyle.onSpellHit(caster,other,
+                            github.com.gengyoubo.sscfa.spell.FormationElement.CURSE,solo?null:ssc_addon$getRefundCastId(),before);
+                }
+                return changed;
+            });
+			// 击退：远离施法者
+			Vec3 knock = new Vec3(target.getX() - caster.getX(), 0.1, target.getZ() - caster.getZ())
+					.normalize().scale(0.6);
+			target.push(knock.x, knock.y, knock.z);
+			target.hurtMarked = true;
+			// 命中演出：暗紫烟雾
+			serverWorld.sendParticles(ParticleTypes.SMOKE,
+					target.getX(), target.getY(0.6), target.getZ(), 6, 0.2, 0.3, 0.2, 0.01);
+		}
+		// 演出：锥形低语波——沿视线方向的锥面螺旋采样（贴合真实锥形判定几何：
+		// 距离 d 处锥面半径 = tan(半角)×d，点随距离扩散；随视线俯仰，不再是水平环）
+		spawnCone(serverWorld, origin, look, range, halfAngleDeg);
+		serverWorld.playSound(null, caster.getX(), caster.getY(), caster.getZ(),
+				SoundEvents.SOUL_ESCAPE, SoundSource.PLAYERS, 2.0f, 0.7f);
+		serverWorld.playSound(null, caster.getX(), caster.getY(), caster.getZ(),
+				SoundEvents.WARDEN_HEARTBEAT, SoundSource.PLAYERS, 1.0f, 1.4f);
+	}
+
+	/**
+	 * 锥面螺旋粒子：沿视线分段（每 0.6 格一段），每段在锥面上绕行撒点；
+	 * 段半径 = tan(半角)×段距，角度随段号旋转（螺旋感）+ 每段多点均匀铺开锥面。
+	 * 微速度让粒子略向外飘（近似扩散感；ServerWorld.spawnParticles 无定向初速重载）。
+	 */
+	private static void spawnCone(ServerLevel world, Vec3 origin, Vec3 look, double range, double halfAngleDeg) {
+		double tanHalf = Math.tan(Math.toRadians(halfAngleDeg));
+		// 视线的正交基（右/上），用于把锥面参数化到世界空间
+		Vec3 right = new Vec3(-look.z, 0, look.x).normalize(); // 水平垂直向量（已去除俯仰分量）
+		if (right.lengthSqr() < 1.0e-4) {
+			right = new Vec3(1, 0, 0); // 正上/正下看时兑底
+		}
+		Vec3 up = right.cross(look).normalize();
+		int segments = Math.max(6, (int) (range / 0.6));
+		for (int s = 1; s <= segments; s++) {
+			double dist = range * s / segments;
+			double ringR = tanHalf * dist;
+			int perRing = 4 + s / 2; // 近处稀、远处密（锥面展开面积变大）
+			double spin = s * 0.7;    // 段间旋转，螺旋感
+			for (int i = 0; i < perRing; i++) {
+				double ang = spin + 2 * Math.PI * i / perRing;
+				double cosA = Math.cos(ang), sinA = Math.sin(ang);
+				// 锥面点 = 轴上点 + 半径方向偏移（right·cos + up·sin）
+				Vec3 point = origin.add(look.scale(dist))
+						.add(right.scale(cosA * ringR)).add(up.scale(sinA * ringR));
+				world.sendParticles(ParticleTypes.SCULK_SOUL,
+						point.x, point.y, point.z, 1, 0.03, 0.03, 0.03, 0.005);
+			}
+			// 锥轴中心粒子（灵魂粒子沿轴前飞的引导感）
+			Vec3 axisPoint = origin.add(look.scale(dist));
+			world.sendParticles(ParticleTypes.SOUL,
+					axisPoint.x, axisPoint.y, axisPoint.z, 1, 0.02, 0.02, 0.02, 0.01);
+		}
+	}
+}

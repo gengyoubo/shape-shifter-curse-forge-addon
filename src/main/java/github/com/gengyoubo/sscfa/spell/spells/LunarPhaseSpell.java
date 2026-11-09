@@ -1,0 +1,313 @@
+package github.com.gengyoubo.sscfa.spell.spells;
+import github.com.gengyoubo.sscfa.spell.research.*;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import github.com.gengyoubo.sscfa.balance.BalanceIntegration;
+
+import github.com.gengyoubo.sscfa.balance.BalanceReader;
+import github.com.gengyoubo.sscfa.spell.DomainManager;
+import github.com.gengyoubo.sscfa.spell.Spell;
+import github.com.gengyoubo.sscfa.spell.SpellRarity;
+import org.joml.Vector3f;
+
+import java.util.UUID;
+
+/**
+ * 月相（月辉系，蓝色基底，jackcooper，2026-09-24 用户两轮定稿）：
+ * <b>两段交互</b>（同爆裂/领域规格）——按住施法键期间仅做本地预览：准星射线命中的实体
+ * 实时紫色描边（零网络，跟随准星换目标）；<b>松手锁定目标后才开始 1.5 秒蓄力</b>
+ * （custom 档 30t 禁动），蓄力期间施法者与目标周围各围一圈浅紫+灵魂沙鬼魂粒子小圈、
+ * 两人之间连一根紫色粒子线（服务端每 2t 广播，代表「正在替换」）。
+ * 蓄满自动完成按<b>百分比</b>交换当前生命——各自按自身最大生命换算，双方保底 1 点不致死。
+ *
+ * <p>无白名单（玩家/宠物/Boss 全部生效，用户定稿）。按住时准星无目标 → 松手释放失败
+ * （不耗法力不进 CD）；蓄力期间目标死亡/远走 → 统一读条安全终止（不产生效果）。</p>
+ *
+ * <p>数值外置 {@code data/ssc_addon/spells/lunar_phase.json}：
+ * 0 直伤 / 25 蓝 / 20s CD（400t）/ custom 档 30t 蓄力（目标锁定后起算）/ interrupt 3。</p>
+ */
+public class LunarPhaseSpell extends Spell {
+
+	/** 实体瞄准最大距离（格）默认；运行时从 balance 快照读取。 */
+	public static final double AIM_RANGE = 24.0;
+	/** 瞄准盒外扩容差（格）默认；运行时从 balance 快照读取。 */
+	public static final double AIM_TOLERANCE = 0.5;
+	/** 描边颜色（紫色 RGB）。 */
+	public static final int HIGHLIGHT_COLOR = 0xB26BD9;
+	/** 蓄力时长（tick，1.5 秒）。 */
+	public static final int CHANNEL_TICKS = 30;
+
+	/** 蓄力中的目标表（施法者 UUID → 目标实体 UUID）：服务端权威，蓄力演出与结算共用。 */
+	private static final java.util.Map<UUID, UUID> CHANNEL_TARGETS = new java.util.HashMap<>();
+
+	// 阶段 5：运行时快照读取（spells.lunar_phase；快照未初始化回退默认常量）。
+	// 瞄准参数被客户端按住预览（raycastEntity 描边）与服务端判定共用 → 双端一致：
+	// 客户端读客户端镜像快照，服务端读权威快照（同 TidalOrbEntity.tetherSoftRadius 模式）。
+	private static final BalanceReader BAL = new BalanceReader("spells.lunar_phase");
+
+	/** 瞄准距离（双端一致几何）：客户端读客户端镜像，服务端读权威快照。 */
+	private static double aimRange() {
+		if (BalanceIntegration.isClientThread()) {
+			var s = github.com.gengyoubo.sscfa.balance.BalanceIntegration.clientSnapshot();
+			if (s != null) return s.getDouble("spells.lunar_phase", "aim_range");
+		}
+		return BAL.d("aim_range", AIM_RANGE);
+	}
+
+	/** 瞄准容差（双端一致几何，同 aimRange）。 */
+	private static double aimTolerance() {
+		if (BalanceIntegration.isClientThread()) {
+			var s = github.com.gengyoubo.sscfa.balance.BalanceIntegration.clientSnapshot();
+			if (s != null) return s.getDouble("spells.lunar_phase", "aim_tolerance");
+		}
+		return BAL.d("aim_tolerance", AIM_TOLERANCE);
+	}
+
+	public LunarPhaseSpell() {
+		super(new ResourceLocation("ssc_addon", "lunar_phase"), SpellRarity.WHITE); // NORMAL 五级品质走 JSON levels[].rarity（白→橙），基底回退白色
+	}
+
+	/** 两段交互：松手（锁定目标）后才创建施法会话开始蓄力（同爆裂 requiresTargetBeforeChannel）。 */
+	@Override
+	public boolean requiresTargetBeforeChannel() {
+		return true;
+	}
+
+	@Override
+	public github.com.gengyoubo.sscfa.spell.SpellCastingRules.Mode getCastingMode() {
+		return github.com.gengyoubo.sscfa.spell.SpellCastingRules.Mode.RELEASE;
+	}
+
+	/** 蓄力阶段禁移动（custom 档：0 移速 + 禁跳，蓄力 1.5 秒「正在替换」仪式感）。 */
+	@Override
+	protected github.com.gengyoubo.sscfa.spell.SpellCastingRules.Profile getCustomCastingProfile(
+			ServerPlayer caster, int level, boolean solo) {
+		return new github.com.gengyoubo.sscfa.spell.SpellCastingRules.Profile(CHANNEL_TICKS, 0, true);
+	}
+
+	/** 按住阶段目标捕获（松手时服务端权威实体 raycast，锁定进 Progress）。 */
+	@Override
+	public Vec3 captureCastTarget(ServerPlayer caster, int level) {
+		LivingEntity target = raycastEntity(caster);
+		return target == null ? null : target.position();
+	}
+	@Override public double getCastingLockRange(ServerPlayer caster,int level) {
+		return RuneCastContext.current().scale(aimRange(),RuneModifiers.Stat.DISTANCE);
+	}
+	@Override public LivingEntity getCastingLockEntity(ServerPlayer caster) {
+		UUID id=CHANNEL_TARGETS.get(caster.getUUID());
+		Entity target=id==null?null:caster.serverLevel().getEntity(id);
+		return target instanceof LivingEntity living?living:null;
+	}
+
+	/** 施法前置校验：按住松手时准星必须命中活体实体（无目标拒绝施放，不耗蓝不进 CD）。 */
+	@Override
+	public boolean canCast(ServerPlayer caster) {
+		return raycastEntity(caster) != null;
+	}
+
+	@Override
+	public net.minecraft.network.chat.Component getCastFailureMessage(ServerPlayer caster) {
+		return net.minecraft.network.chat.Component.translatable("message.ssc_addon.spellbook.no_entity_target");
+	}
+
+	/** 实体射线（双端一致几何）：眼位出发沿视向，命中最近活体实体；未命中/被墙挡返回 null。
+	 *  手动迭代（Box.raycast 逐实体求交，2026-09-24 重写）：不再依赖 ProjectileUtil 重载的
+	 *  maxDistance/命中位语义——旧实现把 AIM_RANGE² 传给 float 参数且用 getPos() 判墙距，
+	 *  服务端判定可能恒空（「锁不到人」根因）。 */
+	public static LivingEntity raycastEntity(Player caster) {
+		Vec3 eye = caster.getEyePosition();
+		Vec3 look = caster.getViewVector(1.0F);
+		double aimRange = RuneCastContext.current().scale(aimRange(),RuneModifiers.Stat.DISTANCE); // 同方法多处使用，读一次局部化（双端一致几何）
+		Vec3 end = eye.add(look.scale(aimRange));
+		HitResult blockHit = caster.level().clip(new ClipContext(eye, end,
+				ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster));
+		double maxDist = blockHit.getType() == HitResult.Type.MISS
+				? aimRange : eye.distanceTo(blockHit.getLocation());
+		LivingEntity best = null;
+		double bestDist = maxDist; // 墙后目标不算：实体交点必须不晚于方块交点
+		AABB searchBox = caster.getBoundingBox().expandTowards(look.scale(aimRange)).inflate(1.0);
+		for (Entity entity : caster.level().getEntities(caster, searchBox)) {
+			if (!(entity instanceof LivingEntity living) || !living.isAlive() || living.isSpectator()) continue;
+			if (DomainManager.blocksTargeting(caster, living)) continue;
+			// Target nearby crosshair marks, but require actual line of sight and range.
+			AABB bounds = living.getBoundingBox();
+			Vec3 visiblePoint = new Vec3(
+					net.minecraft.util.Mth.clamp(eye.x, bounds.minX, bounds.maxX),
+					net.minecraft.util.Mth.clamp(eye.y, bounds.minY, bounds.maxY),
+					net.minecraft.util.Mth.clamp(eye.z, bounds.minZ, bounds.maxZ));
+			if (eye.distanceTo(visiblePoint) > aimRange || caster.level().clip(new ClipContext(
+					eye, visiblePoint, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster))
+					.getType() != HitResult.Type.MISS) continue;
+			AABB aimBox = bounds.inflate(aimTolerance());
+			var hit = aimBox.clip(eye, end);
+			if (hit.isPresent()) {
+				double dist = eye.distanceTo(hit.get());
+				if (dist <= bestDist) { bestDist = dist; best = living; }
+			} else if (aimBox.contains(eye)) {
+				// 目标贴脸包住眼位：Box.raycast 返回 empty，按零距离处理
+				best = living;
+				bestDist = 0.0;
+			}
+		}
+		if (best == null) return null;
+		return best;
+	}
+
+	/** 蓄力开始（目标已锁定）：登记目标表，起手音（附魔台轻响）。 */
+	@Override
+	public void onChannelStarted(ServerPlayer caster, Vec3 target) {
+		LivingEntity entity = findTargetAt(caster, target);
+		if (entity == null) return; // 理论不可达（start 前 canCast 已验）：安全跳过
+		CHANNEL_TARGETS.put(caster.getUUID(), entity.getUUID());
+		spawnPreparationParticles(caster, 0);
+		caster.level().playSound(null, caster.getX(), caster.getY(), caster.getZ(),
+				SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 0.7f, 1.6f);
+	}
+
+	/** 蓄力期间持续校验：目标仍存活且在追踪距离内（死亡/远走 → 统一读条安全终止）。 */
+	@Override
+	public boolean canContinueCasting(ServerPlayer caster, net.minecraft.world.item.ItemStack scroll) {
+		UUID targetId = CHANNEL_TARGETS.get(caster.getUUID());
+		if (targetId == null) return false;
+		Entity target = caster.serverLevel().getEntity(targetId);
+		return target instanceof LivingEntity living && living.isAlive()
+				&& !living.isSpectator() && !DomainManager.blocksTargeting(caster, living); // Distance is owned by the unified accepted-lock guard.
+	}
+
+	/** 蓄力期间演出（每 2t）：双方围浅紫+鬼魂粒子小圈 + 两人之间紫色粒子连线。 */
+	@Override
+	public void tickChannel(ServerPlayer caster, int level,
+			net.minecraft.world.item.ItemStack scroll, int ticks) {
+		spawnPreparationParticles(caster, ticks);
+	}
+
+	private static void spawnPreparationParticles(ServerPlayer caster, int ticks) {
+		if (!(caster.level() instanceof ServerLevel world)) return;
+		if (ticks % 2 != 0 || ticks >= CHANNEL_TICKS) return;
+		UUID targetId = CHANNEL_TARGETS.get(caster.getUUID());
+		Entity target = targetId == null ? null : world.getEntity(targetId);
+		if (!(target instanceof LivingEntity living) || !living.isAlive()) return;
+		// 浅紫+灵魂沙鬼魂小圈（双方脚下，半径 0.8 格 12 采样点）
+		DustParticleOptions lilac = new DustParticleOptions(new Vector3f(0.85f, 0.65f, 0.95f), 1.0f);
+		spawnRing(world, caster, caster.position(), lilac, caster.tickCount);
+		spawnRing(world, null, target.position(), lilac, living.tickCount);
+		// 密集紫色粒子连线，随双方位置移动。
+		Vec3 from = caster.position().add(0, caster.getBbHeight() * 0.6, 0);
+		Vec3 to = target.position().add(0, living.getBbHeight() * 0.6, 0);
+		double dist = from.distanceTo(to);
+		int points = linkSegments(dist);
+		DustParticleOptions link = new DustParticleOptions(new Vector3f(0.70f, 0.42f, 0.85f), 0.9f);
+		for (int i = 0; i <= points; i++) {
+			Vec3 p = from.lerp(to, i / (double) points);
+			github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(world, caster,
+					link, p.x, p.y, p.z, 1, 0.01, 0.01, 0.01, 0.0);
+		}
+	}
+
+	public static int linkSegments(double distance) {
+		return Math.max(2, (int) Math.ceil(distance / 0.25));
+	}
+
+	/** 中断立即清理；正常结束由 cast 消费并清理目标。 */
+	@Override
+	public void onChannelEnded(ServerPlayer caster, boolean interrupted) {
+		onChannelEnded(caster,interrupted,false);
+	}
+	@Override
+	public void onChannelEnded(ServerPlayer caster,boolean interrupted,boolean suppressed) {
+		// Normal completion calls this BEFORE cast(); retain the target until settlement.
+		if (interrupted) {
+			CHANNEL_TARGETS.remove(caster.getUUID());
+			if(!suppressed)caster.level().playSound(null, caster.getX(), caster.getY(), caster.getZ(),
+					SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 0.5f, 1.7f);
+		}
+	}
+
+	@Override
+	public void cast(ServerPlayer caster, float power, boolean solo) {
+		cast(caster, power, solo, 1);
+	}
+
+	/** 蓄满释放：与锁定的目标按百分比交换（服务端权威，重验存活）。 */
+	@Override
+	public void cast(ServerPlayer caster, float power, boolean solo, int level) {
+		UUID targetId = CHANNEL_TARGETS.remove(caster.getUUID());
+		Entity entity = targetId == null ? null : caster.serverLevel().getEntity(targetId);
+		if(github.com.gengyoubo.sscfa.neomagic.NeoLegacyCasting.shifted()) {
+			entity=raycastEntity(caster);
+			if(github.com.gengyoubo.sscfa.neomagic.NeoLegacyCasting.wrongTarget()) {
+				var choices=caster.serverLevel().getEntitiesOfClass(LivingEntity.class,caster.getBoundingBox().inflate(aimRange()),
+						e->e!=caster&&e.isAlive()&&!e.isSpectator()&&caster.hasLineOfSight(e)&&!DomainManager.blocksAimBoundary(caster.level(),caster.position(),e.position()));
+				entity=choices.isEmpty()?null:choices.get(caster.getRandom().nextInt(choices.size()));
+			}
+			if(entity==null){github.com.gengyoubo.sscfa.neomagic.NeoLegacyCasting.miss();return;}
+		}
+		if (!(entity instanceof LivingEntity target) || !target.isAlive()) return; // 安全终止（不产生效果）
+		// 百分比交换：各自按自身最大生命换算，单侧变动上限 ±50 点（2026-09-24 用户定稿），
+		// 保底 1 点不致死；50 = 25 颗心，防止对满血 Boss 一口吞掉大量生命
+		float selfMax = caster.getMaxHealth(), targetMax = target.getMaxHealth();
+		float selfRatio = caster.getHealth() / selfMax;
+		float targetRatio = target.getHealth() / targetMax;
+		float newSelf = swappedHealth(caster.getHealth(), selfMax, targetRatio);
+		float newTarget = swappedHealth(target.getHealth(), targetMax, selfRatio);
+		caster.setHealth(newSelf);
+		target.setHealth(newTarget);
+		// 完成音画：施法者附魔台音 + 目标信标音 + 双方脚下月辉粒子爆发环
+		caster.level().playSound(null, caster.getX(), caster.getY(), caster.getZ(),
+				SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 0.9f, 1.6f);
+		caster.level().playSound(null, target.getX(), target.getY(), target.getZ(),
+				SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.8f, 1.8f);
+		if (caster.level() instanceof ServerLevel world) {
+			spawnBurstRing(world, caster, caster.position());
+			spawnBurstRing(world, null, target.position());
+		}
+	}
+
+	public static float swappedHealth(float current, float maximum, float otherRatio) {
+		return Math.max(1.0F, Math.min(maximum,
+				current + Math.max(-50.0F, Math.min(50.0F, otherRatio * maximum - current))));
+	}
+
+	/** 按锁定坐标重找目标（onChannelStarted 时 Progress 只存了位置）。 */
+	private static LivingEntity findTargetAt(ServerPlayer caster, Vec3 pos) {
+		if (pos == null) return null;
+		// Capture and start run in the same server task; never substitute a nearby entity.
+		LivingEntity target = raycastEntity(caster);
+		return target != null && target.position().distanceToSqr(pos) < 1.0e-6 ? target : null;
+	}
+
+	private static void spawnRing(ServerLevel world, ServerPlayer owner, Vec3 pos, DustParticleOptions dust, int seedBase) {
+		for (int i = 0; i < 12; i++) {
+			double angle = i * 2 * Math.PI / 12 + (seedBase % 20) * 0.1;
+			github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(world, owner, dust,
+					pos.x + Math.cos(angle) * 0.8, pos.y + 0.1, pos.z + Math.sin(angle) * 0.8,
+					1, 0.0, 0.03, 0.0, 0.0);
+			github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(world, owner, ParticleTypes.SOUL,
+					pos.x + Math.cos(angle) * 0.8, pos.y + 0.4, pos.z + Math.sin(angle) * 0.8,
+					i % 3 == 0 ? 1 : 0, 0.0, 0.02, 0.0, 0.005);
+		}
+	}
+
+	private static void spawnBurstRing(ServerLevel world, ServerPlayer owner, Vec3 pos) {
+		var dust = new DustParticleOptions(new Vector3f(0.95f, 0.92f, 0.75f), 1.2f);
+		for (int i = 0; i < 24; i++) {
+			double angle = i * 2 * Math.PI / 24;
+			github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(world, owner, dust,
+					pos.x + Math.cos(angle) * 0.9, pos.y + 0.1, pos.z + Math.sin(angle) * 0.9,
+					1, 0.0, 0.05, 0.0, 0.0);
+		}
+	}
+}

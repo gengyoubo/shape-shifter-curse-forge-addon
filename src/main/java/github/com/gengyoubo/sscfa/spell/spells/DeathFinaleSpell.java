@@ -1,0 +1,44 @@
+package github.com.gengyoubo.sscfa.spell.spells;
+
+import github.com.gengyoubo.sscfa.spell.*;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+
+/** 死亡是一切的终点：虚无系 SPECIAL，统一禁动蓄力，完成后一次性结算。 */
+public final class DeathFinaleSpell extends Spell {
+    public DeathFinaleSpell() { super(new ResourceLocation("ssc_addon", "death_finale"), SpellRarity.RED); }
+
+    /** 领域内禁放死亡终点（2026-10-21 用户定稿，逐法术开关之一）。 */
+    @Override public boolean isForbiddenInsideDomain() {
+        return true;
+    }
+
+	/** SPECIAL 提供分类；蓄力与管理器均以 JSON 时长为准（默认 390t），不采用档位的 260t。 */
+	@Override public SpellCastingRules.Profile getCastingProfile(ServerPlayer caster, int level, boolean solo) {
+        return new SpellCastingRules.Profile(Math.max(1, getBaseCastTimeTicks()), 0, true);
+    }
+
+    @Override public void onChannelStarted(ServerPlayer caster) {
+        DeathFinaleManager.begin(caster, Math.max(1, getBaseCastTimeTicks()));
+    }
+
+    @Override public void tickChannel(ServerPlayer caster, int level, ItemStack scroll, int ticks) {
+        DeathFinaleManager.advance(caster, ticks);
+    }
+
+    @Override public boolean canContinueCasting(ServerPlayer caster, ItemStack scroll) {
+        return DeathFinaleManager.canContinue(caster);
+    }
+
+    @Override public void onChannelEnded(ServerPlayer caster, boolean interrupted) {
+        if (interrupted) DeathFinaleManager.cancel(caster);
+    }
+
+    @Override public void cast(ServerPlayer caster, float power, boolean solo) {
+        DeathFinaleManager.release(caster, power, solo ? null : ssc_addon$getRefundCastId(),
+                ssc_addon$takePendingExp());
+    }
+
+    // 图标走 Spell 基类默认约定路径 textures/gui/spell_icons/death_finale.png（专属立绘已接入）。
+}

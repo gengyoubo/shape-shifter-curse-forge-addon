@@ -4,6 +4,13 @@ import github.com.gengyoubo.sscfa.SscAddonForge;
 import github.com.gengyoubo.sscfa.entity.GhostCatEntity;
 import github.com.gengyoubo.sscfa.entity.ShellMob;
 import github.com.gengyoubo.sscfa.entity.ShellProjectile;
+import github.com.gengyoubo.sscfa.entity.BeepSheepEntity;
+import github.com.gengyoubo.sscfa.entity.SpellCurseMarkEntity;
+import github.com.gengyoubo.sscfa.entity.SpellFireBoltEntity;
+import github.com.gengyoubo.sscfa.entity.SpellFrostSpikeEntity;
+import github.com.gengyoubo.sscfa.entity.SpellMeteorEntity;
+import github.com.gengyoubo.sscfa.entity.SpellMoonlightArrowEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.PathfinderMob;
@@ -28,12 +35,12 @@ public final class AddonEntities {
 
     // ===== 投射物 / 场地实体（空壳） =====
     public static final RegistryObject<EntityType<ShellProjectile>> FROST_BALL = projectile("frost_ball", 0.25f, 0.25f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> SPELL_FROST_SPIKE = projectile("spell_frost_spike", 0.25f, 0.25f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> SPELL_FIRE_BOLT = projectile("spell_fire_bolt", 0.25f, 0.25f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> SPELL_METEOR = projectile("spell_meteor", 0.5f, 0.5f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> SPELL_MOONLIGHT_ARROW = projectile("spell_moonlight_arrow", 0.25f, 0.25f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> SPELL_CURSE_MARK = projectile("spell_curse_mark", 0.25f, 0.25f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> BEEP_SHEEP = projectile("beep_sheep", 0.25f, 0.25f, 4, 10);
+    public static final RegistryObject<EntityType<SpellFrostSpikeEntity>> SPELL_FROST_SPIKE = entity("spell_frost_spike", SpellFrostSpikeEntity::new, 0.25f, 0.25f, 4, 10);
+    public static final RegistryObject<EntityType<SpellFireBoltEntity>> SPELL_FIRE_BOLT = entity("spell_fire_bolt", SpellFireBoltEntity::new, 0.25f, 0.25f, 4, 10);
+    public static final RegistryObject<EntityType<SpellMeteorEntity>> SPELL_METEOR = entity("spell_meteor", SpellMeteorEntity::new, 0.5f, 0.5f, 4, 10);
+    public static final RegistryObject<EntityType<SpellMoonlightArrowEntity>> SPELL_MOONLIGHT_ARROW = entity("spell_moonlight_arrow", SpellMoonlightArrowEntity::new, 0.25f, 0.25f, 4, 10);
+    public static final RegistryObject<EntityType<SpellCurseMarkEntity>> SPELL_CURSE_MARK = entity("spell_curse_mark", SpellCurseMarkEntity::new, 0.25f, 0.25f, 4, 10);
+    public static final RegistryObject<EntityType<BeepSheepEntity>> BEEP_SHEEP = entity("beep_sheep", BeepSheepEntity::new, 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<ShellProjectile>> LUNAR_SPIRIT_BOLT = projectile("lunar_spirit_bolt", 0.2f, 0.2f, 4, 10);
     public static final RegistryObject<EntityType<ShellProjectile>> THROWN_WATER_SPEAR = projectile("thrown_water_spear", 0.4f, 0.4f, 4, 10);
     public static final RegistryObject<EntityType<ShellProjectile>> FROST_THORN = projectile("frost_thorn", 0.3f, 0.3f, 8, 1);
@@ -77,6 +84,13 @@ public final class AddonEntities {
         event.put(GHOST_CAT.get(), GhostCatEntity.createGhostCatAttributes().build());
         event.put(WITCH_FAMILIAR.get(), Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH, 14.0).add(Attributes.ATTACK_DAMAGE, 4.0).add(Attributes.MOVEMENT_SPEED, 0.35).add(Attributes.FOLLOW_RANGE, 20.0).build());
         event.put(AXOLOTL_SHIFTER.get(), PathfinderMob.createMobAttributes().add(Attributes.MAX_HEALTH, 20.0).add(Attributes.ARMOR, 5.0).add(Attributes.MOVEMENT_SPEED, 0.22).add(Attributes.FOLLOW_RANGE, 20.0).add(Attributes.ATTACK_DAMAGE, 4.0).add(Attributes.ATTACK_KNOCKBACK, 0.0).build());
+    }
+
+    private static <T extends Entity> RegistryObject<EntityType<T>> entity(String id, EntityType.EntityFactory<T> factory,
+                                                                          float width, float height, int trackingChunks, int interval) {
+        return ENTITIES.register(id, () ->
+                EntityType.Builder.<T>of(factory, MobCategory.MISC).sized(width, height)
+                        .clientTrackingRange(trackingChunks).updateInterval(interval).build(id));
     }
 
     private static RegistryObject<EntityType<ShellProjectile>> projectile(String id, float width, float height, int trackingChunks, int interval) {
