@@ -1,4 +1,4 @@
-package github.com.gengyoubo.sscfa.effect;
+package github.com.gengyoubo.sscfa.neomagic;
 
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectCategory;

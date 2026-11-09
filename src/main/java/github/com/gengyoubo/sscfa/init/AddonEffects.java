@@ -79,12 +79,6 @@ public final class AddonEffects {
     public static final RegistryObject<Potion> MOON_DUST_TUBE = POTIONS.register("moon_dust_tube", () ->
             new Potion(new MobEffectInstance(MOON_DUST_TUBE_RELIEF.get(), 1)));
 
-    // ===== 新魔法崩解度（ssca_neomagic 命名空间） =====
-    public static final DeferredRegister<MobEffect> NEOMAGIC_EFFECTS = DeferredRegister.create(ForgeRegistries.MOB_EFFECTS, "ssca_neomagic");
-    public static final RegistryObject<MobEffect> DISORDER = NEOMAGIC_EFFECTS.register("disorder", () -> new CollapseEffect(0xC79254, .15));
-    public static final RegistryObject<MobEffect> DISINTEGRATION = NEOMAGIC_EFFECTS.register("disintegration", () -> new CollapseEffect(0xA13C63, .35));
-    public static final RegistryObject<MobEffect> BREAKDOWN = NEOMAGIC_EFFECTS.register("breakdown", () -> new CollapseEffect.Breakdown(0x681C62, .35));
-
     private static RegistryObject<MobEffect> shell(String id, Supplier<MobEffect> factory) {
         return EFFECTS.register(id, factory);
     }
