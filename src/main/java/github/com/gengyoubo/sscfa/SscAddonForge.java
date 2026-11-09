@@ -47,8 +47,10 @@ public final class SscAddonForge {
         AddonNetwork.clientbound(SpellChannelManager.CAST_VISUAL);
         AddonNetwork.clientbound(SpellChannelManager.SUPPRESSION);
         AddonNetwork.clientbound(SharedSpellCooldowns.SYNC);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.SpellbookStatusSync.STATE);
         SpellChannelManager.init();
         SharedSpellCooldowns.init();
+        github.com.gengyoubo.sscfa.network.SpellbookStatusSync.init();
         github.com.gengyoubo.sscfa.spell.pocket.PocketSpaceManager.init();
         SscAddonNetworking.registerServerReceivers();
         MinecraftForge.EVENT_BUS.addListener((AddReloadListenerEvent event) -> event.addListener(SpellRegistry.INSTANCE));

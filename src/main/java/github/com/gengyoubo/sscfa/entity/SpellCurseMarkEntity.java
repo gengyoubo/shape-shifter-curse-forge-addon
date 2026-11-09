@@ -29,24 +29,24 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 閺堝牆鐨规鏃€纭惰矾鐠囧懎鎷婚弽鍥唶閹舵洖鐨犻悧鈺嬬礄鐠囧懎鎷荤化浼欑礉jackcooper閿涘鈧倻绮ㄩ弸鍕瑢 {@link SpellFireBoltEntity} 閸氬矁瀵栧蹇ョ窗
- * 閺堟繂鍣弰鐔烘纯缁惧灝瀵戦柅鐔碱棧鐞涘矉绱欓弮鐘诲櫢閸旀冻绱氶敍灞芥嚒娑擃厾娲伴弽鍥ф倵閺傝棄濮為妴宀冪槒閸滄帗鐖ｇ拋鑸偓宥囧Ц閹緤绱欓崣妞炬縺 +20%閿涘本妞傞梹璺ㄦ暠閺傝姤纭剁€规熬绱氶崥搴㈢Х婢舵唻绱?
- * 鐡掑懓绐?鐡掑懏妞傞懛顏呯槈閵嗗倿绮拋銈囨閸氬秴宕熼敍姘瘜娴滃搫婀痪澶哥瑬閻╊喗鐖ｉ崣妞剧箽閹躲倕鍨稉宥嗘煢閸旂姰鈧?
+ * 月尘魔法·诅咒标记投射物（诅咒系，jackcooper）。结构与 {@link SpellFireBoltEntity} 同范式：
+ * 朝准星直线匀速飞行（无重力），命中目标后施加「诅咒标记」状态（受伤 +20%，时长由施法定）后消失??
+ * 超??超时自毁。默认白名单：主人在线且目标受保护则不施加??
  */
 public class SpellCurseMarkEntity extends Projectile implements ItemSupplier {
 
-	private static final double SPEED = 0.7;         // 14 閺?缁夋帪绱欓崪鎺戝祪缂傛挻鍙冮幇鐕傜礆
-	private static final double MAX_DISTANCE = 30.0; // 閺堚偓婢堆囶棧鐞涘矁绐涚粋?
+	private static final double SPEED = 0.7;         // 14 ??秒（咒印缓慢感）
+	private static final double MAX_DISTANCE = 30.0; // 最大飞行距?
 
 	public static double maxDistance() { return BAL.d("max_distance", MAX_DISTANCE); }
 
-	// 闂冭埖顔?5閿涙碍婀囬崝锛勵伂閺夊啫鈻夎箛顐ゅ弾鐠囪褰囬敍鍫濇彥閻撗勬弓閸掓繂顫愰崠鏍ф礀闁偓姒涙顓荤敮鎼佸櫤閿?
+	// 阶??5：服务端权威快照读取（快照未初始化回退默认常量??
 	private static final BalanceReader BAL = new BalanceReader("spells.curse_mark_entity");
 
-	/** 姒勬梹纭剁粵澶岄獓閿?-5閿涘绱滵ataTracker 閸氬本顒為妴?*/
+	/** 魔法等级??-5），DataTracker 同步?*/
 	private static final EntityDataAccessor<Integer> LEVEL =
 			SynchedEntityData.defineId(SpellCurseMarkEntity.class, EntityDataSerializers.INT);
-	/** 閺嶅洩顔囬弮鍫曟毐閿涘澅ick閿涘绱滵ataTracker 閸氬本顒為敍鍫熻閺屾挾顏０鍕殌閿涘鈧?*/
+	/** 标记时长（tick），DataTracker 同步（渲染端预留）??*/
 	private static final EntityDataAccessor<Integer> DURATION =
 			SynchedEntityData.defineId(SpellCurseMarkEntity.class, EntityDataSerializers.INT);
 
@@ -72,39 +72,39 @@ public class SpellCurseMarkEntity extends Projectile implements ItemSupplier {
 
 	@Override
 	protected void defineSynchedData() {
-		// 娑撳秷鐨?super閿涘湕ntity 閻ㄥ嫭濞婄挒鈩冩煙濞夋洘妫ゅ▔鏇℃硶娑撱倗楠囩拋鍧楁６閿涙矟ataTracker 閻?Entity 閺嬪嫰鈧姴娅掗崚婵嗩潗閸栨牭绱濋崥灞藉暫闁裤儱鍟撳▔鏇礆
+		// 不??super（Entity 的抽象方法无法跨两级访问；dataTracker ??Entity 构造器初始化，同冰锥写法）
 		this.entityData.define(LEVEL, 1);
 		this.entityData.define(DURATION, 160);
 	}
 
-	/** 姒勬梹纭剁粵澶岄獓閿?-5閿涘鈧?*/
+	/** 魔法等级??-5）??*/
 	public int getSpellLevel() {
 		return this.entityData.get(LEVEL);
 	}
 
-	/** 鐠佸墽鐤嗘鏃€纭剁粵澶岄獓閿涘牊婀囬崝锛勵伂閺傝姤纭堕弮鎯扮殶閻㈩煉绱滵ataTracker 閼奉亜濮╅崥灞绢劄鐎广垺鍩涚粩顖ょ礆閵?*/
+	/** 设置魔法等级（服务端施法时调用，DataTracker 自动同步客户端）??*/
 	public void setLevel(int level) {
 		this.entityData.set(LEVEL, Math.max(1, Math.min(5, level)));
 	}
 
-	/** 閺嶅洩顔囬弮鍫曟毐閿涘澅ick閿涘鈧?*/
+	/** 标记时长（tick）??*/
 	public int getDuration() {
 		return this.entityData.get(DURATION);
 	}
 
-	/** 鐠佸墽鐤嗛弽鍥唶閺冨爼鏆遍敍鍧眎ck閿涘鈧?*/
+	/** 设置标记时长（tick）??*/
 	public void setDuration(int durationTicks) {
 		this.entityData.set(DURATION, Math.max(20, durationTicks));
 	}
 
-	/** 鐠佸墽鐤嗘鐐额攽閺傜懓鎮滈敍鍫熸篂閸戝棙妲﹂敍澶涚礉闁喎瀹抽幐澶岀搼缁狙冣偓宥囧芳缂傗晜鏂侀妴?*/
+	/** 设置飞行方向（朝准星），速度按等级倍率缩放?*/
 	public void setDirection(Vec3 direction, float speedMultiplier) {
 		Vec3 velocity = direction.normalize().scale(BAL.d("speed", SPEED) * speedMultiplier);
 		this.setDeltaMovement(velocity.x, velocity.y, velocity.z);
 		updateRotationFromVelocity(velocity);
 	}
 
-	/** 閹稿鈧喎瀹抽懛顏嗙暬閺堟繂鎮滈敍鍫濇倱閸愪即鏁熼崗顒€绱￠敍澶涚礉娓氭稒瑕嗛弻鎾愁嚠濮濓絻鈧?*/
+	/** 按速度自算朝向（同冰锥公式），供渲染对正??*/
 	private void updateRotationFromVelocity(Vec3 v) {
 		double horiz = Math.sqrt(v.x * v.x + v.z * v.z);
 		this.setYRot((float) (Mth.atan2(-v.x, v.z) * (180.0 / Math.PI)));
@@ -119,7 +119,7 @@ public class SpellCurseMarkEntity extends Projectile implements ItemSupplier {
         if(this.isRemoved())return;
 		ticksAlive++;
 
-		// 閺冪娀鍣搁崝娑樺瘧闁喓些閸?
+		// 无重力匀速移??
 		Vec3 velocity = this.getDeltaMovement();
 		boolean limited=((github.com.gengyoubo.sscfa.spell.FormSpellStyle.HomingProjectile)this).ssca$hasRangeLimit();
         if(!limited)this.setPos(this.position().add(velocity));
@@ -134,7 +134,7 @@ public class SpellCurseMarkEntity extends Projectile implements ItemSupplier {
 			return;
 		}
 
-		// 鐡掑懓绐?/ 鐡掑懏妞傞懛顏呯槈閿涘牅绮庨張宥呭缁旑垱娼堟繛渚婄礉閻炲棛鏁遍崥灞藉暫闁裤儻绱扮€广垺鍩涚粩顖氱杽娴?startPos 閹帒甯悙鐧哥礉閸欏瞼顏崚銈勭窗鐠囶垰鍨归敍?
+		// 超??/ 超时自毁（仅服务端权威，理由同冰锥：客户端实??startPos 恒原点，双端判会误删?
 		if (!this.level().isClientSide) {
 			double maxDistance = maxDistance();
 			if (!limited && startPos != null && this.distanceToSqr(startPos) > maxDistance * maxDistance) {
@@ -147,7 +147,7 @@ public class SpellCurseMarkEntity extends Projectile implements ItemSupplier {
 			}
 		}
 
-		// 妞嬬偠顢戦幏鏍х啲缁帒鐡欓敍鍫熸箛閸旓紕顏幘鎺炵礉婢垛晝鍔ф径姘眽閸氬本顒為敍澶涚窗閺嗘浼犻崪鎺戝祪
+		// 飞行拖尾粒子（服务端撒，天然多人同步）：暗紫咒印
 		if (this.level() instanceof ServerLevel serverWorld) {
 			ParticleUtils.spawnParticles(serverWorld, ParticleTypes.WITCH,
 					this.getX(), this.getY(), this.getZ(), 2, 0.1, 0.1, 0.1, 0.01);
@@ -159,12 +159,12 @@ public class SpellCurseMarkEntity extends Projectile implements ItemSupplier {
 		super.onHitEntity(entityHitResult);
 		Entity target = entityHitResult.getEntity();
 		if (target instanceof LivingEntity livingTarget && !this.level().isClientSide) {
-			// 姒涙顓婚惂钘夋倳閸楁洩绱版稉璁虫眽閸︺劎鍤庢稉鏃傛窗閺嶅洤褰堟穱婵囧Б 閳?娑撳秵鏌﹂崝鐘崇垼鐠?
+			// 默认白名单：主人在线且目标受保护 ??不施加标??
 			if (this.getOwner() instanceof ServerPlayer ownerPlayer
 					&& WhitelistUtils.isProtected(ownerPlayer, livingTarget)) {
 				return;
 			}
-			// amplifier = 缁涘楠?1閿涘湢1=0 閳?L5=4閿涘绱癿ixin 閹稿鍙剧拋锛勭暬閸欐ぞ婵€閸旂姵绻?1.2+0.1鑴砤mp
+			// amplifier = 等??1（L1=0 ??L5=4）：mixin 按其计算受伤加??1.2+0.1×amp
 			boolean hadHarmfulEffect = github.com.gengyoubo.sscfa.spell.FormCastingStyle.hasHarmfulEffect(livingTarget);
             boolean applied=github.com.gengyoubo.sscfa.spell.CourtSpellLink.with(github.com.gengyoubo.sscfa.spell.CourtSpellLink.of(this),()->github.com.gengyoubo.sscfa.spell.NightmareSpellLink.with(this.getOwner(),()->github.com.gengyoubo.sscfa.spell.BatSpellLink.with(github.com.gengyoubo.sscfa.spell.BatSpellLink.of(this),()->livingTarget.addEffect(new net.minecraft.world.effect.MobEffectInstance(github.com.gengyoubo.sscfa.init.AddonEffects.CURSE_MARK.get(),getDuration(),getSpellLevel()-1)))));
 			if (github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.acceptedStatus(
@@ -195,7 +195,7 @@ public class SpellCurseMarkEntity extends Projectile implements ItemSupplier {
 	protected void onHit(HitResult hitResult) {
 		super.onHit(hitResult);
 		if (!this.level().isClientSide) {
-			// 閸涙垝鑵戝鏂垮毉閿涙碍娈槐顐㈡嫽閸楁壆鍨庨弫?
+			// 命中演出：暗紫咒印爆?
 			if (this.level() instanceof ServerLevel serverWorld) {
 				ParticleUtils.spawnParticles(serverWorld, ParticleTypes.WITCH,
 						this.getX(), this.getY(), this.getZ(), 10, 0.3, 0.3, 0.3, 0.05);
@@ -206,7 +206,7 @@ public class SpellCurseMarkEntity extends Projectile implements ItemSupplier {
 
 	@Override
 	protected boolean canHitEntity(Entity entity) {
-		// 閹烘帡娅庨惄鏃傛暢閺嬭绱伴崑鍥︽眽娑撳秴鎮嗙拠鍛嫽閺嶅洩顔囬敍宀勪缉閸忓秵姘拹鐟拌剨娴?
+		// 排除盔甲架：假人不吃诅咒标记，避免浪费弹??
 		return super.canHitEntity(entity) && entity != this.getOwner()
 				&& entity instanceof LivingEntity && !(entity instanceof ArmorStand);
 	}
@@ -246,7 +246,7 @@ public class SpellCurseMarkEntity extends Projectile implements ItemSupplier {
 
 	@Override
 	public net.minecraft.world.item.ItemStack getItem() {
-		// 閻劍浼撴鍌欑濞夘亝瑕嗛弻鎿勭礄閸滄帒宓冮幇蹇氳杽閿?
+		// 用恶魂之泪渲染（咒印意象??
 		return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GHAST_TEAR);
 	}
 

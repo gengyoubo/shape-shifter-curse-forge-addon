@@ -24,6 +24,8 @@ public final class FormCastingStyle {
 
     public static boolean isSwapStabilizing(ServerPlayer player) { return false; }
     public static long getSwapReadyAt(ServerPlayer player) { return 0L; }
+    public static long getNaturalRegenAt(ServerPlayer player) { return 0L; }
+    public static int naturalRegenPerSecond(net.minecraft.world.item.ItemStack book) { return 1; }
     public static UUID openRefundBudget(ServerPlayer player, int manaCost) { return null; }
     public static void onSpellCast(ServerPlayer player, FormationElement element, int manaCost) {}
     public static void register() {}

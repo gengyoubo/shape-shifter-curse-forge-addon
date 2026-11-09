@@ -1,0 +1,130 @@
+package github.com.gengyoubo.sscfa.client.renderer;
+
+import org.joml.Matrix4f;
+import org.joml.Vector4f;
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.MemoryUtil;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.nio.ByteBuffer;
+
+/** 保留原顶点顺序与浮点运算，通??Sodium 公??API 一次提交完整线层；其它消费者沿用原路径?*/
+final class CircleVertexBatch {
+    private CircleVertexBatch() {}
+    private static final int MAX_BYTES=1024*1024;
+    private static final ThreadLocal<Scratch> SCRATCH=ThreadLocal.withInitial(Scratch::new);
+    private static final class Scratch {
+        ByteBuffer buffer;
+        final Vector4f position=new Vector4f();
+        final SpherePosition spherePosition=new SpherePosition();
+        boolean busy;
+        long reserve(int bytes) {
+            if(buffer==null||buffer.capacity()<bytes) {
+                int capacity=1024;while(capacity<bytes)capacity*=2;
+                // 有上限的直接缓冲区交?JVM 清理，不留下显式分配的原生内存??
+                buffer=org.lwjgl.BufferUtils.createByteBuffer(capacity);
+            }
+            return MemoryUtil.memAddress(buffer);
+        }
+    }
+    /** 继承实际运行时的矩阵顶点默认方法，保??Sodium 开关与其它兼容修改的计算顺序?*/
+    private static final class SpherePosition implements VertexConsumer {
+        long pointer;
+        @Override public VertexConsumer vertex(double x,double y,double z) {
+            MemoryUtil.memPutFloat(pointer,(float)x);MemoryUtil.memPutFloat(pointer+4,(float)y);
+            MemoryUtil.memPutFloat(pointer+8,(float)z);MemoryUtil.memPutInt(pointer+12,0xFF000000);
+            pointer+=16;return this;
+        }
+        @Override public VertexConsumer color(int r,int g,int b,int a) {throw unsupported();}
+        @Override public VertexConsumer uv(float u,float v) {throw unsupported();}
+        @Override public VertexConsumer overlayCoords(int u,int v) {throw unsupported();}
+        @Override public VertexConsumer uv2(int u,int v) {throw unsupported();}
+        @Override public VertexConsumer normal(float x,float y,float z) {throw unsupported();}
+        @Override public void endVertex() {throw unsupported();}
+        @Override public void defaultColor(int r,int g,int b,int a) {throw unsupported();}
+        @Override public void unsetDefaultColor() {throw unsupported();}
+        private static UnsupportedOperationException unsupported() {
+            return new UnsupportedOperationException("unsupported vertex operation");
+        }
+    }
+    private static final class Sodium {
+        static final MethodHandle TRY, PUSH;
+        static final Object FORMAT;
+        static {
+            MethodHandle find=null,push=null;Object format=null;
+            if(net.minecraftforge.fml.ModList.get().isLoaded("sodium"))try {
+                Class<?> writer=Class.forName("net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter");
+                Class<?> description=Class.forName("net.caffeinemc.mods.sodium.api.vertex.format.VertexFormatDescription");
+                var lookup=MethodHandles.publicLookup();
+                find=lookup.unreflect(writer.getMethod("tryOf",VertexConsumer.class))
+                        .asType(MethodType.methodType(Object.class,VertexConsumer.class));
+                push=lookup.unreflect(writer.getMethod("push",MemoryStack.class,long.class,int.class,description))
+                        .asType(MethodType.methodType(void.class,Object.class,MemoryStack.class,long.class,int.class,Object.class));
+                format=Class.forName("net.caffeinemc.mods.sodium.api.vertex.format.common.ColorVertex").getField("FORMAT").get(null);
+            }catch(ReflectiveOperationException|LinkageError unavailable) {
+                find=null;push=null;format=null;
+            }
+            TRY=find;PUSH=push;FORMAT=format;
+        }
+    }
+    /** 领域双球壳保留全部顶点和最终透明排序，只批量提交固定黑色的位置数据?*/
+    static boolean drawDomainSphere(VertexConsumer consumer,Matrix4f matrix,double radius) {
+        int count=DomainSphereGeometry.vertexCount();
+        if(Sodium.TRY==null||count==0||count>MAX_BYTES/16)return false;
+        Scratch scratch=SCRATCH.get();if(scratch.busy)return false;
+        try {
+            Object writer=(Object)Sodium.TRY.invokeExact(consumer);if(writer==null)return false;
+            scratch.busy=true;
+            long base=scratch.reserve(count*16);
+            SpherePosition position=scratch.spherePosition;position.pointer=base;
+            for(int vertex=0;vertex<count;vertex++) {
+                position.vertex(matrix,DomainSphereGeometry.x(vertex,radius),DomainSphereGeometry.y(vertex,radius),
+                        DomainSphereGeometry.z(vertex,radius));
+            }
+            try(MemoryStack stack=MemoryStack.stackPush()) {
+                Sodium.PUSH.invokeExact(writer,stack,base,count,Sodium.FORMAT);
+            }
+            return true;
+        }catch(RuntimeException|Error error) {throw error;}
+        catch(Throwable error) {throw new IllegalStateException("Cannot submit domain sphere vertices",error);}
+        finally {scratch.spherePosition.pointer=0;scratch.busy=false;}
+    }
+    static boolean draw(VertexConsumer consumer,Matrix4f matrix,MagicCircleGeometry.Mesh mesh,
+                        boolean glow,int glowColor,float alpha) {
+        if(Sodium.TRY==null||mesh.size()==0||mesh.size()>MAX_BYTES/64)return false;
+        Scratch scratch=SCRATCH.get();if(scratch.busy)return false;
+        try {
+            Object writer=(Object)Sodium.TRY.invokeExact(consumer);if(writer==null)return false;
+            scratch.busy=true;
+            long base=scratch.reserve(mesh.size()*64),pointer=base;
+            for(int i=0;i<mesh.size();i++) {
+                var quad=mesh.quad(i,glow);
+                float opacity=alpha*quad.alpha();if(glow)opacity*=MagicCircleGeometry.GLOW_ALPHA;
+                int color=glow?glowColor:quad.color();
+                // ??VertexConsumer.color(float,...) 完全相同的乘法、截断和字节布局??
+                int red=(int)((((color>>16)&255)/255F)*255F);
+                int green=(int)((((color>>8)&255)/255F)*255F);
+                int blue=(int)(((color&255)/255F)*255F);
+                int packed=(red&255)|((green&255)<<8)|((blue&255)<<16)|(((int)(opacity*255F)&255)<<24);
+                put(scratch,matrix,pointer,quad.x1(),quad.z1(),packed);pointer+=16;
+                put(scratch,matrix,pointer,quad.x2(),quad.z2(),packed);pointer+=16;
+                put(scratch,matrix,pointer,quad.x3(),quad.z3(),packed);pointer+=16;
+                put(scratch,matrix,pointer,quad.x4(),quad.z4(),packed);pointer+=16;
+            }
+            try(MemoryStack stack=MemoryStack.stackPush()) {
+                Sodium.PUSH.invokeExact(writer,stack,base,mesh.size()*4,Sodium.FORMAT);
+            }
+            return true;
+        }catch(RuntimeException|Error error) {throw error;}
+        catch(Throwable error) {throw new IllegalStateException("Cannot submit circle vertices",error);}
+        finally {scratch.busy=false;}
+    }
+    private static void put(Scratch scratch,Matrix4f matrix,long pointer,float x,float z,int color) {
+        // ??API 使??matrix.transform(Vector4f)，复用向量而不改变变换的计算顺序?
+        Vector4f p=matrix.transform(scratch.position.set(x,0,z,1));
+        MemoryUtil.memPutFloat(pointer,p.x());MemoryUtil.memPutFloat(pointer+4,p.y());
+        MemoryUtil.memPutFloat(pointer+8,p.z());MemoryUtil.memPutInt(pointer+12,color);
+    }
+}

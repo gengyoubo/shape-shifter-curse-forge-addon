@@ -13,7 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 榄旀硶娉ㄥ唽琛紙jackcooper锛夛細id 鈫?{@link Spell}銆侸ava 渚у彧娉ㄥ唽琛屼负绫伙紙鍗曚緥锛夛紝鏁板€肩敱 JSON 鏁版嵁鍖呮敞鍏ャ€? * Forge 鐗堢敤 {@link SimplePreparableReloadListener} 鎺ュ叆鏁版嵁鍖呴噸杞斤紝缃戠粶鍚屾璧?{@link github.com.gengyoubo.sscfa.network.AddonNetwork}銆? */
+ * 魔法注册表（jackcooper）：id ?{@link Spell}。Java 侧只注册行为类（单例），数值由 JSON 数据包注入? * Forge 版用 {@link SimplePreparableReloadListener} 接入数据包重载，网络同步?{@link github.com.gengyoubo.sscfa.network.AddonNetwork}? */
 public final class SpellRegistry extends SimplePreparableReloadListener<Void> {
 	private static final Map<ResourceLocation, Spell> SPELLS = new LinkedHashMap<>();
 	private volatile Map<String, String> rawJson = Map.of();
@@ -70,7 +70,7 @@ public final class SpellRegistry extends SimplePreparableReloadListener<Void> {
 		return SPELLS.values();
 	}
 
-	/** 娉ㄥ唽鍐呯疆榄旀硶琛屼负绫伙紙鏁板€肩瓑寰?JSON 娉ㄥ叆锛夈€傛殏缂撲緷璧栬兘鍔涘眰鐨?3 涓硶鏈€?*/
+	/** 注册内置魔法行为类（数值等?JSON 注入）。暂缓依赖能力层?3 个法术?*/
 	public static void init() {
 		register(new github.com.gengyoubo.sscfa.spell.spells.FireBoltSpell());
 		register(new github.com.gengyoubo.sscfa.spell.spells.FlameNovaSpell());

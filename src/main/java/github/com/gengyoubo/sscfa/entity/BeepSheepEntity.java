@@ -20,30 +20,30 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 
 /**
- * 閺堝牆鐨规鏃€纭惰矾閸溾晛鑴婇敍鍫濆将閸炪倗閮撮妴宀€绶ゆ禍鍡曢嚋缂?Beep Sheep閵嗗稄绱漥ackcooper閿?026-09-29 閻劍鍩涚€规氨顭堥敍澶堚偓?
+ * 月尘魔法·咩弹（召唤系「羊了个??Beep Sheep」，jackcooper??026-09-29 用户定稿）?
  *
- * <p><b>妞嬬偠顢戞潪銊ㄦ姉娑撳酣娴摂瀣╃閼?/b>閿涙氨鎴烽幍?{@link ThrowableItemProjectile} 娣囨繄鏆€姒涙顓婚柌宥呭閿?.03 闂冭濮?+ 0.05 闁插秴濮忛敍澶涚礉
- * 閸涘牊鐖ｉ崙鍡樺閻椻晝鍤庨妴鍌氭嚒娑擃厽妞挎担鎾虫倵鐏忓棗鍙?b>閸欐ɑ鍨氱紘?/b>閿涘牊鏌﹂崝?{@link SscAddon#SHEEP_FORM} 閺佸牊鐏夐敍?
- * 鐎广垺鍩涚粩顖滄暠 SheepFormClientHooks 閻劌甯悧鍫㈢筏濡€崇€烽弴鎸庡床濞撳弶鐓嬮敍澶涚礉閺堢喖妫块惄顔界垼閺冪姵纭堕弨璇插毊 / 閺冪姵纭堕惍鏉戞綎 / 閺冪姵纭堕弨鍓х枂閺傜懓娼￠妴?/p>
+ * <p><b>飞行轨迹与鸡蛋一??/b>：继?{@link ThrowableItemProjectile} 保留默认重力??.03 阻??+ 0.05 重力），
+ * 呈标准抛物线。命中活体后将??b>变成?/b>（施?{@link SscAddon#SHEEP_FORM} 效果?
+ * 客户端由 SheepFormClientHooks 用原版羊模型替换渲染），期间目标无法攻击 / 无法破坏 / 无法放置方块?/p>
  *
- * <p><b>閻╊喗鐖ｉ梽鎰煑閿?026-09-29 閻劍鍩涚€规氨顭堥弨纭咁攨闁插繘妫敍?/b>閿涙oss 缁紮绱欓崙瀣紥/閻╂垵鐣ч懓鍜冪礆娑?b>閺堚偓婢堆呮晸閸涜棄鈧?
- * 鐡掑懓绻?50 閻?/b>閻ㄥ嫮娲伴弽鍥у帳閻ゎ偓绱欓崢鐔粹偓宀€顫幘鐐殿唸鐎?1.2 閹存牠鐝?2.0閵嗗秳缍嬮崹瀣，瀹歌尙些闂勩倐鈧柡鈧攷od NPC 閺咁噣浜堕煬顐︾彯
- * 鐡?2.0 鐞氼偉顕ら弶鈧敍灞筋嚤閼锋番鈧PC 閻㈢喓澧块弮鐘崇《閸欐ɑ鍨氱紘濞库偓宥忕幢鐞涒偓闁插繘妫径鈺冨姧鐟曞棛娲婇弶鎴炵毌 20 鐞涒偓/婢舵碍鏆?NPC閿涘苯鎮撻弮鏈电矝
- * 閹糕€茬秶闁句礁鍊嬮崕?100 鐞涒偓/閺堫偄濂栨Λ?200 鐞涒偓/閸戝浼?300 鐞涒偓缁涘銇囬崸妤€銇旈敍澶堚偓?/p>
+ * <p><b>目标限制??026-09-29 用户定稿改血量门?/b>：Boss 类（凋灵/监守者）??b>最大生命??
+ * 超??50 ??/b>的目标免疫（原「碰撞箱??1.2 或??2.0」体型门已移除——mod NPC 普遍身高
+ * ??2.0 被误杀，导致「NPC 生物无法变成羊」；血量门天然覆盖村民 20 血/多??NPC，同时仍
+ * 挡住铁傀?100 血/末影?200 血/凋??300 血等大块头）?/p>
  *
- * <p>姒涙顓婚惂钘夋倳閸楁洩绱版稉璁虫眽閸︺劎鍤庢稉鏃傛窗閺嶅洤褰堟穱婵囧Б閿涘牏甯虹€硅泛寮烽崗璺虹枃閻?閸欘剙鏁滈悧鈺嬬礆閸掓瑤绗夐弬钘夊閵嗗倸鎳℃稉?Boss 閸忓秶鏌呮担鎾存
- * 瀵€涚秼閸欏秷顫﹂妴宀€绶ら崠鏍у冀瀵箍鈧秵绱ㄩ崙鐚寸礄閸溾晛褰?+ 缁帒鐡欓敍澶涚礉娑撳秵鏌﹂崝鐘虫櫏閺嬫嚎鈧?/p>
+ * <p>默认白名单：主人在线且目标受保护（玩家及其宠??召唤物）则不施加。命?Boss 免疫体时
+ * 弹体反被「羊化反弹」演出（咩??+ 粒子），不施加效果??/p>
  */
 public class BeepSheepEntity extends ThrowableItemProjectile {
 
-	/** 鐞涒偓闁插繘妫梼鍫濃偓纭风礄2026-09-29 閻劍鍩涚€规氨顭堥敍澶涚窗閺堚偓婢堆呮晸閸涜棄鈧?> 50 閻愬湱娈戦惄顔界垼閸忓秶鏌呴崣妯肩筏閵?*/
+	/** 血量门阈值（2026-09-29 用户定稿）：最大生命??> 50 点的目标免疫变羊??*/
 	private static final float MAX_TARGET_HEALTH = 50.0F;
 
-	/** 閸欐绶ら弮鍫曟毐閿涘澅ick閿涘绱滵ataTracker 閺冪娀娓堕垾鏂衡偓鏂剧矌閺堝秴濮熺粩顖滅波缁犳鏁ら敍瀛˙T 閹镐椒绠欓崠鏍モ偓?*/
+	/** 变羊时长（tick），DataTracker 无需——仅服务端结算用，NBT 持久化?*/
 	private int sheepDuration = 120;
-	/** 姒勬梹纭剁粵澶岄獓閿?-5閿涘鈧?*/
+	/** 魔法等级??-5）??*/
 	private int spellLevel = 1;
-	/** 娑旓箑鍞撮弬鑺ョ《缂傛牕褰块敍鍧皁lo 娑?null閿涙稒绁﹀ú鎯ф嚒娑擃叀绻戞潻妯兼暏閿涘鈧?*/
+	/** 书内施法编号（solo ??null；流派命中返还用）??*/
 	private java.util.UUID refundCastId;
 
 	public void setRefundCastId(java.util.UUID castId) {
@@ -60,7 +60,7 @@ public class BeepSheepEntity extends ThrowableItemProjectile {
 
 	@Override
 	protected Item getDefaultItem() {
-		// 濞撳弶鐓嬮悧鈺佹惂閿涙氨娅ч懝鍙夌厠閺傛瑦娓堕幒銉ㄧ箮閵嗗瞼绶ら妴宥嗗壈鐠炩槄绱欑亸蹇曟閼瑰弶鏌熼崸妤€鑴婇柆鎿勭礉FlyingItemEntityRenderer 閻╁瓨甯撮悽顭掔礆
+		// 渲染物品：白色染料最接近「羊」意象（小白色方块弹道，FlyingItemEntityRenderer 直接用）
 		return Items.WHITE_DYE;
 	}
 
@@ -68,12 +68,12 @@ public class BeepSheepEntity extends ThrowableItemProjectile {
 	public void tick() {
 		super.tick();
         if(this.isRemoved())return;
-		// 妞嬬偠顢戦幏鏍х啲閿涘牊婀囬崝锛勵伂閹炬帪绱濇径鈺冨姧婢舵矮姹夐崥灞绢劄閿涘绱伴惂鍊熷缂囧﹥鐦虹徊?+ 鏉炶浜曢崪鈺傤洤閻滃洭鐓舵稉宥呭煕閿涘牆鑴婇柆鎾崇暔闂堟瑱绱濋崨鎴掕厬閹靛秴褰ㄩ敍?
+		// 飞行拖尾（服务端撒，天然多人同步）：白色羊毛?+ 轻微咩概率音不刷（弹道安静，命中才叫?
 		if (this.level() instanceof ServerLevel serverWorld && this.tickCount % 2 == 0) {
 			serverWorld.sendParticles(ParticleTypes.WHITE_ASH,
 					this.getX(), this.getY(), this.getZ(), 1, 0.05, 0.05, 0.05, 0.0);
 		}
-		// 鐡掑懏妞傞懛顏呯槈閿? 缁夋帪绱辨ウ陇娉插蹇斿閻椻晝鍤庨拃钘夋勾娴兼俺袝閸?onCollision閿涘本顒濇稉鍝勫幑鎼存洩绱?
+		// 超时自毁?? 秒；鸡蛋式抛物线落地会触??onCollision，此为兜底??
 		if (this.tickCount > 160) {
 			this.discard();
 		}
@@ -86,14 +86,14 @@ public class BeepSheepEntity extends ThrowableItemProjectile {
 		if (this.level().isClientSide || !(target instanceof LivingEntity livingTarget)) {
 			return;
 		}
-		// 姒涙顓婚惂钘夋倳閸楁洩绱版稉璁虫眽閸︺劎鍤庢稉鏃傛窗閺嶅洤褰堟穱婵囧Б 閳?娑撳秵鏌﹂崝鐙呯礄瀵€涚秼濞戝牊鏆庨敍?
+		// 默认白名单：主人在线且目标受保护 ??不施加（弹体消散?
 		if (this.getOwner() instanceof ServerPlayer ownerPlayer
 				&& WhitelistUtils.isProtected(ownerPlayer, livingTarget)) {
 			return;
 		}
-		// Boss / 婢堆冪€烽悽鐔哄⒖閸忓秶鏌呴敍鍫㈡暏閹村嘲鐣剧粙鍖＄窗娑撳秴鍘戠拋绋垮綁 boss 缁崵鏁撻悧鈺嬬礉閸欘亣鍏橀崣妯虹毈閸ㄥ鏁撻悧鈺嬬礆
+		// Boss / 大型生物免疫（用户定稿：不允许变 boss 类生物，只能变小型生物）
 		if (isImmuneTarget(livingTarget)) {
-			// 閸忓秶鏌呭鏂垮毉閿涙艾鎸稉鈧竟?+ 缁帒鐡欏鐟扮磻閿涘牆鑿囨妯哄冀妫ｅ牞绱扮紘濠囩摕濞夋洖顕径褍娼℃径瀛樻￥閺佸牞绱?
+			// 免疫演出：咩一?+ 粒子弹开（幽默反馈：羊魔法对大块头无效??
 			this.level().playSound(null, target.getX(), target.getY(), target.getZ(),
 					SoundEvents.SHEEP_AMBIENT, SoundSource.PLAYERS, 1.0f, 0.6f);
 			if (this.level() instanceof ServerLevel serverWorld) {
@@ -102,7 +102,7 @@ public class BeepSheepEntity extends ThrowableItemProjectile {
 			}
 			return;
 		}
-		// 閺傝棄濮為崣妯肩筏閿涙瓫mplifier = 缁涘楠?1閿涘湢1=0 閳?L5=4閿涘奔绶?lang/閹碘晛鐫嶉弰鍓с仛閿?
+		// 施加变羊：amplifier = 等??1（L1=0 ??L5=4，??lang/扩展显示??
 		boolean hadHarmfulEffect = github.com.gengyoubo.sscfa.spell.FormCastingStyle.hasHarmfulEffect(livingTarget);
 		boolean applied = livingTarget.addEffect(new net.minecraft.world.effect.MobEffectInstance(
 				github.com.gengyoubo.sscfa.init.AddonEffects.SHEEP_FORM.get(), sheepDuration, spellLevel - 1, false, true, true), this.getOwner());
@@ -110,7 +110,7 @@ public class BeepSheepEntity extends ThrowableItemProjectile {
                 livingTarget,github.com.gengyoubo.sscfa.init.AddonEffects.SHEEP_FORM.get(),sheepDuration,spellLevel-1,applied))
             github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.hit(this,livingTarget);
 		if (applied) {
-			// 閻ф槒顔囬妴灞藉綀閹﹪鈧啰顬囧┃鎰┾偓宥忕礄2026-09-29 閻劍鍩涚€规氨顭堥敍姘綁缂?NPC 閻ㄥ嫮绶?AI 姒涙顓婚崣妤佸剷鏉╂粎顬囬弬鑺ョ《閼板拑绱?
+			// 登记「受惊逃离源」（2026-09-29 用户定稿：变??NPC 的??AI 默认受惊远离施法者??
 			github.com.gengyoubo.sscfa.effect.SheepFormAiController.setFleeFrom(
 					livingTarget.getUUID(), this.getOwner() != null ? this.getOwner().getUUID() : null);
 		}
@@ -119,7 +119,7 @@ public class BeepSheepEntity extends ThrowableItemProjectile {
 			github.com.gengyoubo.sscfa.spell.FormCastingStyle.onSpellHit(caster, livingTarget,
 					github.com.gengyoubo.sscfa.spell.FormationElement.SUMMON, refundCastId, hadHarmfulEffect);
 		}
-		// 閸欐闊╁鏂垮毉閿涙艾鎸敍? 缂囧﹥鐦洪悥鍡樻殠
+		// 变身演出：咩? 羊毛爆散
 		this.level().playSound(null, target.getX(), target.getY(), target.getZ(),
 				SoundEvents.SHEEP_AMBIENT, SoundSource.PLAYERS, 1.0f, 1.0f);
 		if (this.level() instanceof ServerLevel serverWorld) {
@@ -132,7 +132,7 @@ public class BeepSheepEntity extends ThrowableItemProjectile {
 	protected void onHit(HitResult hitResult) {
 		super.onHit(hitResult);
 		if (!this.level().isClientSide) {
-			// 閽€钘夋勾濠曟柨鍤敍姘毈閸ャ垻绶ゅВ娑樼毠閿涘牅绗夐崪鈺佸建閳ユ柡鈧柨褰ч崨鎴掕厬濞茶缍嬮幍宥呭建閿?
+			// 落地演出：小团羊毛尘（不咩叫——只命中活体才叫??
 			if (this.level() instanceof ServerLevel serverWorld) {
 				serverWorld.sendParticles(ParticleTypes.POOF,
 						this.getX(), this.getY(), this.getZ(), 5, 0.15, 0.15, 0.15, 0.02);
@@ -143,13 +143,13 @@ public class BeepSheepEntity extends ThrowableItemProjectile {
 
 	@Override
 	protected boolean canHitEntity(Entity entity) {
-		// 閹烘帡娅庨惄鏃傛暢閺嬫湹绗岄弬鑺ョ《閼板懏婀版禍鐚寸礄閸氬矁鐦忛崪鎺撶垼鐠佹澘鑴婇敍?
+		// 排除盔甲架与施法者本人（同诅咒标记弹?
 		return super.canHitEntity(entity) && entity != this.getOwner()
 				&& entity instanceof LivingEntity && !(entity instanceof ArmorStand);
 	}
 
-	/** Boss / 妤傛顢呴柌蹇曟窗閺嶅洤鍘ら悿顐㈠灲鐎规熬绱欓張宥呭缁旑垱娼堟繛渚婄礉2026-09-29 閻劍鍩涚€规氨顭堢悰鈧柌蹇涙，閿涘绱伴崙瀣紥閵嗕胶娲冪€瑰牐鈧懌鈧?
-	 *  閺堚偓婢堆呮晸閸涜棄鈧?> 50 閻愬箍鈧倷缍嬮崹瀣，瀹歌尙些闂勩倧绱檓od NPC 闊偊鐝弲顕€浜?>2.0 鐞氼偉顕ら幐鈽呯礉閺夋垶鐨?娴ｅ氦顢?NPC 閻滄澘婀崣顖氬綁缂囧绱氶妴?*/
+	/** Boss / 高血量目标免疫判定（服务端权威，2026-09-29 用户定稿血量门）：凋灵、监守者??
+	 *  最大生命??> 50 点。体型门已移除（mod NPC 身高普??>2.0 被误挡，村??低??NPC 现在可变羊）?*/
 	public static boolean isImmuneTarget(LivingEntity target) {
 		if (target instanceof WitherBoss
 				|| target instanceof net.minecraft.world.entity.monster.warden.Warden) {
@@ -174,12 +174,12 @@ public class BeepSheepEntity extends ThrowableItemProjectile {
 		nbt.putInt("SpellLevel", spellLevel);
 	}
 
-	/** 鐠佸墽鐤嗛崣妯肩筏閺冨爼鏆遍敍鍧眎ck閿涘本婀囬崝锛勵伂閺傝姤纭堕弮鎯扮殶閻㈩煉绱氶妴?*/
+	/** 设置变羊时长（tick，服务端施法时调用）?*/
 	public void setSheepDuration(int durationTicks) {
 		this.sheepDuration = Math.max(20, durationTicks);
 	}
 
-	/** 鐠佸墽鐤嗘鏃€纭剁粵澶岄獓閿?-5閿涘鈧?*/
+	/** 设置魔法等级??-5）??*/
 	public void setSpellLevel(int level) {
 		this.spellLevel = Math.max(1, Math.min(5, level));
 	}

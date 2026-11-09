@@ -32,7 +32,7 @@ import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
 /**
- * 鏂芥硶璇绘潯绠＄悊鍣紙Forge 绠€鍖栫増锛夛細璧锋墜鏍￠獙銆丟CD銆佽鏉℃帹杩涖€侀噴鏀?鎵撴柇銆佸喎鍗寸粨绠椼€佺Щ鍔ㄥ噺閫熶笌鐘舵€佸悓姝ャ€? * 褰㈡€佸崗鍚?宕╄В锛圢eoMagic锛夌瓑楂樼骇缁撶畻寰呭搴旂郴缁熺Щ妞嶅悗琛ュ洖銆? */
+ * 施法读条管理器（Forge 简化版）：起手校验、GCD、读条推进、释?打断、冷却结算、移动减速与状态同步? * 形态协?崩解（NeoMagic）等高级结算待对应系统移植后补回? */
 public final class SpellChannelManager {
 	public static final ResourceLocation STATE = new ResourceLocation("ssc_addon", "spell_channel_state");
 	public static final ResourceLocation RELEASE = new ResourceLocation("ssc_addon", "spell_channel_release");

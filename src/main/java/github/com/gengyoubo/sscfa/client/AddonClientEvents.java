@@ -14,7 +14,9 @@ import github.com.gengyoubo.sscfa.init.AddonEntities;
 import github.com.gengyoubo.sscfa.init.AddonParticles;
 import github.com.gengyoubo.sscfa.particle.client.InwardIceParticle;
 import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraft.client.renderer.entity.NoopRenderer;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import github.com.gengyoubo.sscfa.init.AddonItems;
 import github.com.gengyoubo.sscfa.item.InfiniteEnergyPotionItem;
 import net.minecraft.client.renderer.item.ItemProperties;
@@ -35,12 +37,24 @@ public final class AddonClientEvents {
         event.registerBlockEntityRenderer(AddonBlockEntities.ENERGY_STORAGE_TANK.get(), EnergyStorageTankRenderer::new);
         event.registerBlockEntityRenderer(AddonBlockEntities.ENERGY_BOTTLER.get(), EnergyBottlerRenderer::new);
         event.registerBlockEntityRenderer(AddonBlockEntities.POTION_STORAGE_BOX.get(), PotionStorageBoxRenderer::new);
-        // 实体渲染器尚未迁移：先注册不可见的占位渲染器（缺渲染器的实体一进入视野客户端就会崩溃）
+        // 瀹炰綋娓叉煋鍣ㄥ皻鏈縼绉伙細鍏堟敞鍐屼笉鍙鐨勫崰浣嶆覆鏌撳櫒锛堢己娓叉煋鍣ㄧ殑瀹炰綋涓€杩涘叆瑙嗛噹瀹㈡埛绔氨浼氬穿婧冿級
         AddonEntities.shellProjectiles().forEach(type -> event.registerEntityRenderer(type.get(), NoopRenderer::new));
+        event.registerEntityRenderer(AddonEntities.SPELL_FIRE_BOLT.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(AddonEntities.SPELL_FROST_SPIKE.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(AddonEntities.SPELL_METEOR.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(AddonEntities.SPELL_CURSE_MARK.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(AddonEntities.BEEP_SHEEP.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(AddonEntities.SPELL_MOONLIGHT_ARROW.get(), NoopRenderer::new);
         event.registerEntityRenderer(AddonEntities.LUNAR_SPIRIT.get(), NoopRenderer::new);
         event.registerEntityRenderer(AddonEntities.GHOST_CAT.get(), NoopRenderer::new);
         event.registerEntityRenderer(AddonEntities.WITCH_FAMILIAR.get(), NoopRenderer::new);
         event.registerEntityRenderer(AddonEntities.AXOLOTL_SHIFTER.get(), NoopRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void registerKeys(RegisterKeyMappingsEvent event) {
+        SpellcastKeybindings.init();
+        SpellcastKeybindings.register(event);
     }
 
     @SubscribeEvent
@@ -54,6 +68,9 @@ public final class AddonClientEvents {
             BalanceClient.init(SscBalanceSchema.create());
             SkillCooldownClient.init();
             AddonSkillKeys.init();
+            SpellcastClient.register();
+            CastingVisualState.register();
+            SpellbookStatusClient.init();
             MenuScreens.register(AddonMenus.ENERGY_BOTTLER.get(), EnergyBottlerScreen::new);
             MenuScreens.register(AddonMenus.POTION_STORAGE_BOX.get(), PotionStorageBoxScreen::new);
             var empty = new ResourceLocation(SscAddonForge.MOD_ID, "empty");

@@ -42,9 +42,9 @@ public final class PocketSpaceManager {
 	private static final Map<UUID, Channel> CHANNELS = new HashMap<>();
 	private static final Map<Integer, Generation> GENERATIONS = new HashMap<>();
 	private static final Map<UUID, PocketPortalGate> GATES = new HashMap<>();
-	/** 閹村潡妫垮☉鍫ユ珟閸婃帟顓搁弮璁圭礄濡叉垝缍?閳?閸撯晙缍?tick閿涘绱伴幋鍨敶閺堝姹夐弮璺哄帥鐏炲繐绠锋稉顓炪亷閹绘劗銇?5 缁夋帒鍟€闁礁娲栭妴?*/
+	/** 房间消除倒计时（槽????剩??tick）：房内有人时先屏幕中央提??5 秒再送回?*/
 	private static final Map<Integer, Eviction> EVICTIONS = new HashMap<>();
-	/** 瀹稿弶甯撻梼鐔哥缁岃櫣娈戝Σ鎴掔秴閿涘牓鈧?tick 閸掑棙澹掑〒鍜冪礆閵?*/
+	/** 已排队清空的槽位（??tick 分批清）??*/
 	private static final Map<Integer, Wipe> WIPES = new HashMap<>();
 	private static final Map<Integer, UUID> COMPLETED_WIPES = new HashMap<>();
 	private static final UUID CHANNEL_SLOW_ID = UUID.fromString("9d17b640-476a-4bdc-a396-8a729fbd5ced");
@@ -208,17 +208,17 @@ public final class PocketSpaceManager {
 		}
 	}
 
-	// 閸掑棙顔岀€瑰牆宕奸敍鍫ユ姜閺佺繝缍嬮惌顓＄熅閿涘绱皊etTimeOfDay/鐟欏棜绐?census 韫囧懘銆忛悡褍鐖剁捄鎴礉娑撴柣鈧本婀佹禍鍝勬躬
-	//  閸欙綀顣扮紒鏉戝閵嗗秶娈戝Λ鈧ù瀣拱闊偄姘ㄩ棁鈧憰浣哄负鐎硅泛鎯婇悳顖椻偓鏂衡偓鏃€鏆ｆ担鎾剁叚鐠侯垯绗夐崣顖濐攽閿涙稒鏁兼稉鍝勬倗鏉╊厺鍞崳銊︻唽閸栧懐鈹栫悰銊ョ暓閸楊偁鈧笩ATES.remove
-	//  閸?!GATES.isEmpty()閿涘矁顢戞稉杞扮瑝閸欐﹫绱濈敮鍛娾偓渚婄礄閸ユ稖銆冮崗銊р敄閿涘褰ч崜鈺傜槨閻溾晛顔嶆稉鈧▎?isPocket 閸掋倖鏌囬妴?
+	// 分段守卫（非整体短路）：setTimeOfDay/视??census 必须照常跑，且「有人在
+	//  口袋维度」的检测本身就需要玩家循环——整体短路不可行；改为各迭代器段包空表守卫、GATES.remove
+	//  ??!GATES.isEmpty()，行为不变，常态（四表全空）只剩每玩家一?isPocket 判断?
 	private static void tick(MinecraftServer server) {
 		ensureServer(server);
 		ServerLevel pocket = server.getLevel(WORLD_KEY);
 		if (pocket == null) return;
 		recoverTasks(server);
-		pocket.setDayTime(6000); // 閸欙綀顣扮紒鏉戝閺冪姵妞傞梻瀛橆洤韫囩绱板姝岀箼濮濓絽宕?
-		// 閸欙綀顣扮紒鏉戝鐟欏倸鐧傜捄婵堫瀲閸樺鍩?3閿涙碍婀囬崝鈥虫珤閸欘亙璐熼悳鈺侇啀閸旂姾娴囬崨銊ユ纯 7鑴? 閸栧搫娼￠敍鍫ｅ喕娴犮儴顩惄鏍︽崲閹板繒鐡戠痪褎鍩ч梻瀵告磪閿涘绱?
-		// 閼板矂娼崗銊潒鐠?441 娑擃亜灏崸妞烩偓鏂衡偓鏃囩箹閺勵垪鈧粏绻橀崗銉ュ幢瀵板牅绠欓垾婵堟畱娑撶粯绨妴鍌氭噯閺堢喖鍣哥拋楣冩Щ閸忋劌鐪憴鍡氱獩閸欐ɑ娲块幎濠傜暊閺€鐟版礀閸樻眹鈧?
+		pocket.setDayTime(6000); // 口袋维度无时间概念：永远正??
+		// 口袋维度观察距离压??3：服务器只为玩家加载周围 7?? 区块（足以覆盖任意等级房间盒）??
+		// 而非全视??441 个区块——这是“进入卡很久”的主源。周期重设防全局视距变更把它改回去??
 		if (pocket.getGameTime() % 100 == 0) {
 			((github.com.gengyoubo.sscfa.mixin.ThreadedAnvilChunkStorageAccessor)
 					pocket.getChunkSource().chunkMap).sscAddon$setViewDistance(3);
@@ -278,7 +278,7 @@ public final class PocketSpaceManager {
 				GENERATIONS.computeIfAbsent(room.layout().index(), ignored -> new Generation(room));
 			}
 			if (channel.ticks % 5 == 0) {
-				// owner 閹垫挻鐖ｉ敍姘矌閺堫兛姹夌粭顑跨娴滆櫣袨闁儻顔€閿涘牆绱╃€靛ジ妫梿鎾呯礆
+				// owner 打标：仅本人第一人称避让（引导门雾）
 				github.com.gengyoubo.sscfa.network.DecorationParticles.spawn(player.serverLevel(), player, ParticleTypes.PORTAL, player.getX(), player.getY(0.7),
 						player.getZ(), 5, 0.4, 0.5, 0.4, 0.05);
 				message(player, "channel", (Math.max(0, channel.ticks) + 19) / 20);
@@ -300,11 +300,11 @@ public final class PocketSpaceManager {
 			if (!visit.active()) continue;
 			PocketSpaceStorage.Room room = PocketSpaceStorage.findRoom(server, visit.roomId());
 			if (room == null) {
-				// 閹村潡妫垮鍙夌Х闂勩倛鈧瞼甯虹€规湹绮涢崷銊ф樊鎼达箑鍞撮敍鍫濐洤濞戝牓娅庨弮鍓侇瀲缁惧尅绱氶敍姘辨纯閹恒儵鈧礁娲栭崢鐔剁秴缂?
+				// 房间已消除而玩家仍在维度内（如消除时离线）：直接送回原位??
 				leave(player, visit);
 				continue;
 			}
-			if (EVICTIONS.containsKey(room.layout().index())) continue; // 閸婃帟顓搁弮鏈佃厬閿涘瞼鏁?tickEvictions 婢跺嫮鎮?
+			if (EVICTIONS.containsKey(room.layout().index())) continue; // 倒计时中，??tickEvictions 处??
 			if (!room.initialized()) {
 				GENERATIONS.computeIfAbsent(room.layout().index(), ignored -> new Generation(room));
 				continue;
@@ -337,7 +337,7 @@ public final class PocketSpaceManager {
 			} else if (gate.counting() && player.tickCount % 20 == 0) {
 				message(player, "exit_countdown", gate.remainingSeconds());
 			}
-			// 閸戝搫褰涢崐鎺曨吀閺冭埖婀￠梻杈剧窗娴肩娀鈧礁褰村▔鏇㈡█閸愭帞浼犻懝韫瑐閸楀洨鐭戠€涙劖绁﹂敍鍫滆雹閺傝姤纭跺鏂垮毉閿涘苯顓归幋椋庮伂閺堫剙婀村〒鍙夌厠閿?
+			// 出口倒计时期间：传送台法阵冒紫色上升粒子流（仿施法演出，客户端本地渲染??
 			if (gate.counting() && player.tickCount % 5 == 0) {
 				spawnExitFx(pocket, layout);
 			}
@@ -345,8 +345,8 @@ public final class PocketSpaceManager {
 	}
 
 	/**
-	 * 閸掗攱鏌婂鑼额潎鐎电喎鍩岄崡鐤叡閻ㄥ嫬绺剧捄鐐解偓鍌滎唸鐎涙劑鈧胶顬囩痪璺ㄥ负鐎硅泛鎷伴張顏勫鏉炶棄鐤勬担鎾存￥濞夋洝顫﹀銈嗗閹诲繑娅橀弻銉幢
-	 * 閺堫亣顫︾憴鍌氱檪閸掗绗夌粵澶夌艾閸楃柉閰卞☉鍫濄亼閿涘奔绡冩稉宥勭窗鐟欙箑褰傞幋鍧楁？妞归亶鈧劖鍨ㄥ〒鍛敄閵?
+	 * 刷新已观察到卷轴的心跳。箱子、离线玩家和未加载实体无法被此扫描普查；
+	 * 未被观察到不等于卷轴消失，也不会触发房间驱逐或清空??
 	 */
 	private static void census(MinecraftServer server, ServerLevel pocket) {
 		PocketSpaceStorage.Registry registry = PocketSpaceStorage.registry(server);
@@ -379,14 +379,14 @@ public final class PocketSpaceManager {
 		if (stack.isEmpty()) return;
 		net.minecraft.nbt.CompoundTag nbt = stack.getTag();
 		if (nbt != null && nbt.hasUUID(PocketSpaceStorage.SCROLL_ID)) seen.add(nbt.getUUID(PocketSpaceStorage.SCROLL_ID));
-		// 閸楃柉閰辩憗鍛躬閸掝偆娈戠€圭懓娅掗悧鈺佹惂闁插矉绱欐俊鍌炵摕濞夋洑鍔熼崷銊ㄥ剹閸栧懓鈧矂娼担鈺傚煋閿涘绱伴柅鎺戠秺閹?Items 閸掓銆?
+		// 卷轴装在别的容器物品里（如魔法书在背包而非佩戴）：递归??Items 列??
 		if (nbt != null && nbt.contains(github.com.gengyoubo.sscfa.spell.SpellbookData.NBT_ITEMS, 9)) {
 			net.minecraft.nbt.ListTag list = nbt.getList(github.com.gengyoubo.sscfa.spell.SpellbookData.NBT_ITEMS, 10);
 			for (int i = 0; i < list.size(); i++) collectScroll(ItemStack.of(list.getCompound(i)), seen);
 		}
 	}
 
-	/** 瀵偓婵绉烽梽銈忕窗閹村灝鍞撮弮鐘辨眽缁斿宓嗗〒鍛敄閿涙稒婀佹禍鍝勫灟鐏炲繐绠锋稉顓炪亷閹绘劗銇?5 缁夋帒鎮楅柅浣告礀閸愬秵绔荤粚鎭掆偓?*/
+	/** 开始消除：房内无人立即清空；有人则屏幕中央提??5 秒后送回再清空?*/
 	private static void beginEviction(MinecraftServer server, ServerLevel pocket, PocketSpaceStorage.Room room) {
 		java.util.List<ServerPlayer> inside = playersInRoom(server, room);
 		if (inside.isEmpty()) {
@@ -444,7 +444,7 @@ public final class PocketSpaceManager {
 		return list;
 	}
 
-	/** 濞戝牓娅庨幋鍧楁？閿涙艾鍘涙穱婵嗙摠濞夈劑鏀㈡稉搴暕閻ｆ瑦蝎娴ｅ稄绱濋崘宥呭瀻閹佃绔荤粚鎭掆偓浣盒╅梽銈嗗煣閸愬懘娼悳鈺侇啀鐎圭偘缍嬮妴?*/
+	/** 消除房间：先保存注销与预留槽位，再分批清空、移除房内非玩家实体?*/
 	private static void wipe(MinecraftServer server, ServerLevel pocket, PocketSpaceStorage.Room room) {
 		int slot = room.layout().index();
 		if (!PocketSpaceStorage.unbind(server, room)) return;
@@ -459,8 +459,8 @@ public final class PocketSpaceManager {
 	}
 
 	/**
-	 * 闁劗甯虹€硅泛灏崸妤勭箖濠娿倧绱版导妯哄帥閹稿顔栭梻顔款唶瑜版洝袙閺嬫劖澧嶉崷銊﹀煣闂傝揪绱欐导鐘烩偓浣稿鐏忓崬鍑￠崘娆忓弳閿涘奔绗夐崣妤冨负鐎硅泛娼楅弽鍥﹀閺冭泛鈧厧濂栭崫宥忕礆閿?
-	 * 閸忎浇顔忛懠鍐ㄦ纯 = 閻喎鐤勯幋鍧楁？婢舵牕瀵橀崶瀵告磪鐎瑰苯鍙忕憰鍡欐磰閻ㄥ嫭鏆ｉ崠鍝勬健閿涘牆鍟€婢舵牗澧?1 閸栧搫娼＄憗鏇㈠櫤閿涘绱遍弻銉︽￥閹村潡妫块弮鑸垫杹鐞涘备鈧柡鈧摶t * 鐎逛礁褰叉径姘絺娑撳秴褰插蹇撳絺閿涘本绱￠崣鎴濆祮濮橀晲绠欓柅蹇旀缁岀儤绀婇妴?
+	 * 逐玩家区块过滤：优先按访问记录解析所在房间（传送前就已写入，不受玩家坐标临时值影响）??
+	 * 允许范围 = 真实房间外包围盒完全覆盖的整区块（再外??1 区块裕量）；查无房间时放行——\t * 宁可多发不可漏发，漏发即永久透明空洞?
 	 */
 	public static boolean shouldSendChunk(ServerPlayer player, net.minecraft.world.level.ChunkPos chunk) {
 		if (!isPocket(player.level())) return true;
@@ -517,20 +517,20 @@ public final class PocketSpaceManager {
 	}
 
 	/**
-	 * 閸戝搫褰涙导鐘烩偓浣稿酱濞夋洟妯€缁帒鐡欓敍?026-09-19 閻劍鍩涚€规氨顭堥敍澶涚窗缁旀瑤绗傛导鐘烩偓浣稿酱閸婃帟顓搁弮鑸垫埂闂傝揪绱?
-	 * 娴犮儲纭堕梼?2鑴? 閸栧搫鐓欐稉铏规櫕閸愭帞浼犻懝韫瑐閸楀洨鐭戠€涙劖绁﹂垾鏂衡偓鎿燫AGON_BREATH閿涘牓绶抽幁顖滀紶閿涘本婀囬崝锛勵伂閸欐垵鐨?
-	 * 閼奉亜鐢崥鎴滅瑐妞嬫ɑ璇為崚婵嬧偓鐕傜礉鐟欏倹鍔呮稉搴㈡煢濞夋洖銇旀い鑸电ウ娑撯偓閼疯揪绱? PORTAL 娴肩娀鈧線妫槐顐ゅ仯缂傗偓閿?
-	 * 濮?5t 娑撯偓鏉烆噯绱欑憴鍡氼潕鏉╃偟鐢绘稉鏂垮瘶闁插繐鍘犻崚璁圭礆閿涘本婀囬崝锛勵伂閹炬帒銇夐悞璺侯樋娴滃搫鎮撳銉ｂ偓?
+	 * 出口传送台法阵粒子?026-09-19 用户定稿）：站上传送台倒计时期间??
+	 * 以法?2?? 区域为界冒紫色上升粒子流——DRAGON_BREATH（龙息紫，服务端发??
+	 * 自带向上飘浮初速，观感与施法头顶流一致?? PORTAL 传送门紫点缀??
+	 * ??5t 一轮（视觉连续且包量克制），服务端撒天然多人同步?
 	 */
 	private static void spawnExitFx(ServerLevel pocket, PocketSpaceLayout layout) {
-		// 濞夋洟妯€娑擃厼绺鹃敍?鑴? 閸欎即娼伴惃鍕殤娴ｆ洑鑵戣箛鍐跨礆
+		// 法阵中心??? 台面的几何中心）
 		double cx = layout.centerX();
 		double cz = layout.minZ() - 2.0;
 		double cy = PocketSpaceLayout.FLOOR_Y + 1 + PocketSpaceLayout.PORTAL_TOP_HEIGHT + 0.05;
-		// 姒瑦浼呯槐顐＄瑐閸楀洦绁﹂敍姘《闂冧絻瀵栭崶鏉戝敶闂呭繑婧€鐠ч鍨庨敍鍩? 閺嶉棿璐熼悾宀嬬礆閿涘矁鍤滅敮锔剧处閸?
+		// 龙息紫上升流：法阵范围内随机起爆?? 格为界），自带缓??
 		pocket.sendParticles(ParticleTypes.DRAGON_BREATH,
 				cx, cy, cz, 14, 0.8, 0.08, 0.8, 0.01);
-		// 娴肩娀鈧線妫槐顐窗鐏忔垿鍣烘妯瑰瘨閻愬湱绱戦敍鍫熸閸楀洦鍔呴敍?
+		// 传送门紫：少量高亮点缀（旋升感?
 		pocket.sendParticles(ParticleTypes.PORTAL,
 				cx, cy + 0.1, cz, 6, 0.7, 0.15, 0.7, 0.3);
 	}
@@ -606,7 +606,7 @@ public final class PocketSpaceManager {
 		}
 	}
 
-	/** 閸掑棙澹掑〒鍛敄娑撯偓娑擃亝蝎娴ｅ秶娈戦崗銊╁劥閺傜懓娼￠敍鍫熷瘻 Lv5 閺堚偓婢堆冨瘶閸ュ娲呴敍澶涚礉娑撳海鏁撻幋鎰彙閻?generating 瀵偓閸忓磭绮潻鍥珶閻ｅ奔绻氶幎銈冣偓?*/
+	/** 分批清空一个槽位的全部方块（按 Lv5 最大包围盒），与生成共??generating 开关绕过边界保护?*/
 	private static final class Wipe {
 		final MinecraftServer server;
 		final int slot;
@@ -645,7 +645,7 @@ public final class PocketSpaceManager {
 					used++;
 					BlockPos pos = new BlockPos(blockX, blockY, blockZ);
 					if (world.getBlockState(pos).isAir()) continue;
-					net.minecraft.world.Clearable.tryClear(world.getBlockEntity(pos)); // 鐎圭懓娅掗崘鍛啇娑撳秵甯€閽€鏂ょ礉閻╁瓨甯撮幎褰掓珟
+					net.minecraft.world.Clearable.tryClear(world.getBlockEntity(pos)); // 容器内容不掉落，直接抹除
 					world.setBlock(pos, air, Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS | Block.UPDATE_KNOWN_SHAPE);
 				}
 			} finally {
@@ -659,7 +659,7 @@ public final class PocketSpaceManager {
 
 	private static final class Generation {
 		final PocketSpaceStorage.Room room;
-		/** 閸忓牊绔荤粚鐑樞担宥嗘付婢堆冨瘶閸ュ娲呴敍鍫ｎ洬閻╂牗妫稉鏍櫕濞堝鏆€/閹广垻楠囬弮褍娼￠敍澶涚礉閸愬秶鏁撻幋鎰樆婢圭偨鈧?*/
+		/** 先清空槽位最大包围盒（覆盖旧世界残留/换级旧块），再生成外壳??*/
 		final int cleanMinX, cleanMinZ, cleanW, cleanD, cleanH;
 		int cleanCursor;
 		int cursor;
