@@ -52,8 +52,17 @@ public final class SscAddonForge {
         SharedSpellCooldowns.init();
         github.com.gengyoubo.sscfa.network.SpellbookStatusSync.init();
         github.com.gengyoubo.sscfa.spell.pocket.PocketSpaceManager.init();
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.tutorial.FormTutorialManager.OFFER);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.evolution.RegEvolutionComponent.SYNC);
+        github.com.gengyoubo.sscfa.tutorial.FormTutorialManager.register();
+        github.com.gengyoubo.sscfa.story.MoonScarStoryManager.register();
+        github.com.gengyoubo.sscfa.story.TideSpiritStoryManager.register();
+        github.com.gengyoubo.sscfa.evolution.EvolutionManager.register();
         SscAddonNetworking.registerServerReceivers();
-        MinecraftForge.EVENT_BUS.addListener((AddReloadListenerEvent event) -> event.addListener(SpellRegistry.INSTANCE));
+        MinecraftForge.EVENT_BUS.addListener((AddReloadListenerEvent event) -> {
+            event.addListener(SpellRegistry.INSTANCE);
+            event.addListener(github.com.gengyoubo.sscfa.evolution.EvolutionRegistry.INSTANCE);
+        });
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent event) -> SpellDamageSource.bind(event.getServer()));
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, AddonServerConfig.SPEC);

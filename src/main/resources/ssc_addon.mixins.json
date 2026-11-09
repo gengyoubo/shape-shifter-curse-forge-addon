@@ -24,6 +24,7 @@
     "SoundRangeEntityPacketMixin",
     "SoundRangeCommandMixin",
     "ThreadedAnvilChunkStorageAccessor",
+    "entity.PatrolEntityAccessor",
     "PocketSpaceBoundaryMixin",
     "PocketSpaceChunkFilterMixin"
   ],

@@ -1,0 +1,460 @@
+package github.com.gengyoubo.sscfa.ability;
+
+import github.com.gengyoubo.sscfa.entity.FrostThornEntity;
+import github.com.gengyoubo.sscfa.entity.FrostArrayEntity;
+import github.com.gengyoubo.sscfa.network.SscAddonNetworking;
+import github.com.gengyoubo.sscfa.util.FormIdentifiers;
+import github.com.gengyoubo.sscfa.util.FormUtils;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.phys.Vec3;
+import github.com.gengyoubo.sscfa.balance.BalanceReader;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+
+/**
+ * 寒棘狐「冰刺」蓄?/ 发射 / 环绕 / 计时 / 替换 / 净?服务端状态机?
+ *
+ * <p>长按主技能键蓄力：每 {@value #CHARGE_INTERVAL} tick?.2 秒）凝聚一根冰锥，最?{@value #MAX_THORNS} 根，
+ * 冰锥在玩家背部竖直面上按 150° 扇形（上→左→右→左上→右上）开屏分布；朝向与身体朝向平行，尖朝头部所指方向（最多偏 30°）?
+ * ?5 根后继续蓄力则替换存在时间最久（剩余最短）的一根。点按主技能键按生成顺序（最旧优先）发射一根，
+ * 发射冷却?power JSON form_snow_fox_frostspine_frost_spike。主人被 SP 悦灵净化时全部冰锥碎裂?/p>
+ *
+ * <p>每根冰锥各自独立 60 秒存在时间由 {@link FrostThornEntity} 自行计时；本管理器只负责环绕定位、蓄力节奏与发射?
+ * 全部判定在服务端，冰锥实体走 EntityTracker 天然多人同步?/p>
+ */
+public final class FrostSpikeManager {
+
+	// 以下常量均为默认值；运行时从 balance 快照读取（scope：abilities.frost_spike_manager?
+	private static final int CHARGE_INTERVAL = 24; // 默认 1.2 秒凝聚一?
+	private static final int MAX_THORNS = 5;       // 默认环绕冰锥上限
+	private static final String SKILL_ID = "my_addon:form_snow_fox_frostspine_frost_spike";
+	// ===== 凝棘（次技能）蓄力 =====
+	private static final int SECONDARY_CONSUME_INTERVAL = 20;   // 默认?1 秒消耗一个环绕冰锥强?
+	private static final double SECONDARY_SLOW_AMOUNT = -0.90;  // 默认蓄力时移速降?10%（MULTIPLY_TOTAL -0.9?
+	private static final UUID SECONDARY_SLOW_UUID = UUID.fromString("f2a7c3d1-8b64-4e29-9a11-6c3d0f7e51ab");
+	// 环绕几何统一?FrostThornEntity.hoverTarget/hoverYaw（服务端权威设置；客户端?tick 按本地玩家自算贴合，平滑不卡顿）
+
+	private static final Map<UUID, State> STATES = new ConcurrentHashMap<>();
+
+	// 阶段 5：服务端权威快照读取（快照未初始化回退默认常量?
+	private static final BalanceReader BAL = new BalanceReader("abilities.frost_spike_manager");
+
+	private static final class State {
+		boolean charging = false;
+		int chargeTicks = 0;
+		// 凝棘次技能蓄力?
+		boolean secondaryCharging = false;
+		int secondaryTicks = 0;
+		int secondaryLevel = 0;
+		FrostArrayEntity arrayEntity = null; // 蓄力法阵（视觉）
+		final FrostThornEntity[] slots = new FrostThornEntity[BAL.i("max_thorns", MAX_THORNS)];
+	}
+
+	private FrostSpikeManager() {}
+
+	/** 客户端「长按确认」→ 开始蓄力。次技能（凝棘）蓄力期间禁止凝聚新冰锥?*/
+	public static void startCharge(ServerPlayer player) {
+		if (!isFrostspine(player)) return;
+		State s = STATES.computeIfAbsent(player.getUUID(), k -> new State());
+		if (s.secondaryCharging) return; // 凝棘蓄力中：主技能禁?
+		if (!s.charging) {
+			s.charging = true;
+			// 事件级状态包（发起点直发，不?tick 对比——上次翻车根因）：客户端开始本地自算汇聚流
+				SscAddonNetworking.syncFrostSpikeChargeState(player, true);
+		}
+	}
+
+	/** 客户端「松开」→ 停止蓄力（保留已凝聚的冰锥）?*/
+	public static void stopCharge(ServerPlayer player) {
+		State s = STATES.get(player.getUUID());
+		if (s != null && s.charging) {
+			s.charging = false; s.chargeTicks = 0;
+			SscAddonNetworking.syncFrostSpikeChargeState(player, false);
+		}
+	}
+
+	/** 客户端「点按」→ 按生成顺序（最旧优先）发射一根冰锥?*/
+	public static void fire(ServerPlayer player) {
+		if (!isFrostspine(player)) return;
+		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.ready(player, SKILL_ID)) return; // 发射冷却
+		State s = STATES.get(player.getUUID());
+		if (s == null) return;
+		cleanupDead(s);
+		int idx = oldestSlot(s);
+		if (idx < 0) return;
+		FrostThornEntity thorn = s.slots[idx];
+		s.slots[idx] = null;
+		// 发射前把服务端位置刷新到当前环绕位（HOVER 态服务端不?tick 移动，防与客户端自算打架?
+		thorn.setHoverTransform(FrostThornEntity.hoverTarget(player, idx), FrostThornEntity.hoverYaw(player), FrostThornEntity.hoverPitch(player));
+		// 从冰锥当?环绕)位置发射；飞行中自然靠拢到发射瞬间的准星射线，汇入后沿射线继续飞
+		thorn.launch(player.getEyePosition(), player.getLookAngle());
+		ServerLevel sw = (ServerLevel) player.level();
+		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
+				SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.PLAYERS, 0.9f, 1.4f);
+		github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.instant(player, SKILL_ID);
+	}
+
+/**
+	 * 凝棘（次技能）蓄力锥一舞台中心：头顶正上方环绕位（slot 0）?
+	 *
+	 * <p>法阵渲染、蓄力粒子汇聚中心、冰锥发射点统一用此处——三处严格同点，避免「合成位置与实际出生位置不一致」?
+	 * 冰锥初?= 头顶指向准星远点的直线方向（出生即纯直线、尖朝速度方向），无弯曲汇入——弯曲拐大弯会被看成「旋转着飞」?/p>
+	 */
+	public static Vec3 secondaryFocus(ServerPlayer player) {
+		return FrostThornEntity.hoverTarget(player, 0);
+	}
+
+	/** 凝棘（次技能）开始蓄力：需身上有环绕冰锥才生效；进入后禁用主技能凝聚、移速降 10%?*/
+	public static void startSecondaryCharge(ServerPlayer player) {
+		if (!isFrostspine(player)) return;
+		State s = STATES.get(player.getUUID());
+		if (s == null) return;
+		cleanupDead(s);
+		if (countThorns(s) == 0) return; // 无环绕冰锥：按次键无?
+		s.charging = false; s.chargeTicks = 0; // 清主技能蓄?
+		s.secondaryCharging = true;
+		s.secondaryTicks = 0;
+		s.secondaryLevel = 0;
+		applyChargeSlow(player);
+		// 蓄力法阵（纯视觉，跟随施法者头顶；中央冰锥随蓄力等级放大）
+		if (player.level() instanceof ServerLevel sw) {
+			FrostArrayEntity array = new FrostArrayEntity(sw, player);
+			sw.addFreshEntity(array);
+			s.arrayEntity = array;
+			// 潮涌核心蓄力启动?
+			sw.playSound(null, player.getX(), player.getY(), player.getZ(),
+					SoundEvents.CONDUIT_ACTIVATE, SoundSource.PLAYERS, 0.9f, 1.0f);
+			// 按下瞬间的汇聚波已移到客户端：法阵实体生成包即客户端开始本地自算（零网络粒子包?
+		}
+	}
+
+	/**
+	 * 凝棘（次技能）松开：发射一根强化冰锥（伤害/大小/速度按已消耗冰锥数强化）?
+	 * 一个冰锥都没消耗（level==0）则取消不发射（环绕冰锥保留）?
+	 */
+	public static void releaseSecondary(ServerPlayer player) {
+		State s = STATES.get(player.getUUID());
+		if (s == null) return;
+		if (!s.secondaryCharging) return;
+		int level = s.secondaryLevel;
+		endSecondaryCharge(player, s); // 退出蓄?+ 恢复移?
+		if (level <= 0) return;         // 没消耗任何冰锥：取消发射
+		if (!(player.level() instanceof ServerLevel sw)) return;
+		FrostThornEntity thorn = new FrostThornEntity(sw, player);
+		Vec3 dir = player.getLookAngle();
+		// 从头顶法阵中心（与粒?法阵严格同点）发射；初?= 头顶指向准星远点的直线方向（纯直线无弯曲?
+		Vec3 origin = secondaryFocus(player);
+		Vec3 aimPoint = player.getEyePosition().add(dir.scale(16.0));
+		Vec3 flyDir = aimPoint.subtract(origin).normalize();
+		// ?launchEnhanced ?spawnEntity：生成包才会携带正确位置/朝向/FLY ?全精度速度
+		// （若?spawn，生成包捕获的是构造器位置+朝向 0°，客户端起步姿态错??起飞瞬间甩转?
+		thorn.launchEnhanced(origin, flyDir, level, player.getEyePosition(), dir);
+		sw.addFreshEntity(thorn);
+		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
+				SoundEvents.WARDEN_ROAR, SoundSource.PLAYERS, 1.0f, 1.0f);
+	}
+
+	/** 蓄力期移速降?10%（先移除?UUID 旧修改器防叠加）?*/
+	private static void applyChargeSlow(ServerPlayer player) {
+		AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (speed != null) {
+			speed.removeModifier(SECONDARY_SLOW_UUID);
+			speed.addTransientModifier(new AttributeModifier(
+					SECONDARY_SLOW_UUID, "Frost Forge Charge Slow", BAL.d("secondary_slow_amount", SECONDARY_SLOW_AMOUNT),
+					AttributeModifier.Operation.MULTIPLY_TOTAL));
+		}
+	}
+
+	/** 结束凝棘蓄力：移除减?+ 清蓄力态。所有结束路径统一走此方法，防减速泄漏?*/
+	public static void interruptControl(ServerPlayer player) {
+		State s = STATES.get(player.getUUID());
+		if (s == null) return;
+		stopCharge(player);
+		if (s.secondaryCharging) endSecondaryCharge(player, s);
+	}
+
+	private static void endSecondaryCharge(ServerPlayer player, State s) {
+		AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (speed != null) speed.removeModifier(SECONDARY_SLOW_UUID);
+		if (s != null) {
+			s.secondaryCharging = false; s.secondaryTicks = 0; s.secondaryLevel = 0;
+			if (s.arrayEntity != null) { s.arrayEntity.discard(); s.arrayEntity = null; }
+		}
+	}
+
+	/** 每服务端 tick 对每个在线玩家调用（?SscAddonServerEvents 世界 tick）?*/
+	public static void tick(ServerPlayer player) {
+		State s = STATES.get(player.getUUID());
+		if (s == null) return;
+		if (player.isDeadOrDying() || !isFrostspine(player)) { endSecondaryCharge(player, s); clearAll(s);
+			if (s.charging) SscAddonNetworking.syncFrostSpikeChargeState(player, false);
+			s.charging = false; s.chargeTicks = 0; STATES.remove(player.getUUID()); return; }
+		// 净化：主人?SP 悦灵净??全部环绕冰锥碎裂（飞行中的由实体自身 tick 处理?
+		if (player.hasEffect(github.com.gengyoubo.sscfa.init.AddonEffects.PURIFIED.get())) { endSecondaryCharge(player, s); clearAll(s);
+			if (s.charging) SscAddonNetworking.syncFrostSpikeChargeState(player, false);
+			s.charging = false; s.chargeTicks = 0; return; }
+		cleanupDead(s);
+		// 凝棘次技能蓄力：?1 秒消耗一个环绕冰锥强化（无冰锥可消耗则停在当前强化等待松开?
+		if (s.secondaryCharging) {
+			int consumeInterval = BAL.i("secondary_consume_interval", SECONDARY_CONSUME_INTERVAL);
+			s.secondaryTicks++;
+			// 潮涌核心蓄力氛围音（循环嗡鸣，充能感；压低避免盖住每秒的紫水晶消耗钟声）
+			if (player.tickCount % 25 == 0 && player.level() instanceof ServerLevel amb) {
+				amb.playSound(null, player.getX(), player.getY(), player.getZ(),
+						SoundEvents.CONDUIT_AMBIENT, SoundSource.PLAYERS, 0.35f, 1.0f);
+			}
+			// 持续汇聚已移到客户端（法阵实?tick 本地自算，零网络粒子包）
+			if (s.secondaryTicks >= consumeInterval) {
+					s.secondaryTicks = 0;
+				int idx = consumeSlot(s); // 固定消耗顺序：上→左→右→左上→右上（slot 0??
+					if (idx >= 0) {
+					// 消?burst 已移到客户端（法阵实体检?LEVEL 跳变即播密集汇聚，零网络粒子包）
+					// 被吸走的冰锥就地碎冰反馈保留服务端（事件级一次性，与实?discard 同帧到达?
+					if (player.level() instanceof ServerLevel sw) {
+							Vec3 taken = FrostThornEntity.hoverTarget(player, idx);
+							sw.sendParticles(ParticleTypes.ITEM_SNOWBALL, taken.x, taken.y, taken.z, 5, 0.1, 0.1, 0.1, 0.03);
+						}
+						if (s.slots[idx] != null) s.slots[idx].discard();
+					s.slots[idx] = null;
+					s.secondaryLevel = Math.min(BAL.i("max_thorns", MAX_THORNS), s.secondaryLevel + 1);
+					float pitch = 0.8f + s.secondaryLevel * 0.22f; // 越来越高的紫水晶?
+					if (player.level() instanceof ServerLevel sw) {
+							// 双音：经验球叮声本身响亮（主音）+ 紫水?CHIME 作水晶泛音?
+							// CHIME 原版响度极低?volume>1 只扩可闻距离不增源响度，单提音量无效
+							sw.playSound(null, player.getX(), player.getY(), player.getZ(),
+									SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.2f, pitch);
+							sw.playSound(null, player.getX(), player.getY(), player.getZ(),
+									SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.8f, pitch);
+					}
+				}
+			}
+			// 同步法阵中央冰锥大小（随蓄力等级放大? 蓄力总进度（HUD 副槽侧边内置条从 0 涨到满）
+			if (s.arrayEntity != null && !s.arrayEntity.isRemoved()) {
+				s.arrayEntity.setLevel(s.secondaryLevel);
+				s.arrayEntity.setProgressCycle(s.secondaryLevel * consumeInterval, s.secondaryTicks, consumeInterval);
+			}
+		} else if (s.charging) {
+			s.chargeTicks++;
+			// 主技能持续汇聚已移到客户端（状态包驱动本地自算，零网络粒子包）
+			// 寒棘项圈：凝聚间?×1.75?.2s ?2.1s = 42t），与被?饰品实时判定、摘下即回原
+			int baseInterval = BAL.i("charge_interval", CHARGE_INTERVAL);
+			int interval = github.com.gengyoubo.sscfa.item.FrostSpineCollarItem.isWearingBy(player)
+					? Math.round(baseInterval * github.com.gengyoubo.sscfa.item.FrostSpineCollarItem.CHARGE_INTERVAL_MULTIPLIER)
+					: baseInterval;
+			if (s.chargeTicks >= interval) { s.chargeTicks = 0; spawnOrReplaceThorn(player, s); }
+		}
+		updateHoverPositions(player, s);
+		if (isEmpty(s) && !s.charging && !s.secondaryCharging) STATES.remove(player.getUUID());
+	}
+
+	/** 形态切?/ 断线清理?*/
+	public static void clear(ServerPlayer player) {
+		State s = STATES.remove(player.getUUID());
+		if (s != null) {
+			if (s.charging) SscAddonNetworking.syncFrostSpikeChargeState(player, false);
+			endSecondaryCharge(player, s); clearAll(s);
+		}
+	}
+
+	/**
+	 * 玩家退出：环绕冰锥随玩家消失——各槽存在时间写入持久化存档，实体全部清除；
+	 * 飞行中的冰锥直接清空（不持久化）。重进后?onJoin 按存档重建?
+	 */
+	public static void onDisconnect(ServerPlayer player) {
+		State s = STATES.remove(player.getUUID());
+		if (s != null) endSecondaryCharge(player, s);
+		FrostSpikeState state = FrostSpikeState.get(player.getServer());
+		int[] ticks = new int[s != null ? s.slots.length : BAL.i("max_thorns", MAX_THORNS)];
+		java.util.Arrays.fill(ticks, -1);
+		if (s != null) {
+			for (int i = 0; i < s.slots.length; i++) {
+				FrostThornEntity t = s.slots[i];
+				if (t != null && !t.isRemoved()) {
+					ticks[i] = t.getHoverTicks();
+					t.discard();           // 环绕冰锥随玩家消失（数据已存档）
+				}
+			}
+		}
+        if (java.util.Arrays.stream(ticks).anyMatch(t -> t >= 0)) state.thorns.put(player.getUUID(), ticks);
+        else state.thorns.remove(player.getUUID());
+		state.setDirty();
+		// 飞行中的冰锥：同主人的全部清空（速度/起点不持久化，留着会冻在空中）
+				if (player.level() instanceof ServerLevel sw) {
+			for (FrostThornEntity e : sw.getEntitiesOfClass(FrostThornEntity.class,
+					player.getBoundingBox().inflate(256),
+					ex -> ex.getState() == FrostThornEntity.STATE_FLY && player.getUUID().equals(ex.getOwnerUuid().orElse(null)))) {
+				e.discard();
+			}
+		}
+	}
+
+	/** 玩家重进：按退出前存档重建环绕冰锥（槽位与存在时间延续）?*/
+	public static void onJoin(ServerPlayer player) {
+		FrostSpikeState state = FrostSpikeState.get(player.getServer());
+		int[] ticks = state.thorns.remove(player.getUUID());
+		if (ticks == null) return;
+		state.setDirty();
+		if (!isFrostspine(player)) return;
+		if (!(player.level() instanceof ServerLevel sw)) return;
+		State s = STATES.computeIfAbsent(player.getUUID(), k -> new State());
+		for (int i = 0; i < ticks.length && i < s.slots.length; i++) {
+			if (ticks[i] < 0) continue;
+			FrostThornEntity thorn = new FrostThornEntity(sw, player);
+			thorn.setSlot(i);
+			thorn.restoreHoverTicks(ticks[i]);
+			thorn.setHoverTransform(FrostThornEntity.hoverTarget(player, i), FrostThornEntity.hoverYaw(player), FrostThornEntity.hoverPitch(player));
+			sw.addFreshEntity(thorn);
+			s.slots[i] = thorn;
+		}
+		if (isEmpty(s)) STATES.remove(player.getUUID());
+	}
+
+	/**
+	 * 重进游戏自认领（幂等，每服务?tick 由孤儿冰锥自行调用）?
+	 * NBT 恢复的环绕冰锥通过 OWNER_UUID 找回主人，重新挂?slots 并恢?owner 引用?
+	 * 主人离线则等待上线或存在时间到期自融；主人已非寒棘狐则直接碎裂（等同 clearAll）?
+	 */
+	public static void adopt(FrostThornEntity thorn) {
+		if (!(thorn.level() instanceof ServerLevel sw)) return;
+		var oid = thorn.getOwnerUuid();
+		if (oid.isEmpty()) { thorn.discard(); return; } // 无主环绕冰锥无意?
+		ServerPlayer player = sw.getServer().getPlayerList().getPlayer(oid.get());
+		if (player == null) return;                      // 主人离线：先留着
+		if (player.isDeadOrDying() || !isFrostspine(player)) { thorn.discard(); return; }
+		thorn.setOwner(player);                           // 恢复 ProjectileEntity owner 引用（净化判?伤害归属用）
+		State s = STATES.computeIfAbsent(player.getUUID(), k -> new State());
+		cleanupDead(s);
+		int idx = thorn.getSlot();
+		if (idx >= 0 && idx < s.slots.length && s.slots[idx] == thorn) return; // 已认?
+		if (idx < 0 || idx >= s.slots.length || s.slots[idx] != null) {
+			idx = firstEmptySlot(s);
+			if (idx < 0) { thorn.discard(); return; }     // 超出 5 根（异常）→ 丢弃
+			thorn.setSlot(idx);
+		}
+		s.slots[idx] = thorn;
+	}
+
+	/**
+	 * 寒棘项圈命中回补：主技能普通冰锥真正命中敌人后，立刻免费凝?1 根环绕冰锥?
+	 * 走与主动凝聚完全一致的槽位逻辑（优先空位，?5 替换最旧）与反馈（成形粒子/凝聚音）?
+	 */
+	public static void refundThorn(ServerPlayer player) {
+		if (!isFrostspine(player)) return;
+		if (!(player.level() instanceof ServerLevel)) return; // 仅服务端（sw 未用，只做维度守卫）
+		State s = STATES.computeIfAbsent(player.getUUID(), k -> new State());
+		cleanupDead(s);
+		spawnOrReplaceThorn(player, s);
+	}
+
+	private static void spawnOrReplaceThorn(ServerPlayer player, State s) {
+		ServerLevel sw = (ServerLevel) player.level();
+		int idx = firstEmptySlot(s);
+		if (idx < 0) { // 已满 5 ??替换存在时间最久（剩余最短）?
+			idx = oldestSlot(s);
+			if (idx < 0) return;
+			if (s.slots[idx] != null) s.slots[idx].discard();
+		}
+		FrostThornEntity thorn = new FrostThornEntity(sw, player);
+		thorn.setSlot(idx);
+		thorn.markFresh(); // 新生冰锥：成形粒子只跟它（重进恢复的旧锥不标，不重播成形特效?
+		// 生成时直接落在环绕位（否则生成包首帧在眼睛处闪现一帧）
+		thorn.setHoverTransform(FrostThornEntity.hoverTarget(player, idx), FrostThornEntity.hoverYaw(player), FrostThornEntity.hoverPitch(player));
+		sw.addFreshEntity(thorn);
+		s.slots[idx] = thorn;
+		// 成形汇聚粒子已移到客户端（冰锥实体自身前 20t 在自己当前位置发）：中心与渲染位置完全重合，
+		// 服务端预测点与客户端插值位置的错位彻底消失
+		int count = countThorns(s);
+		float pitch = 0.9f + count * 0.12f; // 紫水晶凝聚音，pitch 随冰锥数递增
+		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
+				SoundEvents.AMETHYST_BLOCK_STEP, SoundSource.PLAYERS, 1.0f, pitch);
+	}
+
+	// 汇聚粒子（inward_ice）生成已全部移到客户端本地自算（冰锥实体/法阵实体/蓄力客户端状态三处）?
+	// 服务端版 spawnInwardIceParticles 在客户端化改造后无调用方，已删除?
+
+	private static void updateHoverPositions(ServerPlayer player, State s) {
+		// HOVER 态服务端不?tick 移动（无移动→无移动包，客户端独占每 tick 自算贴合位置，避免与延迟网络包打架致鬼畜）?
+		// 仅当服务端残留位置离玩家超过 40 格（超出常规移动范围、追踪快失效且远不可见）才校正一次，维持实体在追踪范围内?
+		for (int i = 0; i < s.slots.length; i++) {
+			FrostThornEntity t = s.slots[i];
+			if (t == null || t.isRemoved() || !t.isHover()) continue;
+			if (t.distanceToSqr(player) > 40.0 * 40.0) {
+				t.setHoverTransform(FrostThornEntity.hoverTarget(player, i), FrostThornEntity.hoverYaw(player), FrostThornEntity.hoverPitch(player));
+			}
+		}
+	}
+
+	private static void cleanupDead(State s) {
+		for (int i = 0; i < s.slots.length; i++) {
+			FrostThornEntity t = s.slots[i];
+			if (t != null && (t.isRemoved() || !t.isHover())) s.slots[i] = null;
+		}
+	}
+
+	private static void clearAll(State s) {
+		for (int i = 0; i < s.slots.length; i++) {
+			if (s.slots[i] != null && !s.slots[i].isRemoved()) s.slots[i].discard();
+			s.slots[i] = null;
+		}
+	}
+
+	private static int firstEmptySlot(State s) {
+		for (int i = 0; i < s.slots.length; i++) if (s.slots[i] == null) return i;
+		return -1;
+	}
+
+	/** 存在时间最久（hoverTicks 最?= 最?= 剩余最短）?slot?*/
+	private static int oldestSlot(State s) {
+		int idx = -1, max = -1;
+		for (int i = 0; i < s.slots.length; i++) {
+			FrostThornEntity t = s.slots[i];
+			if (t != null && t.getHoverTicks() > max) { max = t.getHoverTicks(); idx = i; }
+		}
+		return idx;
+	}
+
+	/** 凝棘消耗顺序：优先头顶正上方（slot 0）；其被耗后，剩余按剩余存在时间排列——最快消失的（hoverTicks 最大）先被消耗?*/
+	private static int consumeSlot(State s) {
+		if (s.slots[0] != null) return 0;
+		return oldestSlot(s);
+	}
+
+	private static int countThorns(State s) {
+		int c = 0;
+		for (int i = 0; i < s.slots.length; i++) if (s.slots[i] != null) c++;
+		return c;
+	}
+
+	/** Current same-world hovering contributors, without consuming or including already fired thorns. */
+	public static java.util.List<FrostThornEntity> hoveringThorns(ServerPlayer player) {
+		State s=STATES.get(player.getUUID());
+		if(s==null)return java.util.List.of();
+		cleanupDead(s);
+		return java.util.Arrays.stream(s.slots).filter(java.util.Objects::nonNull)
+				.filter(t->t.level()==player.level()&&player.getUUID().equals(t.getOwnerUuid().orElse(null))).toList();
+	}
+
+	/** 寒棘护体（棘甲）用：指定玩家当前环绕冰锥数（服务端权威；清死槽后计数）?*/
+	public static int getHoverCount(ServerPlayer player) {
+		State s = STATES.get(player.getUUID());
+		if (s == null) return 0;
+		cleanupDead(s);
+		return countThorns(s);
+	}
+
+	private static boolean isEmpty(State s) {
+		return countThorns(s) == 0;
+	}
+
+	private static boolean isFrostspine(ServerPlayer player) {
+		return FormUtils.isForm(player, FormIdentifiers.SNOW_FOX_FROSTSPINE);
+	}
+}

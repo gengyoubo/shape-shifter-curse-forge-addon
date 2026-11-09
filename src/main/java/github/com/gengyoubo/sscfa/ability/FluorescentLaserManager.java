@@ -1,0 +1,391 @@
+package github.com.gengyoubo.sscfa.ability;
+
+import github.com.gengyoubo.sscfa.balance.BalanceReader;
+import github.com.gengyoubo.sscfa.compat.FluorescentAxolotlPerks;
+import github.com.gengyoubo.sscfa.entity.LaserBeamEntity;
+import github.com.gengyoubo.sscfa.util.FormIdentifiers;
+import github.com.gengyoubo.sscfa.util.FormUtils;
+import github.com.gengyoubo.sscfa.util.PowerUtils;
+import github.com.gengyoubo.sscfa.util.TrinketUtils;
+import github.com.gengyoubo.sscfa.util.WhitelistUtils;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * 荧光幼灵主要技能「法阵激光」管理器?
+ *
+ * <p><b>普?/b>（未装备海晶荧光坠）：按 sp_primary ?生成 {@link LaserBeamEntity}（原蓄力/释放/消退单发，全程定身）?
+ *
+ * <p><b>海晶荧光坠增?/b>：按 sp_primary 展开斜后方三法阵进入 combo；之后窗口内每按一次从一个法阵朝准星发射一?
+ * 缩型激光（8t、范围缩到原 30%、每目标 12 点物理只结算 1 次），消?1 法阵 + 累加 6s CD + 重置 5s 窗口?
+ * 3 法阵用尽?5s 未再发射则结束，按累?CD 起算。整段移?-50%（视角不受限）?
+ */
+public final class FluorescentLaserManager {
+
+	// ===== 普通单?=====
+	private static final Map<UUID, LaserBeamEntity> ACTIVE = new ConcurrentHashMap<>();
+
+	// ===== 增强 combo 常量 =====
+	private static final int ARRAY_COUNT = 3;              // 三法?
+	private static final int WINDOW_TICKS = 100;           // 5 秒发射窗?
+	private static final int SHOT_TICKS = 8;               // 每道激?8t
+	private static final net.minecraft.resources.ResourceLocation SHOT_HUD =
+			new net.minecraft.resources.ResourceLocation("my_addon", "form_axolotl_fluorescent_shot_cd");
+	private static final int SHOT_DAMAGE_INTERVAL = 2;     // ?2t 判定一次（?4 次）
+	private static final float SHOT_DAMAGE = 12.0f;        // 每道 12 点物理（每目标每道只 1 次）
+	/** 技?ID? 荷光幼灵/阿漪挂载的激?power）；增强版每发累?extra_cooldowns.per_shot?*/
+	public static final String SKILL_ID = "my_addon:form_axolotl_fluorescent_laser";
+	private static final double SPEED_PENALTY = -0.5;      // 整段移?-50%
+	// 缩型激光几何（?32/2.5 ?30%?
+	private static final double ENH_BEAM_LENGTH = 24.0;        // 攻击距离最?24 格（与渲染光柱一致）
+	private static final double ENH_BEAM_RADIUS = 0.75;        // 判定半径（与渲染光柱一致）
+	private static final double AIM_CONE_DEG = 10.0;           // 微自瞄：准星 10 度锥内锁定最近非白名单生?
+	// 三法阵相对玩家的偏移（斜后方 ??上，与渲染器一致）
+	private static final double ARRAY_BACK = 1.6;
+	private static final double ARRAY_SIDE = 1.3;
+	private static final double ARRAY_UP = 1.7;
+
+	// 阶段 5：运行时快照读取（abilities.fluorescent_laser；快照未初始化回退默认常量?
+	// 几何摆位 ARRAY_COUNT/ARRAY_BACK/SIDE/UP 不迁移）
+	private static final BalanceReader BAL = new BalanceReader("abilities.fluorescent_laser");
+
+	/** HUD 门槛同源：单发读?tick（balance 可调；HUD 展示用）?*/
+	public static int shotTicksForHud() { return BAL.i("shot_ticks", SHOT_TICKS); }
+
+	private static final UUID LASER_SPEED_UUID = UUID.fromString("b7e1c2d3-4f50-6172-8394-a5b6c7d8e9f0");
+
+	private static final class ComboSession {
+        ServerPlayer owner;
+        long castId = -1;
+        int perShotCooldown;
+		boolean active = false;
+		boolean isAling = false;        // 阿澪：伤?射程/判定半径 ×1.2
+		boolean efficient;
+		int arraysLeft = ARRAY_COUNT;
+		int windowTicks = 0;
+		int accumulatedCd = 0;
+		int shotTicks = 0;
+		LaserBeamEntity laser = null;   // 持久待机法阵实体
+		Vec3 fireLock = null;          // 发射瞬间定格的世界锁定点（激光落点固定，不随法阵移动改变?
+		int firingIdx = 0;              // 当前发射的法阵索引（0?1?2上）
+		final Set<UUID> damagedThisShot = new HashSet<>();
+	}
+
+	private static final Map<UUID, ComboSession> COMBOS = new ConcurrentHashMap<>();
+
+	private FluorescentLaserManager() {
+	}
+
+	/** 客户端「按下主要技能键」时调用?*/
+	public static void onKeyPress(ServerPlayer player) {
+		if (!FormUtils.isAxolotlFluorescent(player)) return;
+		// Keep the active cast's variant. Changing equipment cannot start a second variant over it.
+		LaserBeamEntity activeBeam = ACTIVE.get(player.getUUID());
+		if (activeBeam != null && activeBeam.isAlive()) return;
+		ComboSession activeCombo = COMBOS.get(player.getUUID());
+		if (activeCombo != null && activeCombo.active) {
+			if (activeCombo.isAling != FormUtils.isForm(player, FormIdentifiers.AXOLOTL_ALING)
+					|| !(activeCombo.isAling || TrinketUtils.isWearing(player, github.com.gengyoubo.sscfa.init.AddonItems.SEA_CRYSTAL_PENDANT.get()))) {
+				endCombo(player, activeCombo);
+				return;
+			}
+			onKeyPressEnhanced(player);
+			return;
+		}
+		// 阿澪天生使用三连发（无需饰品）；荧光幼灵需装备海晶荧光坠才进三连发
+		boolean useEnhanced = FormUtils.isForm(player, FormIdentifiers.AXOLOTL_ALING)
+				|| TrinketUtils.isWearing(player, github.com.gengyoubo.sscfa.init.AddonItems.SEA_CRYSTAL_PENDANT.get());
+		if (useEnhanced) {
+			onKeyPressEnhanced(player);
+			return;
+		}
+		// 普通单发：CD ?/ 已有活跃激??忽略
+		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.ready(player, SKILL_ID)) return;
+		LaserBeamEntity existing = ACTIVE.get(player.getUUID());
+		if (existing != null && existing.isAlive()) return;
+		if (!(player.level() instanceof ServerLevel sw)) return;
+		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.begin(player, SKILL_ID)) return;
+        LaserBeamEntity laser = new LaserBeamEntity(sw, player);
+        laser.bindCast(github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.currentCastId(player, SKILL_ID));
+		sw.addFreshEntity(laser);
+		ACTIVE.put(player.getUUID(), laser);
+	}
+
+	// ==================== 增强 combo ====================
+	private static void onKeyPressEnhanced(ServerPlayer player) {
+		ComboSession s = COMBOS.computeIfAbsent(player.getUUID(), k -> new ComboSession());
+		if (!(player.level() instanceof ServerLevel sw)) return;
+		if (!s.active) {
+			// 首次：CD 中不可用
+            var spec = github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.spec(player, SKILL_ID);
+            if (spec == null || !github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.begin(player, SKILL_ID)) return;
+            s.owner = player;
+            s.castId = github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.currentCastId(player, SKILL_ID);
+            s.perShotCooldown = spec.extra("per_shot");
+            github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.retune(player, SKILL_ID, s.castId, 0);
+            github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.released(player, SKILL_ID, s.castId);
+			s.active = true;
+			s.isAling = FormUtils.isForm(player, FormIdentifiers.AXOLOTL_ALING);
+			// Once this is a three-shot session, the Perk bonus has no equipment requirement.
+			s.efficient = FluorescentAxolotlPerks.hasWaterMagicEfficiency(player);
+			s.arraysLeft = ARRAY_COUNT;
+			s.windowTicks = BAL.i("window_ticks", WINDOW_TICKS);
+			s.accumulatedCd = 0;
+			s.shotTicks = 0;
+			applyLaserSpeed(player, true);
+			// spawn 持久待机法阵实体（前方旋转法阵，跟随玩家，combo 结束 discard?
+			LaserBeamEntity e = new LaserBeamEntity(sw, player, true);
+			e.setArraysLeft(ARRAY_COUNT);
+			sw.addFreshEntity(e);
+			s.laser = e;
+			sw.playSound(null, player.getX(), player.getY(), player.getZ(),
+					SoundEvents.CONDUIT_ACTIVATE, SoundSource.PLAYERS, 1.0f, 1.3f);
+			sw.playSound(null, player.getX(), player.getY(), player.getZ(),
+					SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.6f, 1.6f);
+		} else if (s.arraysLeft > 0 && s.shotTicks <= 0) {
+			// 窗口内再按：发射一?
+			fireShot(player, s, sw);
+		}
+	}
+
+	private static void fireShot(ServerPlayer player, ComboSession s, ServerLevel sw) {
+		int idx = ARRAY_COUNT - s.arraysLeft;       // 0=宸?1=鍙?2=涓?
+		double enhBeamLen = BAL.d("enh_beam_length", ENH_BEAM_LENGTH);
+		double beamLen = s.isAling ? enhBeamLen * 1.2 : enhBeamLen;   // 阿澪射程 ×1.2
+		// 发射瞬间准星落点（方?/ 微自瞄生物）= 定格世界锁定点；激光落点固定于此，法阵随玩家移动时激光始终指向它（追踪锁定）
+		Vec3 fireLock = resolveHitPoint(player, sw, beamLen);
+		s.fireLock = fireLock;
+		s.firingIdx = idx;
+		s.shotTicks = BAL.i("shot_ticks", SHOT_TICKS);
+		PowerUtils.setResourceValueAndSync(player, SHOT_HUD, s.shotTicks);
+		s.damagedThisShot.clear();
+		s.arraysLeft--;
+        s.accumulatedCd += s.perShotCooldown;
+        github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.retune(player, SKILL_ID, s.castId, s.accumulatedCd);
+		s.windowTicks = BAL.i("window_ticks", WINDOW_TICKS);               // 重置窗口
+		// 持久待机法阵实体进入发射态（存固定锁定点），并同步剩余法阵数
+		if (s.laser != null && s.laser.isAlive()) {
+			s.laser.startFiring(idx, fireLock);
+			s.laser.setArraysLeft(s.arraysLeft);
+		}
+		Vec3 origin = arrayPos(player, idx);
+		sw.playSound(null, origin.x, origin.y, origin.z,
+				SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 0.8f, 1.5f);
+		sw.playSound(null, origin.x, origin.y, origin.z,
+				SoundEvents.CONDUIT_ACTIVATE, SoundSource.PLAYERS, 0.8f, 1.2f);
+	}
+
+	/** 三法阵位置：玩家斜后??0)/?1)/?2)?*/
+	private static Vec3 arrayPos(ServerPlayer player, int idx) {
+		Vec3 eye = new Vec3(player.getX(), player.getEyeY(), player.getZ());
+		Vec3 look = player.getViewVector(1.0f).normalize();
+		Vec3 right = look.cross(new Vec3(0, 1, 0));
+		if (right.lengthSqr() < 1.0e-6) right = new Vec3(1, 0, 0);
+		right = right.normalize();
+		Vec3 base = eye.subtract(look.scale(ARRAY_BACK));
+		return switch (idx) {
+			case 0 -> base.add(right.scale(-ARRAY_SIDE));
+			case 1 -> base.add(right.scale(ARRAY_SIDE));
+			default -> base.add(0, ARRAY_UP, 0);
+		};
+	}
+
+	/** 落点解析：准星射线命中方块点；若准星 10 度锥内有非白名单生物则优先取最近生物（微自瞄）?*/
+	private static Vec3 resolveHitPoint(ServerPlayer player, ServerLevel sw, double maxDist) {
+		Vec3 eye = player.getEyePosition();
+		Vec3 aim = player.getViewVector(1.0f).normalize();
+		Vec3 end = eye.add(aim.scale(maxDist));
+		net.minecraft.world.phys.BlockHitResult bh = sw.clip(new net.minecraft.world.level.ClipContext(
+				eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+				net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+		Vec3 blockPoint = (bh.getType() != net.minecraft.world.phys.HitResult.Type.MISS) ? bh.getLocation() : end;
+		double reach = eye.distanceTo(blockPoint);
+		LivingEntity target = findAimTarget(player, sw, eye, aim, reach);
+		if (target != null) {
+			return target.position().add(0, target.getBbHeight() * 0.5, 0);
+		}
+		return blockPoint;
+	}
+
+	/** 微自瞄：准星 AIM_CONE_DEG 锥内、maxDist 内、最近的非白名单存活生物?*/
+	private static LivingEntity findAimTarget(ServerPlayer player, ServerLevel sw, Vec3 eye, Vec3 aim, double maxDist) {
+		if (maxDist < 0.5) return null;
+		double aimConeDeg = BAL.d("aim_cone_deg", AIM_CONE_DEG);
+		double cosCone = Math.cos(Math.toRadians(aimConeDeg));
+		Vec3 end = eye.add(aim.scale(maxDist));
+		double expand = maxDist * Math.tan(Math.toRadians(aimConeDeg)) + 1.0;
+		AABB search = new AABB(eye, end).inflate(expand);
+		LivingEntity best = null;
+		double bestDist = Double.MAX_VALUE;
+		for (Entity e : sw.getEntities(player, search, EntitySelector.NO_SPECTATORS)) {
+			if (!(e instanceof LivingEntity le) || !le.isAlive()) continue;
+			if (WhitelistUtils.isProtected(player, le)) continue;
+			if (github.com.gengyoubo.sscfa.spell.DomainManager.blocksTargeting(player, le)) continue;
+			Vec3 center = le.position().add(0, le.getBbHeight() * 0.5, 0);
+			Vec3 toE = center.subtract(eye);
+			double dist = toE.length();
+			if (dist > maxDist || dist < 1.0e-4) continue;
+			if (aim.dot(toE.scale(1.0 / dist)) < cosCone) continue;
+			if (dist < bestDist) { bestDist = dist; best = le; }
+		}
+		return best;
+	}
+
+	/** 每服务端 tick 对每个在线玩家调用（推进增强 combo）?*/
+	public static void tick(ServerPlayer player) {
+		ComboSession s = COMBOS.get(player.getUUID());
+		if (s == null || !s.active) {
+			// 兜底清理降频到每秒一次：endCombo 已统一清零 SHOT_HUD，此查询仅防异常残留?
+			// 原实现对全员?tick ?Apoli 资源查询（遍?power 列表），非荧光幼灵玩?100% 浪费
+			if (player.tickCount % 20 == 0 && PowerUtils.getResourceValue(player, SHOT_HUD) > 0) {
+				PowerUtils.setResourceValueAndSync(player, SHOT_HUD, 0);
+			}
+			return;
+		}
+		// ?SP 悦灵净化打断：立即结束 combo（与死亡/卸饰品同路径，含失活音效 + CD 结算?
+		if (player.hasEffect(github.com.gengyoubo.sscfa.init.AddonEffects.PURIFIED.get())) {
+			endCombo(player, s);
+			return;
+		}
+		if (player.isDeadOrDying() || !FormUtils.isAxolotlFluorescent(player)
+				|| s.isAling != FormUtils.isForm(player, FormIdentifiers.AXOLOTL_ALING)
+				|| !(s.isAling || TrinketUtils.isWearing(player, github.com.gengyoubo.sscfa.init.AddonItems.SEA_CRYSTAL_PENDANT.get()))
+				|| !(player.level() instanceof ServerLevel sw)) {
+			endCombo(player, s);
+			return;
+		}
+		// 实时锁定点（准星落点）同步给渲染器，剩余待发射法阵据此预瞑转?
+		if (s.laser != null && s.laser.isAlive()) {
+			double enhLen = BAL.d("enh_beam_length", ENH_BEAM_LENGTH);
+			double preLen = s.isAling ? enhLen * 1.2 : enhLen;
+			s.laser.setLockPoint(resolveHitPoint(player, sw, preLen));
+		}
+		// 活跃发射推进?t，其间每 2t 判定，每目标?1 次）
+		if (s.shotTicks > 0) {
+			int shotTicks = BAL.i("shot_ticks", SHOT_TICKS);
+			int elapsed = shotTicks - s.shotTicks;   // 0..7
+			if (elapsed % BAL.i("shot_damage_interval", SHOT_DAMAGE_INTERVAL) == 0) {
+				shotDamage(sw, player, s);
+			}
+			s.shotTicks--;
+			// ?tick 恰好 -1 的短倒计时：走批量预测通道?026-09-24?
+			PowerUtils.countDownAndSync(player, SHOT_HUD, s.shotTicks);
+		}
+		// 窗口计时（仅在没有活跃发射时倒数?
+		if (s.shotTicks <= 0) {
+			s.windowTicks--;
+		}
+		// 结束：法阵用??窗口超时（且当前发射已完?
+		if (s.shotTicks <= 0 && (s.arraysLeft <= 0 || s.windowTicks <= 0)) {
+			endCombo(player, s);
+		}
+	}
+
+	private static void shotDamage(ServerLevel sw, ServerPlayer player, ComboSession s) {
+		if (s.fireLock == null) return;
+		Vec3 origin = arrayPos(player, s.firingIdx);   // 当前法阵位置（随玩家移动?
+		Vec3 end = s.fireLock;                          // 固定世界锁定?
+		Vec3 diff = end.subtract(origin);
+		double len = diff.length();
+		if (len < 1.0e-4) return;
+		Vec3 dir = diff.scale(1.0 / len);
+		// 阿澪：判定半?×1.2
+		double enhBeamRadius = BAL.d("enh_beam_radius", ENH_BEAM_RADIUS);
+		double radius = s.isAling ? enhBeamRadius * 1.2 : enhBeamRadius;
+		float shotDamageBase = (float) BAL.d("shot_damage", SHOT_DAMAGE);
+		float dmg = s.isAling ? shotDamageBase * 1.2f : shotDamageBase;   // 闃挎惊浼ゅ 脳1.2锛?2鈫?4.4锛?
+		dmg = FluorescentAxolotlPerks.enhancedLaserDamage(dmg, s.efficient);
+		AABB box = new AABB(origin, end).inflate(radius);
+		List<LivingEntity> targets = sw.getEntitiesOfClass(LivingEntity.class, box,
+				e -> e.isAlive() && !e.isSpectator() && !e.getUUID().equals(player.getUUID()));
+		for (LivingEntity t : targets) {
+			if (s.damagedThisShot.contains(t.getUUID())) continue;   // 每道每目标只 1 ?
+			if (WhitelistUtils.isProtected(player, t)) continue;      // 默认白名?
+			Vec3 center = t.position().add(0, t.getBbHeight() * 0.5, 0);
+			double proj = center.subtract(origin).dot(dir);
+			if (proj < 0 || proj > len) continue;
+			Vec3 closest = origin.add(dir.scale(proj));
+			if (center.distanceToSqr(closest) > radius * radius) continue;
+			if (t.hurt(t.damageSources().playerAttack(player), dmg)) {   // 12 点物理（阿澪 14.4?
+				FluorescentAxolotlPerks.onLaserHit(player);
+				t.invulnerableTime = 10;   // 主要技能：受击无敌 20?0 减半，令目标更快可再次受?
+			}
+			s.damagedThisShot.add(t.getUUID());
+		}
+	}
+
+	public static void interruptControl(ServerPlayer player) {
+		LaserBeamEntity beam = ACTIVE.remove(player.getUUID());
+		if (beam != null && beam.isAlive()) beam.interruptControl(player);
+		ComboSession combo = COMBOS.get(player.getUUID());
+		if (combo != null && combo.active) endCombo(player, combo);
+	}
+
+	private static void endCombo(ServerPlayer player, ComboSession s) {
+        if (!s.active) return;
+        s.active = false;
+        COMBOS.remove(player.getUUID(), s);
+		PowerUtils.setResourceValueAndSync(player, SHOT_HUD, 0);
+		applyLaserSpeed(player, false);
+        github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.ended(player, SKILL_ID, s.castId);
+		// 结束音效：三发射?/ 窗口超时失效 / ?SP 悦灵净化打?等所有结束路径统一播放
+		// （信标失活，与开?BLOCK_BEACON_ACTIVATE 呼应；全员可闻）
+		if (player.level() instanceof ServerLevel sw) {
+			sw.playSound(null, player.getX(), player.getY(), player.getZ(),
+					SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.0f, 1.6f);
+		}
+		if (s.laser != null) { s.laser.discard(); s.laser = null; }
+		s.active = false;
+		s.shotTicks = 0;
+		s.arraysLeft = 0;
+		COMBOS.remove(player.getUUID());
+	}
+
+	/** 整段技能期移动速度 -50%（固?UUID，apply/remove 幂等）?*/
+	private static void applyLaserSpeed(ServerPlayer player, boolean apply) {
+		var attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (attr == null) return;
+		attr.removeModifier(LASER_SPEED_UUID);
+		if (apply) {
+			attr.addTransientModifier(new AttributeModifier(
+					LASER_SPEED_UUID, "Enhanced Laser Slow", BAL.d("speed_penalty", SPEED_PENALTY),
+					AttributeModifier.Operation.MULTIPLY_TOTAL));
+		}
+	}
+
+    public static void onPlayerDisconnect(ServerPlayer player) {
+        interruptControl(player);
+        COMBOS.remove(player.getUUID());
+    }
+
+    public static void onBeamRemoved(LaserBeamEntity beam, ServerPlayer owner) {
+        if (owner == null) return;
+        ACTIVE.remove(owner.getUUID(), beam);
+        ComboSession session = COMBOS.get(owner.getUUID());
+        if (session != null && session.laser == beam && session.active) endCombo(owner, session);
+    }
+
+    public static void clearAll() {
+        for (ComboSession session : List.copyOf(COMBOS.values())) {
+            if (session.owner != null && session.active) endCombo(session.owner, session);
+        }
+        for (LaserBeamEntity beam : List.copyOf(ACTIVE.values())) beam.discard();
+        ACTIVE.clear();
+        COMBOS.clear();
+    }
+}

@@ -5,6 +5,11 @@ import github.com.gengyoubo.sscfa.entity.GhostCatEntity;
 import github.com.gengyoubo.sscfa.entity.ShellMob;
 import github.com.gengyoubo.sscfa.entity.ShellProjectile;
 import github.com.gengyoubo.sscfa.entity.BeepSheepEntity;
+import github.com.gengyoubo.sscfa.entity.FrostArrayEntity;
+import github.com.gengyoubo.sscfa.entity.FrostThornEntity;
+import github.com.gengyoubo.sscfa.entity.LaserBeamEntity;
+import github.com.gengyoubo.sscfa.entity.TidalOrbEntity;
+import github.com.gengyoubo.sscfa.entity.FrostStormEntity;
 import github.com.gengyoubo.sscfa.entity.SpellCurseMarkEntity;
 import github.com.gengyoubo.sscfa.entity.SpellFireBoltEntity;
 import github.com.gengyoubo.sscfa.entity.SpellFrostSpikeEntity;
@@ -26,14 +31,12 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * SSCA 实体注册（对应 Fabric 版 SscAddon / RegAddonEntities）。尺寸与追踪参数照搬原版；
- * 追踪范围由方块换算为区块（向上取整）。除 ghost_cat 外均为空壳，见 {@link ShellProjectile} / {@link ShellMob}。
- */
+ * SSCA 实体注册（对?Fabric ??SscAddon / RegAddonEntities）。尺寸与追踪参数照搬原版?? * 追踪范围由方块换算为区块（向上取整）??ghost_cat 外均为空壳，?{@link ShellProjectile} / {@link ShellMob}?? */
 public final class AddonEntities {
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, SscAddonForge.MOD_ID);
     private static final List<RegistryObject<EntityType<ShellProjectile>>> SHELL_PROJECTILES = new ArrayList<>();
 
-    // ===== 投射物 / 场地实体（空壳） =====
+    // ===== 投射?/ 场地实体（空??=====
     public static final RegistryObject<EntityType<ShellProjectile>> FROST_BALL = projectile("frost_ball", 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<SpellFrostSpikeEntity>> SPELL_FROST_SPIKE = entity("spell_frost_spike", SpellFrostSpikeEntity::new, 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<SpellFireBoltEntity>> SPELL_FIRE_BOLT = entity("spell_fire_bolt", SpellFireBoltEntity::new, 0.25f, 0.25f, 4, 10);
@@ -43,14 +46,14 @@ public final class AddonEntities {
     public static final RegistryObject<EntityType<BeepSheepEntity>> BEEP_SHEEP = entity("beep_sheep", BeepSheepEntity::new, 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<ShellProjectile>> LUNAR_SPIRIT_BOLT = projectile("lunar_spirit_bolt", 0.2f, 0.2f, 4, 10);
     public static final RegistryObject<EntityType<ShellProjectile>> THROWN_WATER_SPEAR = projectile("thrown_water_spear", 0.4f, 0.4f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> FROST_THORN = projectile("frost_thorn", 0.3f, 0.3f, 8, 1);
-    public static final RegistryObject<EntityType<ShellProjectile>> FROST_ARRAY = projectile("frost_array", 0.3f, 0.3f, 4, 1);
+    public static final RegistryObject<EntityType<FrostThornEntity>> FROST_THORN = entity("frost_thorn", FrostThornEntity::new, 0.3f, 0.3f, 8, 1);
+    public static final RegistryObject<EntityType<FrostArrayEntity>> FROST_ARRAY = entity("frost_array", FrostArrayEntity::new, 0.3f, 0.3f, 4, 1);
     public static final RegistryObject<EntityType<ShellProjectile>> FOX_FIREBALL = projectile("fox_fireball", 0.25f, 0.25f, 4, 2);
     public static final RegistryObject<EntityType<ShellProjectile>> INFECTION_SPORE_BOMB = projectile("infection_spore_bomb", 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<ShellProjectile>> PARASITIC_SEED = projectile("parasitic_seed", 0.25f, 0.25f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> FROST_STORM = projectile("frost_storm", 1.0f, 2.0f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> TIDAL_ORB = projectile("tidal_orb", 0.5f, 0.5f, 4, 1);
-    public static final RegistryObject<EntityType<ShellProjectile>> LASER_BEAM = projectile("laser_beam", 0.5f, 0.5f, 6, 1);
+    public static final RegistryObject<EntityType<FrostStormEntity>> FROST_STORM = entity("frost_storm", FrostStormEntity::new, 1.0f, 2.0f, 4, 10);
+    public static final RegistryObject<EntityType<TidalOrbEntity>> TIDAL_ORB = entity("tidal_orb", TidalOrbEntity::new, 0.5f, 0.5f, 4, 1);
+    public static final RegistryObject<EntityType<LaserBeamEntity>> LASER_BEAM = entity("laser_beam", LaserBeamEntity::new, 0.5f, 0.5f, 6, 1);
     public static final RegistryObject<EntityType<ShellProjectile>> WATER_SPEAR = projectile("water_spear", 0.5f, 0.5f, 1, 20);
     public static final RegistryObject<EntityType<ShellProjectile>> FRIEND_MARKER = projectile("friend_marker", 0.25f, 0.25f, 1, 10);
     public static final RegistryObject<EntityType<ShellProjectile>> CLEAR_FRIEND_MARKER = projectile("clear_friend_marker", 0.25f, 0.25f, 1, 10);
@@ -58,7 +61,7 @@ public final class AddonEntities {
     public static final RegistryObject<EntityType<ShellProjectile>> WEB_MEMBRANE_BULLET = projectile("web_membrane_bullet", 0.5f, 0.5f, 10, 1);
     public static final RegistryObject<EntityType<ShellProjectile>> SPIDER_SWING_BULLET = projectile("spider_swing_bullet", 0.4f, 0.4f, 10, 1);
 
-    // ===== 生物 =====
+    // ===== 鐢??=====
     public static final RegistryObject<EntityType<ShellMob>> LUNAR_SPIRIT = ENTITIES.register("lunar_spirit", () ->
             EntityType.Builder.<ShellMob>of(ShellMob::new, MobCategory.MISC).sized(0.4f, 0.6f)
                     .clientTrackingRange(4).updateInterval(1).build("lunar_spirit"));
@@ -78,7 +81,7 @@ public final class AddonEntities {
         return Collections.unmodifiableList(SHELL_PROJECTILES);
     }
 
-    /** 模组总线：为生物注册默认属性（缺失会在生成时崩溃）。 */
+    /** 模组总线：为生物注册默认属性（缺失会在生成时崩溃）?*/
     public static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(LUNAR_SPIRIT.get(), PathfinderMob.createMobAttributes().add(Attributes.MAX_HEALTH, 3.0).add(Attributes.ATTACK_DAMAGE, 3.0).add(Attributes.MOVEMENT_SPEED, 0.4).add(Attributes.FLYING_SPEED, 0.6).add(Attributes.FOLLOW_RANGE, 32.0).build());
         event.put(GHOST_CAT.get(), GhostCatEntity.createGhostCatAttributes().build());

@@ -18,19 +18,15 @@ import github.com.gengyoubo.sscfa.spell.SpellCastingRules;
 import github.com.gengyoubo.sscfa.spell.SpellbookData;
 
 /**
- * 月尘魔法书施法客户端检测器（jackcooper）。仅在佩戴魔法书时生效。
- * <p>施法键 / 7 个直达键：上升沿检测 → C2S 施法包（带槽位 index）。切换键 + 滚轮：由
- * {@code SpellcastMouseScrollMixin} 调用 {@link #cycleSelected} 切换当前选中槽并同步服务端。</p>
- * <p><b>法力不足三连击降档</b>（阶段 C §6.4 变体，用户 2026-09-18 定稿）：选中槽为高阶卷轴且
- * 书法力不足时，1 秒内连按三次施法键 → 第三次改为发送「临时降档施放」包（服务端降到付得起的
- * 最高档，本次 CD ×1.2 惩罚）；不写卷轴 NBT、下次施法仍按原档。法力充足时第一次按键即正常施放。</p>
- * <p><b>按住瞄准型法术</b>（{@link Spell#getAimMaxRange()} > 0，如陨火术）：按住施法键时
- * 在准星落点本地粒子圈持续预览（随准星实时移动、半径含等级缩放），松开才发送施法包；
- * 冷却中不预览不发送。直达键仍为按下立即施放。所有伤害/冷却/法力判定在服务端。</p>
+ * 月尘魔法书施法客户端检测器（jackcooper）。仅在佩戴魔法书时生效? * <p>施法?/ 7 个直达键：上升沿检??C2S 施法包（带槽?index）。切换键 + 滚轮：由
+ * {@code SpellcastMouseScrollMixin} 调用 {@link #cycleSelected} 切换当前选中槽并同步服务端?/p>
+ * <p><b>法力不足三连击降?/b>（阶?C §6.4 变体，用?2026-09-18 定稿）：选中槽为高阶卷轴? * 书法力不足时? 秒内连按三次施法??第三次改为发送「临时降档施放」包（服务端降到付得起的
+ * 最高档，本?CD ×1.2 惩罚）；不写卷轴 NBT、下次施法仍按原档。法力充足时第一次按键即正常施放?/p>
+ * <p><b>按住瞄准型法?/b>（{@link Spell#getAimMaxRange()} > 0，如陨火术）：按住施法键? * 在准星落点本地粒子圈持续预览（随准星实时移动、半径含等级缩放），松开才发送施法包? * 冷却中不预览不发送。直达键仍为按下立即施放。所有伤?冷却/法力判定在服务端?/p>
  */
 public final class SpellcastClient {
 	private static int selectedSlot = 0;
-	/** ??tick 是否已装备书：无→有沿触发从??NBT 恢复选中槽（重进游戏不丢选择?026-09-24）??*/
+	/** ??tick 是否已装备书：无→有沿触发从??NBT 恢复选中槽（重进游戏不丢选择?026-09-24??*/
 	private static boolean bookWasEquipped;
 	private static final boolean[] wasDirectPressed = new boolean[7];
 	private static boolean wasCastPressed = false;
@@ -63,6 +59,7 @@ public final class SpellcastClient {
 				(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) ->
 						github.com.gengyoubo.sscfa.spell.SharedSpellCooldowns.applyClientSnapshot(null));
 		github.com.gengyoubo.sscfa.client.hud.SpellCastHud.register();
+		github.com.gengyoubo.sscfa.network.AddonNetwork.registerClientReceiver(github.com.gengyoubo.sscfa.evolution.RegEvolutionComponent.SYNC, buf -> github.com.gengyoubo.sscfa.evolution.RegEvolutionComponent.EVOLUTION.acceptClient(buf.readUUID(), buf.readNbt()));
 		net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
 				(net.minecraftforge.event.TickEvent.ClientTickEvent event) -> {
 					if (event.phase == net.minecraftforge.event.TickEvent.Phase.END)
@@ -70,13 +67,13 @@ public final class SpellcastClient {
 				});
 	}
 
-	/** 客户端当前佩戴的魔法书（未装备返??null；??tick 缓存，tick 检测??HUD 帧渲染共读）??*/
+	/** 客户端当前佩戴的魔法书（未装备返??null??tick 缓存，tick 检??HUD 帧渲染共读）??*/
 	public static ItemStack getEquippedBook() {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player == null) {
 			return null;
 		}
-		// 每帧全饰品扫?+ Curios 反射兜底链收敛到 ClientTickCache 的??tick 一??
+		// 每帧全饰品扫?+ Curios 反射兜底链收敛到 ClientTickCache ??tick 一??
 		return ClientTickCache.equippedBook();
 	}
 
@@ -93,7 +90,7 @@ public final class SpellcastClient {
 		return selectedSlot;
 	}
 
-	/** 滚轮切换当前选中槽（首尾相连）。dir=+1 下一个，-1 上一个。由滚??mixin 调用?*/
+	/** 滚轮切换当前选中槽（首尾相连）。dir=+1 下一个，-1 上一个。由??mixin 调用?*/
 	public static void cycleSelected(int dir) {
 		ItemStack book = getEquippedBook();
 		if (book == null || book.isEmpty()) {
@@ -110,8 +107,8 @@ public final class SpellcastClient {
 	}
 
 	/**
-	 * 循环当前选中槽的施放档位（低阶选档，阶??C ??.4）??
-	 * 循环序：满????满??1 ??????1 ??回满档；一级卷轴无意义不动作?
+	 * 循环当前选中槽的施放档位（低阶选档，阶??C ??.4??
+	 * 循环序：??????1 ??????1 ??回满档；一级卷轴无意义不动?
 	 * 服务端权威写入，这里只发请求。（保留供潜?施法键等后续入口复用?
 	 */
 	public static void cycleCastLevel(int slot) {
@@ -134,7 +131,7 @@ public final class SpellcastClient {
 
 	private static boolean handleTriplePressDowngrade(LocalPlayer player, ItemStack book, int slot, int level, int cost,
 			Spell spell, ItemStack scroll, int payable) {
-		// 书??经验的正常同步不打断连按；换槽、换卷轴、换法阵或手选等级则重新计数??
+		// ??经验的正常同步不打断连按；换槽、换卷轴、换法阵或手选等级则重新计数??
 		var source = book.getTag() == null ? new net.minecraft.nbt.CompoundTag() : book.getTag().copy();
 		source.remove(SpellbookData.NBT_MANA);
 		source.remove(SpellbookData.NBT_EXP);
@@ -149,6 +146,9 @@ public final class SpellcastClient {
 	}
 
 	private static void onClientTick(Minecraft client) {
+		if (SpellcastKeybindings.KEY_EVOLUTION != null && SpellcastKeybindings.KEY_EVOLUTION.consumeClick()) {
+			client.setScreen(new github.com.gengyoubo.sscfa.client.evolution.EvolutionScreen(null));
+		}
 		LocalPlayer player = client.player;
 		if (player == null || client.level == null) {
 			resetKeys();
@@ -204,7 +204,7 @@ public final class SpellcastClient {
 			return;
 		}
 		if (!bookWasEquipped) {
-			// 重进游戏/新装备书：从?NBT 恢复上次选中的槽（修复「选了第三个法术，重进变回第一个」—?
+			// 重进游戏/新装备书：从?NBT 恢复上次选中的槽（修复「选了第三个法术，重进变回第一个」?
 			// 服务?Selected 一直有存，客户端静态字段却??0 起步从未读过它）?
 			bookWasEquipped = true;
 			int saved = SpellbookData.getSelectedSlot(book);
@@ -214,7 +214,7 @@ public final class SpellcastClient {
 		if (selectedSlot >= count) {
 			selectedSlot = 0;
 		}
-		// 选中槽为空（被取走卷?/ 换??/ 初始化）??归位到第一个非空槽，保??HUD 与施法键始终指向有魔法的??
+		// 选中槽为空（被取走卷?/ ??/ 初始化）??归位到第一个非空槽，保??HUD 与施法键始终指向有魔法的??
 		if (!SpellbookData.hasScroll(book, selectedSlot)) {
 			int first = SpellbookData.firstFilledSlot(book);
 			if (first >= 0) {
@@ -256,8 +256,8 @@ public final class SpellcastClient {
 		}
 		if (!handled && castPressed && !wasCastPressed) {
 			if (active != null) {
-				// 锁定态（领域壳扩张??爆裂红白球生成后??026-09-23）：不可取消，不发取消包??
-				// 不打本地取消标（避免「取消中」红字永驻），HUD 倒计时保持红显?
+				// 锁定态（领域壳扩??爆裂红白球生成后??026-09-23）：不可取消，不发取消包??
+				// 不打本地取消标（避免「取消中」红字永驻），HUD 倒计时保持红?
 				if (!active.solo() && !active.locked()
 						&& (active.mode() == github.com.gengyoubo.sscfa.spell.SpellCastingRules.Mode.AUTOMATIC
 						|| active.mode() == github.com.gengyoubo.sscfa.spell.SpellCastingRules.Mode.RELEASE)) {
@@ -401,10 +401,10 @@ public final class SpellcastClient {
 
 	/**
 	 * 按住瞄准预览（纯客户端本地，零网络开销）：??2t 在准星落点撒一圈火焰粒??
-	 * （与服务端陨火预警圈同视觉语言），随准星实时移动?
+	 * （与服务端陨火预警圈同视觉语言），随准星实时移?
 	 * 月相（实体目标型）：不撒粒子圈，改为对准星射线命中的实体持续紫色描边
 	 * （本地高亮表短租约续约，松手停止续约后自然消失；与服务端 raycastEntity 同几何）??
-	 * 调用方已保??CD/法??落点均就绪（服务端施法时权威重验），此处无需重复校验??
+	 * 调用方已??CD/??落点均就绪（服务端施法时权威重验），此处无需重复校验??
 	 */
 	private static void updateAimPreview(Minecraft client, LocalPlayer player, ItemStack book, int slot) {
 		ItemStack scroll = SpellbookData.getScroll(book, slot);
@@ -426,12 +426,12 @@ public final class SpellcastClient {
 		if (impact == null) {
 			return;
 		}
-		// 圈粒子按法术系别取色（火=火??/ 虚??传送门?/ 其它默认火焰?
+		// 圈粒子按法术系别取色（火=??/ ??传送门?/ 其它默认火焰?
 		net.minecraft.core.particles.ParticleOptions ringParticle = ParticleTypes.FLAME;
 		if (spell.getElement() == github.com.gengyoubo.sscfa.spell.FormationElement.VOID) {
 			ringParticle = ParticleTypes.PORTAL;
 		}
-		// 火焰圈勾??AOE 范围（旋转角随时间缓慢流动，与服务端预警圈同款动感??
+		// 火焰圈勾??AOE 范围（旋转角随时间缓慢流动，与服务端预警圈同款动??
 		int ringCount = (int) Math.min(40, Math.max(16, radius * 10));
 		double baseAngle = (client.level.getGameTime() / 2) * 0.15;
 		for (int i = 0; i < ringCount; i++) {
@@ -466,7 +466,7 @@ public final class SpellcastClient {
 		github.com.gengyoubo.sscfa.network.AddonNetwork.sendToServer(SscAddonNetworking.PACKET_SPELL_SET_CAST_LEVEL, buf);
 	}
 
-	/** 三连击触发的临时降档施放（服务端自动选付得起的最高??+ CD ??.2 惩罚）?*/
+	/** 三连击触发的临时降档施放（服务端自动选付得起的最??+ CD ??.2 惩罚?*/
 	private static void sendCastDowngraded(int slot) {
 		FriendlyByteBuf buf = github.com.gengyoubo.sscfa.network.AddonNetwork.buffer();
 		buf.writeVarInt(slot);

@@ -1,0 +1,73 @@
+package github.com.gengyoubo.sscfa.spell.spells;
+import github.com.gengyoubo.sscfa.spell.research.*;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import github.com.gengyoubo.sscfa.balance.BalanceReader;
+import github.com.gengyoubo.sscfa.spell.Spell;
+import github.com.gengyoubo.sscfa.spell.SpellRarity;
+
+/**
+ * 腐蚀之雾（诅咒系，蓝色基底，jackcooper）：以自身为圆心散布腐蚀雾气，范围内敌人
+ * 持续每 2 秒受毒伤（中毒 I）+ 缓速，雾气持续 6 秒。即时施放，持续结算走
+ * 服务端 tick 管理器（{@code CorruptMistManager}，按 UUID 隔离）。
+ *
+ * <p>数值外置 {@code data/ssc_addon/spells/corrupt_mist.json}：
+ * 基准半径 3 格 / 持续 6s（每 2s 一跳中毒 I 4s + 缓速 I 2s）/ cd 18s / 耗蓝 28；
+ * 半径按 speed_multiplier 缩放。</p>
+ */
+public class CorruptMistSpell extends Spell {
+
+	/** 基础半径（格）默认，实际半径 = 基础 × speed_multiplier(level)；运行时从 balance 快照读取。 */
+	private static final double BASE_RADIUS = 3.0;
+	/** 雾气持续时间（tick）：6s。默认值；运行时从 balance 快照读取。 */
+	public static final int DURATION_TICKS = 120;
+	/** 每跳间隔（tick）：2s。默认值；运行时从 balance 快照读取。 */
+	public static final int INTERVAL_TICKS = 40;
+	/** 中毒时长（tick）：4s。默认值；运行时从 balance 快照读取（本类自身不消费，结算方 CorruptMistManager 经下方 poisonTicks() 取值）。 */
+	public static final int POISON_TICKS = 80;
+
+	// 阶段 5：运行时快照读取（spells.corrupt_mist；快照未初始化回退上方默认常量）
+	private static final BalanceReader BAL = new BalanceReader("spells.corrupt_mist");
+
+	/** 中毒时长运行时读取（spells.corrupt_mist.poison_ticks）：供 CorruptMistManager 结算时调用。 */
+	public static int poisonTicks() {
+		return BAL.i("poison_ticks", POISON_TICKS);
+	}
+
+	public CorruptMistSpell() {
+		super(new ResourceLocation("ssc_addon", "corrupt_mist"), SpellRarity.BLUE);
+	}
+
+	@Override
+	public void cast(ServerPlayer caster, float power, boolean solo) {
+		cast(caster, power, solo, 1);
+	}
+
+	@Override
+	public void cast(ServerPlayer caster, float power, boolean solo, int level) {
+		if (caster.level().isClientSide() || !(caster.level() instanceof ServerLevel serverWorld)) {
+			return;
+		}
+		double radius = RuneCastContext.current().scale(BAL.d("base_radius", BASE_RADIUS) * getSpeedMultiplier(level),RuneModifiers.Stat.AREA);
+		// 雾持续时间：每级 +1.25s（L1=6s … L5=11s）
+		int duration = BAL.i("duration_ticks", DURATION_TICKS) + Math.round((level - 1) * 1.25f * 20);
+		if (!solo) duration = github.com.gengyoubo.sscfa.spell.FormAffinity.curseDurationTicks(caster, duration);
+		// 注册持续雾气区域（服务端 tick 结算，见 CorruptMistManager；L4+ 中毒 II）
+		github.com.gengyoubo.sscfa.ability.CorruptMistManager.start(
+				caster, radius, duration, BAL.i("interval_ticks", INTERVAL_TICKS), level, solo ? null : ssc_addon$getRefundCastId());
+		// 起手演出：紫色雾气扩散 + 酸蚀音效
+		for (int layer = 1; layer <= 3; layer++) {
+			double r = radius * layer / 3.0;
+			github.com.gengyoubo.sscfa.util.SpellFxUtils.ring(serverWorld, caster, ParticleTypes.DRAGON_BREATH,
+					caster.getX(), caster.getY() + 0.15, caster.getZ(), r, 16);
+		}
+		serverWorld.playSound(null, caster.getX(), caster.getY(), caster.getZ(),
+				SoundEvents.EVOKER_PREPARE_ATTACK, SoundSource.PLAYERS, 0.8f, 0.5f);
+		serverWorld.playSound(null, caster.getX(), caster.getY(), caster.getZ(),
+				SoundEvents.BREWING_STAND_BREW, SoundSource.PLAYERS, 0.7f, 0.6f);
+	}
+}

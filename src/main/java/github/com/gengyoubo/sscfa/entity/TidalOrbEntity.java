@@ -1,0 +1,784 @@
+package github.com.gengyoubo.sscfa.entity;
+
+import github.com.gengyoubo.sscfa.balance.BalanceIntegration;
+import github.com.gengyoubo.sscfa.balance.BalanceReader;
+import github.com.gengyoubo.sscfa.compat.FluorescentAxolotlPerks;
+import github.com.gengyoubo.sscfa.util.FormIdentifiers;
+import github.com.gengyoubo.sscfa.util.EntityDisplayClock;
+import github.com.gengyoubo.sscfa.util.FormUtils;
+import github.com.gengyoubo.sscfa.util.TrinketUtils;
+import github.com.gengyoubo.sscfa.util.WhitelistUtils;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * 荧光幼灵（Axolotl Fluorescent）主要技能「潮汐波动」粒子球实体?
+ *
+ * <p>状态机?
+ * <ul>
+ *   <li>FLYING? ?s 向前飞行，每 tick 缓慢偏向主人准星方向（陶氏导弹式，最?~3°/tick）；最多飞 8 秒?/li>
+ *   <li>DECELERATING：飞行中再次按键 / 飞满 8 秒触发，0.75 秒内速度线性衰减至 0（保持当前方向，不再转向）?/li>
+ *   <li>ATTRACTING（潮汐束?/ 拴人）：落点瞬间捕获半径 6 格内所有非白名单目标；持续 8.5 秒把它们「拴」在落点?
+ *       6 格内自由活动，超?6 格按超出距离线性拉回锚点，绝不允许超过 8 格。纯控制、无伤害?/li>
+ *   <li>DELAY：拴人时长结束，延迟 0.35 秒后泡泡破裂消失?/li>
+ * </ul>
+ * 不消耗潮湿度；CD 在球完全消失后由技能管理器起算；可被净化（PURIFIED）直接消除?
+ *
+ * <p>渲染：实?{@link net.minecraft.world.entity.projectile.ItemSupplier} 以潮涌（Conduit）方块作为可见核?
+ * （由 FlyingItemEntityRenderer 渲染，对?red 火球标准），外层附以富的?荧光拖尾粒子?
+ */
+public class TidalOrbEntity extends Entity implements net.minecraft.world.entity.projectile.ItemSupplier {
+
+    // ===== 飞行参数（以下均为默认值；运行时从 balance 快照读取 abilities.tidal_orb?====
+    private static final double FLY_SPEED = 0.2;            // 4 鏍?s = 0.2 鏍?tick
+    private static final int MAX_FLY_TICKS = 160;           // 8 秒后自动进入吸附
+    private static final double MAX_TURN_RAD = Math.toRadians(3.0); // ?tick 最多转?3°（幅度小；未登记不开放）
+
+    // ===== 减速参?=====
+    private static final int DECEL_TICKS = 15;              // 0.75 秒减速到 0
+
+    // ===== 拴人参数（潮汐束缚）=====
+    private static final double TETHER_CATCH_RADIUS = 6.0;    // 落点瞬间：捕获半?6 格内所有目?
+    private static final double TETHER_SOFT_RADIUS = 6.0;     // 软边界：6 格内自由活动
+    private static final double TETHER_HARD_RADIUS = 8.0;     // 硬边界：绝不允许超过 8 ?
+    private static final int TETHER_DURATION_TICKS = 170;     // 拴住时长 8.5 ?
+    private static final double TETHER_PULL_PER_BLOCK = 0.30; // 超出 6 格后：每?1 格给 0.30 速度线性拉?
+    private static final double TETHER_VERTICAL_DAMP = 0.4;   // 垂直拉力衰减，避免上下猛?
+
+    // ===== 消失延迟 =====
+    private static final int POP_DELAY_TICKS = 7;           // 0.35 秒后破裂
+
+    /** balance 快照读取（快照未初始化回退默认常量?*/
+    private static final BalanceReader BAL = new BalanceReader("abilities.tidal_orb");
+
+    private enum Phase { FLYING, DECELERATING, ATTRACTING, DELAY }
+
+    /** 客户端同步：是否处于拴人（激活）状态，用于把潮涌核心切换为激活态渲染?*/
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Boolean> TETHER_ACTIVE =
+            net.minecraft.network.syncher.SynchedEntityData.defineId(TidalOrbEntity.class, net.minecraft.network.syncher.EntityDataSerializers.BOOLEAN);
+    /** 拴人阶段剩余 tick（服务端?2t 刷新，客户端 HUD 辅助栏据此倒数潮汐束缚剩余）?*/
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Long> TETHER_END =
+            net.minecraft.network.syncher.SynchedEntityData.defineId(TidalOrbEntity.class, net.minecraft.network.syncher.EntityDataSerializers.LONG);
+
+    private static final net.minecraft.network.syncher.EntityDataAccessor<java.util.Optional<UUID>> TRACKED_OWNER =
+            net.minecraft.network.syncher.SynchedEntityData.defineId(TidalOrbEntity.class, net.minecraft.network.syncher.EntityDataSerializers.OPTIONAL_UUID);
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> TETHER_TOTAL =
+            net.minecraft.network.syncher.SynchedEntityData.defineId(TidalOrbEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+
+    private Phase phase = Phase.FLYING;
+    private int ticksAlive = 0;
+    private int phaseTicks = 0;
+    private UUID ownerUuid;
+    // 阿澪(axolotl_aling)差异化：飞行/拴人时长 +20%，拴人期间造成伤害
+    private boolean isAling = false;
+    // 海晶荧光坠增强：落点一次性爆炸（伤害+强减速）、飞行提?55%
+    private boolean isEnhanced = false;
+    private int maxFlyTicks = BAL.i("max_fly_ticks", MAX_FLY_TICKS);
+    private int tetherDuration = BAL.i("tether_duration_ticks", TETHER_DURATION_TICKS);
+    private Vec3 flyDir = new Vec3(0, 0, 1);   // FLYING / DECEL 鐢?
+    private double flySpeed = BAL.d("fly_speed", FLY_SPEED);   // 基础飞行速度（增?×1.55?
+    private double currentSpeed = flySpeed;      // DECEL 时衰?
+    private Vec3 tetherCenter = null;           // 落点锚点（拴人中心）
+    private final Set<UUID> tetheredTargets = new HashSet<>(); // 落点瞬间捕获、被拴住的目?UUID
+    private static final int TETHER_REPAIR_TICKS = 40;
+    private int[] tetherSnapshot = new int[0];
+    private boolean tetherSnapshotDirty = true;
+    private long tetherSnapshotRevision;
+    private int nextTetherRepairAt;
+    private final java.util.Map<UUID, Integer> snapshotEntityIds = new java.util.HashMap<>();
+    private final java.util.Map<UUID, TetherAudience> tetherAudiences = new java.util.HashMap<>();
+    private record TetherAudience(ServerPlayer player, long revision, int sentAt) {}
+
+    // ===== 粒子配色（青/?淡蓝/白：?+ 荧光?=====
+    private static final DustParticleOptions CYAN_DUST =
+            new DustParticleOptions(new Vector3f(0.20f, 0.78f, 0.92f), 1.5f);
+    private static final DustParticleOptions BLUE_DUST =
+            new DustParticleOptions(new Vector3f(0.25f, 0.45f, 0.95f), 1.5f);
+    private static final DustParticleOptions LIGHT_BLUE_DUST =
+            new DustParticleOptions(new Vector3f(0.55f, 0.80f, 1.0f), 1.4f);
+
+    public TidalOrbEntity(EntityType<?> type, Level world) {
+        super(type, world);
+        this.noPhysics = true;
+    }
+
+    public TidalOrbEntity(Level world, ServerPlayer owner) {
+        super(github.com.gengyoubo.sscfa.init.AddonEntities.TIDAL_ORB.get(), world);
+        this.ownerUuid = owner.getUUID();
+        this.entityData.set(TRACKED_OWNER, java.util.Optional.of(this.ownerUuid));
+        // 从玩家眼部前方生成，方向取准?
+        Vec3 look = owner.getViewVector(1.0f);
+        this.flyDir = look.normalize();
+        this.setPos(owner.getX() + look.x * 0.8, owner.getEyeY() - 0.1 + look.y * 0.8, owner.getZ() + look.z * 0.8);
+        this.noPhysics = true;
+        // 阿澪：飞?拴人时长 +20%（拴人伤害在 tickAttracting 结算?
+        this.isAling = FormUtils.isForm(owner, FormIdentifiers.AXOLOTL_ALING);
+        if (this.isAling) {
+            this.maxFlyTicks = (int) Math.round(this.maxFlyTicks * 1.2);            // 基础?+20%（默?160 -> 192?
+            this.tetherDuration = (int) Math.round(this.tetherDuration * 1.2); // 基础?+20%（默?170 -> 204?
+        }
+        // 海晶荧光坠增强：飞行速度 +55%，落点变一次性爆?
+        this.isEnhanced = TrinketUtils.isWearing(owner, github.com.gengyoubo.sscfa.init.AddonItems.SEA_CRYSTAL_PENDANT.get());
+        if (this.isEnhanced) {
+            this.flySpeed = this.flySpeed * 1.55;
+        }
+        this.flySpeed = FluorescentAxolotlPerks.tidalFlightSpeed(this.flySpeed,
+                FluorescentAxolotlPerks.hasWaterMagicEfficiency(owner));
+        this.currentSpeed = this.flySpeed;
+        this.entityData.set(TETHER_TOTAL, this.tetherDuration);
+    }
+
+    @Override
+    protected void defineSynchedData() {
+        this.entityData.define(TETHER_ACTIVE, false);
+        this.entityData.define(TRACKED_OWNER, java.util.Optional.empty());
+        this.entityData.define(TETHER_TOTAL, TETHER_DURATION_TICKS);
+        this.entityData.define(TETHER_END, EntityDisplayClock.UNSET);
+    }
+
+    /** 飞行阶段：触发减速（玩家再次按键 / 飞满 8 秒自动）?*/
+    public void triggerDecelerate() {
+        if (phase == Phase.FLYING) {
+            phase = Phase.DECELERATING;
+            phaseTicks = 0;
+        }
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        ticksAlive++;
+        phaseTicks++;
+
+        if (this.level().isClientSide) {
+            // 客户端：在实体（渲染核心）位置生成拖尾粒子，紧跟核心无网络延?
+            spawnTrailParticlesClient();
+            return;
+        }
+        if (!(this.level() instanceof ServerLevel sw)) return;
+
+        // 净化消除：主人受到 PURIFIED 时球立即破裂
+        if (isOwnerPurified(sw)) {
+            pop(sw);
+            return;
+        }
+
+        switch (phase) {
+            case FLYING -> tickFlying(sw);
+            case DECELERATING -> tickDecelerating(sw);
+            case ATTRACTING -> tickAttracting(sw);
+            case DELAY -> tickDelay(sw);
+        }
+
+        // 全局保底：超?30 秒强制消失，防卡?
+        if (ticksAlive > 600) {
+            pop(sw);
+        }
+    }
+
+    // ==================== FLYING ====================
+    private void tickFlying(ServerLevel sw) {
+        ServerPlayer owner = getOwner(sw);
+        // 向主人当前准星方向缓慢偏转（陶氏式追踪）
+        if (owner != null) {
+            Vec3 look = owner.getViewVector(1.0f);
+            if (look.lengthSqr() > 1.0e-6) {
+                flyDir = turnToward(flyDir, look.normalize(), MAX_TURN_RAD);
+            }
+        }
+        // 移动（撞墙则停下并进入吸附，不再穿墙?
+        if (moveWithWallCheck(sw, flyDir.x * currentSpeed, flyDir.y * currentSpeed, flyDir.z * currentSpeed)) {
+            enterAttractPhase(sw);
+            return;
+        }
+        // 飞行环境音（?10 tick 一次轻水波?
+        if (ticksAlive % 10 == 0) {
+            sw.playSound(null, getX(), getY(), getZ(),
+                    SoundEvents.AXOLOTL_SWIM, SoundSource.PLAYERS, 0.6f, 1.1f);
+        }
+
+        if (ticksAlive >= maxFlyTicks) {
+            triggerDecelerate();   // 飞满时长自动进入减速（阿澪 +20%?
+        }
+    }
+
+    // ==================== DECELERATING ====================
+    private void tickDecelerating(ServerLevel sw) {
+        // 0.75 秒线性减速到 0，保持当前方向不转向
+        int decelTicks = BAL.i("decel_ticks", DECEL_TICKS);
+        double t = (double) phaseTicks / decelTicks;
+        currentSpeed = flySpeed * (1.0 - Mth.clamp(t, 0.0, 1.0));
+        if (moveWithWallCheck(sw, flyDir.x * currentSpeed, flyDir.y * currentSpeed, flyDir.z * currentSpeed)) {
+            enterAttractPhase(sw);
+            return;
+        }
+        if (phaseTicks >= decelTicks) {
+            enterAttractPhase(sw);
+        }
+    }
+
+    /** 撞墙检测移动：撞墙返回 true 并停在墙前（回退 0.25 格防嵌入）?*/
+    private boolean moveWithWallCheck(ServerLevel sw, double dx, double dy, double dz) {
+        Vec3 from = position();
+        Vec3 to = from.add(dx, dy, dz);
+        net.minecraft.world.phys.BlockHitResult hit = sw.clip(new net.minecraft.world.level.ClipContext(
+                from, to, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, this));
+        if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+            Vec3 hp = hit.getLocation();
+            Vec3 back = from.subtract(to);
+            if (back.lengthSqr() > 1.0e-6) back = back.normalize().scale(0.25);
+            else back = Vec3.ZERO;
+            setPos(hp.x + back.x, hp.y + back.y, hp.z + back.z);
+            return true;
+        }
+        setPos(to.x, to.y, to.z);
+        return false;
+    }
+
+    /** 落点：进入「拴人」阶段（减速停?/ 撞墙 / 飞满时长）。记录锚点并捕获 6 格内目标?*/
+    private void enterAttractPhase(ServerLevel sw) {
+        currentSpeed = 0.0;
+        phase = Phase.ATTRACTING;
+        this.entityData.set(TETHER_ACTIVE, true); // 潮涌核心切激活?
+        phaseTicks = 0;
+        tetherCenter = position();
+        // 落点瞬间捕获半径 6 格内的所有合法目标（之后再进入范围的不算?
+        tetheredTargets.clear();
+        ServerPlayer owner = getOwner(sw);
+        double catchRadius = BAL.d("tether_catch_radius", TETHER_CATCH_RADIUS);
+        double cx = tetherCenter.x, cy = tetherCenter.y, cz = tetherCenter.z;
+        AABB box = new AABB(cx - catchRadius, cy - catchRadius, cz - catchRadius,
+                cx + catchRadius, cy + catchRadius, cz + catchRadius);
+        List<LivingEntity> found = sw.getEntitiesOfClass(LivingEntity.class, box,
+                e -> e.isAlive() && !e.isSpectator()
+                        && e.distanceToSqr(cx, cy, cz) <= catchRadius * catchRadius);
+        for (LivingEntity t : found) {
+            if (WhitelistUtils.isProtected(ownerUuid, sw, t)) continue; // 默认白名单豁免（owner 离线也保守保护玩?宠物?
+            if (t.getUUID().equals(ownerUuid)) continue;                          // 主人自己不被?
+            tetheredTargets.add(t.getUUID());
+        }
+        if (owner != null && !tetheredTargets.isEmpty()) FluorescentAxolotlPerks.onTidalHit(owner);
+        // 落点「潮汐降临」：一次清晰潮涌音（球位置 + 主人位置，不重叠?
+        sw.playSound(null, cx, cy, cz,
+                SoundEvents.CONDUIT_ACTIVATE, SoundSource.PLAYERS, 1.0f, 1.1f);
+        if (owner != null) {
+            sw.playSound(null, owner.getX(), owner.getY(), owner.getZ(),
+                    SoundEvents.CONDUIT_ACTIVATE, SoundSource.PLAYERS, 0.5f, 1.1f);
+        }
+        // 落点水柱爆开 + 6 格束缚环
+        sw.sendParticles(ParticleTypes.SPLASH, cx, cy, cz, 50, 0.8, 0.5, 0.8, 0.4);
+        sw.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP, cx, cy - 0.3, cz, 30, 0.6, 0.2, 0.6, 0.3);
+        spawnTetherRing(sw, 40);
+        // 海晶荧光坠增强：落点一次性爆炸（8 点物?+ 35% 减?12 秒），随后立即破裂，不长时间拴人
+        if (isEnhanced) {
+            explodeEnhanced(sw);
+        }
+        tetherSnapshotDirty = true;
+        syncTetherToClients(sw);
+    }
+
+    // ==================== ATTRACTING（潮汐束?/ 拴人?===================
+    private void tickAttracting(ServerLevel sw) {
+        // 锚点悬停粒子 + 6 格束缚环
+        spawnHoverParticles(sw);
+        applyTether(sw);
+        // Control-only tides also count as hits while a valid target remains tethered.
+        ServerPlayer owner = getOwner(sw);
+        if (owner != null) {
+            for (UUID id : tetheredTargets) {
+                Entity target = sw.getEntity(id);
+                if (target instanceof LivingEntity living && living.isAlive() && !living.isSpectator()
+                        && !WhitelistUtils.isProtected(ownerUuid, sw, living)) {
+                    FluorescentAxolotlPerks.onTidalHit(owner);
+                    break;
+                }
+            }
+        }
+        // 同步稳定的结束时刻；HUD 用世界时间倒数，服务器仍按 phaseTicks 结算?
+        setTetherRemain(tetherDuration - phaseTicks);
+        // 阿澪：拴人期间每?20t)对被拴目标造成 4 点物理伤?
+        if (isAling && phaseTicks > 0 && phaseTicks % 20 == 0) {
+            tickTetherDamage(sw);
+        }
+        // 目标变化立即同步；稳定列表每 40 tick 校准，晚追踪另发完整列表?
+        if (phaseTicks >= tetherDuration) {
+            phase = Phase.DELAY;
+            phaseTicks = 0;
+            tetherSnapshotDirty = true;
+        }
+        syncTetherToClients(sw);
+    }
+
+    /** 阿澪专属：对被拴目标造成物理伤害（走默认白名单豁免，服务端判定）?*/
+    private void tickTetherDamage(ServerLevel sw) {
+        if (tetheredTargets.isEmpty()) return;
+        ServerPlayer owner = getOwner(sw);
+        for (UUID id : tetheredTargets) {
+            Entity e = sw.getEntity(id);
+            if (!(e instanceof LivingEntity t) || !t.isAlive() || t.isSpectator()) continue;
+            if (WhitelistUtils.isProtected(ownerUuid, sw, t)) continue;
+            if (owner != null) {
+                t.hurt(t.damageSources().playerAttack(owner), 4.0f);
+            } else {
+                t.hurt(t.damageSources().magic(), 4.0f);
+            }
+        }
+    }
+
+    /** 海晶荧光坠增强：落点一次性爆炸——对 6 格内捕获目标造成 8 点物理伤?+ 35% 减?12 秒，随后立即破裂?*/
+    private void explodeEnhanced(ServerLevel sw) {
+        ServerPlayer owner = getOwner(sw);
+        double cx = tetherCenter.x, cy = tetherCenter.y, cz = tetherCenter.z;
+        for (UUID id : tetheredTargets) {
+            Entity e = sw.getEntity(id);
+            if (!(e instanceof LivingEntity t) || !t.isAlive() || t.isSpectator()) continue;
+            if (WhitelistUtils.isProtected(ownerUuid, sw, t)) continue;
+            if (owner != null) {
+                t.hurt(t.damageSources().playerAttack(owner), 8.0f);
+            } else {
+                t.hurt(t.damageSources().magic(), 8.0f);
+            }
+            // 35% 减?12 秒（TIDAL_SLOW amplifier=2 ?-0.35）；带主?source 供入梦拦截归?
+            t.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    github.com.gengyoubo.sscfa.init.AddonEffects.TIDAL_SLOW.get(), 240, 2, false, false, true), owner);
+        }
+        // 爆炸表现 + 立即破裂（跳?8.5 秒拴人）
+        sw.sendParticles(ParticleTypes.EXPLOSION, cx, cy + 0.5, cz, 3, 0.3, 0.3, 0.3, 0.0);
+        sw.sendParticles(ParticleTypes.SPLASH, cx, cy, cz, 80, 1.5, 1.0, 1.5, 0.5);
+        sw.playSound(null, cx, cy, cz, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0f, 1.3f);
+        this.tetheredTargets.clear();
+        this.entityData.set(TETHER_ACTIVE, false);   // 爆炸后不再显示拴人束缚环
+        phase = Phase.DELAY;
+        phaseTicks = 0;
+    }
+
+    /**
+     * 拴人：对落点捕获的每个目标，6 格内自由；超?6 格按「超出距离」线性拉回锚点，
+     * 绝不允许超过 8 格（硬封）。纯控制、无伤害。全服务端判定?
+     */
+    private void applyTether(ServerLevel sw) {
+        if (tetherCenter == null || tetheredTargets.isEmpty()) return;
+        double softRadius = BAL.d("tether_soft_radius", TETHER_SOFT_RADIUS);
+        double hardRadius = BAL.d("tether_hard_radius", TETHER_HARD_RADIUS);
+        double pullPerBlock = BAL.d("tether_pull_per_block", TETHER_PULL_PER_BLOCK);
+        double verticalDamp = BAL.d("tether_vertical_damp", TETHER_VERTICAL_DAMP);
+        double cx = tetherCenter.x, cy = tetherCenter.y, cz = tetherCenter.z;
+        java.util.Iterator<UUID> it = tetheredTargets.iterator();
+        while (it.hasNext()) {
+            UUID id = it.next();
+            Entity e = sw.getEntity(id);
+            if (!(e instanceof LivingEntity t) || !t.isAlive() || t.isSpectator()) {
+                it.remove(); // 死亡 / 离线 / 无效 ?移除，不再处?
+                tetherSnapshotDirty = true;
+                continue;
+            }
+            Integer publishedId = snapshotEntityIds.get(id);
+            if (publishedId == null || publishedId != t.getId()) tetherSnapshotDirty = true;
+            if (WhitelistUtils.isProtected(ownerUuid, sw, t)) continue; // 白名单豁免（owner 离线也保守保护玩?宠物?
+            double tx = t.getX(), ty = t.getY() + t.getBbHeight() * 0.5, tz = t.getZ();
+            double dx = tx - cx, dy = ty - cy, dz = tz - cz;
+            double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (dist <= softRadius || dist < 1.0e-4) continue; // 6 格内自由活动
+            double inv = 1.0 / dist;
+            double over = dist - softRadius;
+            double mag = pullPerBlock * over;                          // 线性拉力：超得越多、拉得越?
+            t.setDeltaMovement(t.getDeltaMovement().add(
+                    -dx * inv * mag,
+                    -dy * inv * mag * verticalDamp,
+                    -dz * inv * mag));
+            t.hurtMarked = true;
+            // 硬封：一旦超?8 格，直接拉回?8 格球面并抵消向外冲量
+            if (dist > hardRadius) {
+                double k = hardRadius * inv;
+                double nx = cx + dx * k;
+                double ny = cy + dy * k - t.getBbHeight() * 0.5;
+                double nz = cz + dz * k;
+                t.teleportTo(nx, ny, nz);
+                t.setDeltaMovement(t.getDeltaMovement().multiply(0.15, 0.6, 0.15));
+                t.hurtMarked = true;
+            }
+            spawnAffectedFootParticles(sw, t); // 被拴目标脚底提示
+        }
+    }
+
+    /** 把当前被拴目标的 entityId 打包发给所有正在追踪本球的客户端（守卫者激光渲染用）?*/
+    private void syncTetherToClients(ServerLevel sw) {
+        int tick = sw.getServer().getTickCount();
+        if (!tetherSnapshotDirty && tick - nextTetherRepairAt < 0) return;
+        refreshTetherSnapshot(sw);
+        var tracking = new java.util.ArrayList<ServerPlayer>(); for (var pl : this.level().players()) if (pl instanceof ServerPlayer sp && sp.distanceToSqr(this) <= 64 * 64) tracking.add(sp);
+        nextTetherRepairAt = tick + TETHER_REPAIR_TICKS;
+        for (ServerPlayer p : tracking) {
+            TetherAudience previous = tetherAudiences.get(p.getUUID());
+            boolean changed = previous != null && (previous.player != p || previous.revision != tetherSnapshotRevision);
+            if (tetherSnapshot.length == 0 ? changed : previous == null || changed || tick - previous.sentAt >= TETHER_REPAIR_TICKS)
+                sendTetherSnapshot(p, tick);
+            TetherAudience current = tetherAudiences.get(p.getUUID());
+            if (tetherSnapshot.length > 0 && current != null)
+                nextTetherRepairAt = Math.min(nextTetherRepairAt,current.sentAt + TETHER_REPAIR_TICKS);
+        }
+    }
+
+    private void refreshTetherSnapshot(ServerLevel sw) {
+        if (!tetherSnapshotDirty) return;
+        tetherSnapshotDirty = false;
+        java.util.List<Integer> ids = new java.util.ArrayList<>();
+        snapshotEntityIds.clear();
+        // Keep the original non-enhanced visual tail during DELAY; this does not apply tether physics.
+        if (phase == Phase.ATTRACTING || phase == Phase.DELAY && !isEnhanced) for (UUID id : tetheredTargets) {
+            Entity target = sw.getEntity(id);
+            if (target != null && target.isAlive()) {
+                ids.add(target.getId()); snapshotEntityIds.put(id, target.getId());
+            }
+        }
+        ids.sort(Integer::compare);
+        int[] next = new int[ids.size()];
+        for (int i=0; i<next.length; i++) next[i]=ids.get(i);
+        if (!java.util.Arrays.equals(next,tetherSnapshot)) {tetherSnapshot=next;tetherSnapshotRevision++;}
+    }
+
+    private void sendTetherSnapshot(ServerPlayer player, int tick) {
+        net.minecraft.network.FriendlyByteBuf buf = github.com.gengyoubo.sscfa.network.AddonNetwork.buffer();
+        buf.writeVarInt(this.getId()); buf.writeVarInt(tetherSnapshot.length);
+        for (int id : tetherSnapshot) buf.writeVarInt(id);
+        github.com.gengyoubo.sscfa.network.AddonNetwork.sendToPlayer(player,
+                github.com.gengyoubo.sscfa.network.SscAddonNetworking.PACKET_TIDAL_TETHER,buf);
+        tetherAudiences.put(player.getUUID(),new TetherAudience(player,tetherSnapshotRevision,tick));
+    }
+
+    @Override
+    public void startSeenByPlayer(ServerPlayer player) {
+        super.startSeenByPlayer(player);
+        if (this.level() instanceof ServerLevel sw) {
+            // EntityTrackerEntry sends the spawn/metadata bundle before invoking this callback.
+            tetherSnapshotDirty = true;
+            refreshTetherSnapshot(sw);
+            int tick = sw.getServer().getTickCount();
+            if (tetherSnapshot.length > 0) sendTetherSnapshot(player,tick);
+            nextTetherRepairAt = tick;
+        }
+    }
+
+    @Override
+    public void stopSeenByPlayer(ServerPlayer player) {
+        super.stopSeenByPlayer(player);
+        tetherAudiences.remove(player.getUUID());
+    }
+
+    // ==================== DELAY ====================
+    private void tickDelay(ServerLevel sw) {
+        // 增强爆炸球已破裂，DELAY 期不再画拴人悬停粒子/束缚环（避免爆炸后还闪范围环?
+        if (!isEnhanced) {
+            spawnHoverParticles(sw);
+        }
+        if (phaseTicks >= BAL.i("pop_delay_ticks", POP_DELAY_TICKS)) {
+            pop(sw);
+        }
+    }
+
+    // ==================== 破裂消失 ====================
+    private void pop(ServerLevel sw) {
+        // End the visual lease explicitly, including purification and the end of the original tail.
+        tetheredTargets.clear();
+        tetherSnapshotDirty = true;
+        syncTetherToClients(sw);
+        double x = getX(), y = getY(), z = getZ();
+        // 泡泡破裂：大量水/气泡/淡蓝 dust 向外迸射
+        for (int i = 0; i < 80; i++) {
+            Vec3 p = randomInSphere(1.8, random);
+            sw.sendParticles(ParticleTypes.BUBBLE, x + p.x, y + p.y, z + p.z, 1, 0, 0, 0, 0.03);
+        }
+        for (int i = 0; i < 50; i++) {
+            Vec3 p = randomInSphere(1.4, random);
+            sw.sendParticles(ParticleTypes.SPLASH, x + p.x, y + p.y, z + p.z, 1, 0, 0, 0, 0.06);
+        }
+        sw.sendParticles(CYAN_DUST, x, y, z, 60, 1.2, 1.2, 1.2, 0.0);
+        sw.sendParticles(LIGHT_BLUE_DUST, x, y, z, 60, 1.2, 1.2, 1.2, 0.0);
+        sw.sendParticles(ParticleTypes.END_ROD, x, y, z, 20, 0.5, 0.5, 0.5, 0.15);
+        sw.sendParticles(ParticleTypes.EXPLOSION, x, y, z, 3, 0.3, 0.3, 0.3, 0.0);
+        sw.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP, x, y - 0.3, z, 40, 0.8, 0.3, 0.8, 0.4);
+        // 破裂：单一清晰水灵音（球位?+ 主人位置，不重叠?
+        sw.playSound(null, x, y, z, SoundEvents.AXOLOTL_SPLASH, SoundSource.PLAYERS, 1.3f, 0.9f);
+        ServerPlayer owner = getOwner(sw);
+        if (owner != null) {
+            sw.playSound(null, owner.getX(), owner.getY(), owner.getZ(),
+                    SoundEvents.AXOLOTL_SPLASH, SoundSource.PLAYERS, 0.6f, 0.9f);
+        }
+        // 通知技能管理器：球已消失，可开?CD
+        notifyManagerBallEnded();
+        this.discard();
+    }
+
+    // ==================== 粒子 ====================
+    private void spawnTrailParticlesClient() {
+        double x = getX(), y = getY(), z = getZ();
+        Level w = this.level();
+        // 1. 核心发光（END_ROD + GLOW?
+        w.addParticle(ParticleTypes.END_ROD, x, y, z, 0, 0, 0);
+        w.addParticle(ParticleTypes.END_ROD, x, y, z, 0, 0, 0);
+        if (ticksAlive % 2 == 0) w.addParticle(ParticleTypes.GLOW, x, y, z, 0, 0, 0);
+        // 2. 旋转水环? 点环绕，随时间旋转）
+        double rot = ticksAlive * 0.35;
+        for (int i = 0; i < 6; i++) {
+            double a = rot + i * (Math.PI * 2 / 6);
+            double r = 0.5;
+            double px = x + Math.cos(a) * r;
+            double pz = z + Math.sin(a) * r;
+            double py = y + Math.sin(ticksAlive * 0.25 + i) * 0.12;
+            w.addParticle((i % 2 == 0) ? CYAN_DUST : LIGHT_BLUE_DUST, px, py, pz, 0, 0, 0);
+        }
+        // 3. 球体水粒子（气泡 + 水花?
+        for (int i = 0; i < 5; i++) {
+            Vec3 p = randomInSphere(0.5, random);
+            w.addParticle(ParticleTypes.BUBBLE, x + p.x, y + p.y, z + p.z, 0, 0.01, 0);
+        }
+        if (random.nextFloat() < 0.5f) {
+            Vec3 p = randomInSphere(0.45, random);
+            w.addParticle(ParticleTypes.SPLASH, x + p.x, y + p.y, z + p.z, 0, 0.02, 0);
+        }
+        // 4. 蓝色 dust 包围
+        for (int i = 0; i < 3; i++) {
+            Vec3 p = randomInSphere(0.35, random);
+            w.addParticle(LIGHT_BLUE_DUST, x + p.x, y + p.y, z + p.z, 0, 0, 0);
+        }
+        // 5. 偶发鹦鹉?
+        if (random.nextFloat() < 0.35f) {
+            w.addParticle(ParticleTypes.NAUTILUS, x, y, z, 0, 0, 0);
+        }
+    }
+
+    private void spawnHoverParticles(ServerLevel sw) {
+        // 悬停粒子已移到客户端 TidalOrbRenderer.spawnHoverParticlesClient 本地自绘（逐行照抄未改参数），
+        // 服务端不再广播——持续粒子网络包归零。此方法保留空壳，ATTRACTING/DELAY 调用点不变?
+    }
+
+    /** ?6 格软边界处描一?dust（落点瞬间一次性闪现，展示拴人范围）?*/
+    private void spawnTetherRing(ServerLevel sw, int count) {
+        double softRadius = BAL.d("tether_soft_radius", TETHER_SOFT_RADIUS);
+        double x = getX(), y = getY(), z = getZ();
+        for (int i = 0; i < count; i++) {
+            double ang = i * (Math.PI * 2 / count);
+            sw.sendParticles(BLUE_DUST,
+                    x + Math.cos(ang) * softRadius, y + 0.1, z + Math.sin(ang) * softRadius,
+                    1, 0, 0, 0, 0.0);
+        }
+    }
+
+    // ?spawnBoundaryOrbs? 格边界公转球）已并入客户?TidalOrbRenderer.spawnHoverParticlesClient（照抄未改参数），此方法删除?
+
+    private void spawnAffectedFootParticles(ServerLevel sw, LivingEntity t) {
+        double fx = t.getX(), fy = t.getY() + 0.05, fz = t.getZ();
+        // 脚底青色 + 蓝色粒子（提示被吸附影响?
+        for (int i = 0; i < 6; i++) {
+            double ang = random.nextDouble() * Math.PI * 2;
+            double r = random.nextDouble() * t.getBbWidth() * 0.6;
+            sw.sendParticles(CYAN_DUST, fx + Math.cos(ang) * r, fy, fz + Math.sin(ang) * r, 1, 0, 0.05, 0, 0.0);
+        }
+        for (int i = 0; i < 4; i++) {
+            double ang = random.nextDouble() * Math.PI * 2;
+            double r = random.nextDouble() * t.getBbWidth() * 0.6;
+            sw.sendParticles(BLUE_DUST, fx + Math.cos(ang) * r, fy, fz + Math.sin(ang) * r, 1, 0, 0.05, 0, 0.0);
+        }
+    }
+
+    // ==================== 工具 ====================
+    /** ?from 方向?to 方向转最?maxRad 弧度，返回新单位向量?*/
+    private static Vec3 turnToward(Vec3 from, Vec3 to, double maxRad) {
+        Vec3 f = from.normalize();
+        Vec3 tt = to.normalize();
+        double dot = Mth.clamp(f.dot(tt), -1.0, 1.0);
+        double angle = Math.acos(dot);
+        if (angle < 1.0e-4) return f;
+        double turn = Math.min(angle, maxRad);
+        double t = turn / angle;
+        // 球面线性插值（slerp?
+        Vec3 cross = f.cross(tt);
+        if (cross.lengthSqr() < 1.0e-8) return tt; // 共线
+        // 用四元数思路简化：f * sin((1-t)a)/sin(a) + to * sin(ta)/sin(a)
+        double sa = Math.sin(angle);
+        double w1 = Math.sin((1 - t) * angle) / sa;
+        double w2 = Math.sin(t * angle) / sa;
+        return new Vec3(f.x * w1 + tt.x * w2, f.y * w1 + tt.y * w2, f.z * w1 + tt.z * w2).normalize();
+    }
+
+    private Vec3 randomInSphere(double r, net.minecraft.util.RandomSource rnd) {
+        double rr = r * Math.cbrt(rnd.nextDouble());
+        double theta = rnd.nextDouble() * 2 * Math.PI;
+        double phi = Math.acos(2 * rnd.nextDouble() - 1);
+        double sinPhi = Math.sin(phi);
+        return new Vec3(rr * sinPhi * Math.cos(theta), rr * Math.cos(phi), rr * sinPhi * Math.sin(theta));
+    }
+
+    private ServerPlayer getOwner(ServerLevel sw) {
+        if (ownerUuid == null) return null;
+        var server = sw.getServer();
+        return server == null ? null : server.getPlayerList().getPlayer(ownerUuid);
+    }
+
+    private boolean isOwnerPurified(ServerLevel sw) {
+        ServerPlayer owner = getOwner(sw);
+        return owner != null && owner.hasEffect(github.com.gengyoubo.sscfa.init.AddonEffects.PURIFIED.get());
+    }
+
+    /** 球消失时回调技能管理器，让其开?CD?*/
+    private void notifyManagerBallEnded() {
+        if (ownerUuid != null) {
+            github.com.gengyoubo.sscfa.ability.FluorescentTidalManager.onBallRemoved(ownerUuid, this);
+        }
+    }
+
+    // ==================== NBT / 同步 ====================
+    @Override
+    public void addAdditionalSaveData(CompoundTag nbt) {
+        nbt.putInt("Phase", phase.ordinal());
+        nbt.putInt("TicksAlive", ticksAlive);
+        nbt.putInt("PhaseTicks", phaseTicks);
+        nbt.putDouble("DirX", flyDir.x);
+        nbt.putDouble("DirY", flyDir.y);
+        nbt.putDouble("DirZ", flyDir.z);
+        nbt.putDouble("Speed", currentSpeed);
+        nbt.putDouble("FlySpeed", flySpeed);
+        nbt.putBoolean("Aling", isAling);
+        nbt.putBoolean("Enhanced", isEnhanced);
+        nbt.putInt("MaxFlyTicks", maxFlyTicks);
+        nbt.putInt("TetherDuration", tetherDuration);
+        if (tetherCenter != null) {
+            nbt.putDouble("TetherX", tetherCenter.x);
+            nbt.putDouble("TetherY", tetherCenter.y);
+            nbt.putDouble("TetherZ", tetherCenter.z);
+        }
+        ListTag tl = new ListTag();
+        for (UUID id : tetheredTargets) tl.add(net.minecraft.nbt.NbtUtils.createUUID(id));
+        nbt.put("Tethered", tl);
+        if (ownerUuid != null) nbt.putUUID("Owner", ownerUuid);
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag nbt) {
+        int p = nbt.contains("Phase") ? nbt.getInt("Phase") : 0;
+        phase = Phase.values()[Mth.clamp(p, 0, Phase.values().length - 1)];
+        ticksAlive = nbt.contains("TicksAlive") ? nbt.getInt("TicksAlive") : 0;
+        phaseTicks = nbt.contains("PhaseTicks") ? nbt.getInt("PhaseTicks") : 0;
+        double dx = nbt.contains("DirX") ? nbt.getDouble("DirX") : 0;
+        double dy = nbt.contains("DirY") ? nbt.getDouble("DirY") : 0;
+        double dz = nbt.contains("DirZ") ? nbt.getDouble("DirZ") : 1;
+        flyDir = new Vec3(dx, dy, dz).normalize();
+        currentSpeed = nbt.contains("Speed") ? nbt.getDouble("Speed") : BAL.d("fly_speed", FLY_SPEED);
+        if (nbt.contains("FlySpeed")) flySpeed = Math.max(0.0, nbt.getDouble("FlySpeed"));
+        if (nbt.contains("Aling")) isAling = nbt.getBoolean("Aling");
+        if (nbt.contains("Enhanced")) isEnhanced = nbt.getBoolean("Enhanced");
+        if (nbt.contains("MaxFlyTicks")) maxFlyTicks = Math.max(1, nbt.getInt("MaxFlyTicks"));
+        if (nbt.contains("TetherDuration")) tetherDuration = Math.max(1, nbt.getInt("TetherDuration"));
+        if (nbt.contains("TetherX")) {
+            tetherCenter = new Vec3(nbt.getDouble("TetherX"), nbt.getDouble("TetherY"), nbt.getDouble("TetherZ"));
+        }
+        tetheredTargets.clear();
+        if (nbt.contains("Tethered")) {
+            ListTag tl = nbt.getList("Tethered", Tag.TAG_INT_ARRAY);
+            for (int i = 0; i < tl.size(); i++) {
+                tetheredTargets.add(net.minecraft.nbt.NbtUtils.loadUUID(tl.get(i)));
+            }
+        }
+        if (nbt.hasUUID("Owner")) ownerUuid = nbt.getUUID("Owner");
+        this.entityData.set(TRACKED_OWNER, java.util.Optional.ofNullable(ownerUuid));
+        this.entityData.set(TETHER_TOTAL, tetherDuration);
+        this.entityData.set(TETHER_ACTIVE, phase == Phase.ATTRACTING || phase == Phase.DELAY && !isEnhanced);
+        if (phase == Phase.ATTRACTING) setTetherRemain(tetherDuration - phaseTicks);
+        else this.entityData.set(TETHER_END, EntityDisplayClock.UNSET);
+        tetherSnapshotDirty = true;
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getAddEntityPacket() {
+        return new net.minecraft.network.protocol.game.ClientboundAddEntityPacket(this);
+    }
+
+    /** 渲染为潮涌（Conduit）方块作为发光核心?*/
+    @Override
+    public net.minecraft.world.item.ItemStack getItem() {
+        return new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CONDUIT);
+    }
+
+    @Override
+    public boolean canBeCollidedWith() {
+        return false;
+    }
+
+    @Override
+    public boolean isPickable() {
+        return false;
+    }
+
+    /** 主人是否仍持有该球（供管理器查询）?*/
+    public boolean isAliveOrActive() {
+        return !this.isRemoved();
+    }
+
+    /** Synchronized owner identity for the local player's HUD. */
+    public java.util.Optional<UUID> getTrackedOwnerUuid() {
+        return this.entityData.get(TRACKED_OWNER);
+    }
+
+    public int getTetherTotal() {
+        return Math.max(1, this.entityData.get(TETHER_TOTAL));
+    }
+
+    /** 客户端查询：是否处于拴人激活状态（潮涌核心切激活态渲染）?*/
+    public boolean isTetherActive() {
+        return this.entityData.get(TETHER_ACTIVE);
+    }
+
+    /** 客户?HUD 辅助栏查询：拴人阶段剩余 tick? = 非拴人阶段）?*/
+    public int getTetherRemain() {
+        if (this.level().isClientSide) {
+            return EntityDisplayClock.remaining(this.level().getGameTime(), this.entityData.get(TETHER_END));
+        }
+        return phase == Phase.ATTRACTING && phaseTicks > 0 ? Math.max(0, tetherDuration - phaseTicks) : 0;
+    }
+
+    /** 从服务器剩余时间更新稳定的截止时刻，正常倒数期间不会产生 dirty 字段?*/
+    private void setTetherRemain(int remain) {
+        int v = Math.max(0, remain);
+        long end = this.level().getGameTime() + v;
+        if (this.entityData.get(TETHER_END) != end) this.entityData.set(TETHER_END, end);
+    }
+
+    /** 客户端渲染器粒子门控：记录本实体 tick 已发过粒子（render 每帧调用，同 tick 多帧只放行一次，
+     *  保证粒子频率与服务端?tick 一致；非同步字段，仅客户端使用）?*/
+    public int clientParticleGate = -1;
+
+    /** 软边界半径（客户端渲染器画公转边界球用，与服务端拴人判定同参数）?*/
+    public static double tetherSoftRadius() {
+        // 仅客户端渲染器调用：优先读客户端镜像快照（多人客机与服务端覆盖值一致）?
+        // clientSnapshot() ?@Environment(CLIENT)，专用服务器上被剥离——必须先判环境，
+        // 保证专用服务器永不解析该方法引用（tetherSoftRadius 本身也不该在服务端被调）?
+        if (BalanceIntegration.isClientThread()) {
+            var s = github.com.gengyoubo.sscfa.balance.BalanceIntegration.clientSnapshot();
+            if (s != null) return s.getDouble("abilities.tidal_orb", "tether_soft_radius");
+        }
+        return BAL.d("tether_soft_radius", TETHER_SOFT_RADIUS);
+    }
+}
