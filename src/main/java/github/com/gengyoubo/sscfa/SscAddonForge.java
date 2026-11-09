@@ -2,6 +2,7 @@ package github.com.gengyoubo.sscfa;
 
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import github.com.gengyoubo.sscfa.forms.AddonForms;
 import github.com.gengyoubo.sscfa.init.AddonRegistries;
 
 @Mod(SscAddonForge.MOD_ID)
@@ -11,5 +12,6 @@ public final class SscAddonForge {
     public SscAddonForge() {
         var bus = FMLJavaModLoadingContext.get().getModEventBus();
         AddonRegistries.init(bus);
+        AddonForms.init();
     }
 }

@@ -1,8 +1,7 @@
 package github.com.gengyoubo.sscfa.init;
 
 import github.com.gengyoubo.sscfa.SscAddonForge;
-import github.com.gengyoubo.sscfa.recipe.InfiniteEnergyPotionRecipe;
-import github.com.gengyoubo.sscfa.recipe.SpUpgradeRecipe;
+import github.com.gengyoubo.sscfa.recipe.*;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
 import net.minecraftforge.registries.DeferredRegister;
@@ -16,5 +15,17 @@ public final class AddonRecipes {
             SERIALIZERS.register("infinite_energy_potion_crafting", () -> new SimpleCraftingRecipeSerializer<>(InfiniteEnergyPotionRecipe::new));
     public static final RegistryObject<RecipeSerializer<SpUpgradeRecipe>> SP_UPGRADE =
             SERIALIZERS.register("sp_upgrade_crafting", () -> new SimpleCraftingRecipeSerializer<>(SpUpgradeRecipe::new));
+    public static final RegistryObject<RecipeSerializer<RefillMoisturizerRecipe>> REFILL_MOISTURIZER =
+            SERIALIZERS.register("refill_moisturizer", () -> new SimpleCraftingRecipeSerializer<>(RefillMoisturizerRecipe::new));
+    public static final RegistryObject<RecipeSerializer<UpgradeMoisturizerRecipe>> UPGRADE_MOISTURIZER =
+            SERIALIZERS.register("upgrade_moisturizer", () -> new SimpleCraftingRecipeSerializer<>(UpgradeMoisturizerRecipe::new));
+    public static final RegistryObject<RecipeSerializer<ReloadSnowballLauncherRecipe>> RELOAD_SNOWBALL_LAUNCHER =
+            SERIALIZERS.register("reload_snowball_launcher", () -> new SimpleCraftingRecipeSerializer<>(ReloadSnowballLauncherRecipe::new));
+    public static final RegistryObject<RecipeSerializer<BlizzardTankRechargeRecipe>> BLIZZARD_TANK_RECHARGE =
+            SERIALIZERS.register("blizzard_tank_recharge", () -> new SimpleCraftingRecipeSerializer<>(BlizzardTankRechargeRecipe::new));
+    public static final RegistryObject<RecipeSerializer<VenomGlandRecipe>> VENOM_GLAND =
+            SERIALIZERS.register("venom_gland_crafting", () -> new SimpleCraftingRecipeSerializer<>(VenomGlandRecipe::new));
+    public static final RegistryObject<RecipeSerializer<TestTubeFillingRecipe>> TEST_TUBE_FILLING =
+            SERIALIZERS.register("test_tube_filling", () -> new SimpleCraftingRecipeSerializer<>(TestTubeFillingRecipe::new));
     private AddonRecipes() {}
 }

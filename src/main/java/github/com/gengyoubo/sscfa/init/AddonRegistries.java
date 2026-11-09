@@ -12,8 +12,13 @@ public final class AddonRegistries {
         AddonBlockEntities.BLOCK_ENTITIES.register(modBus);
         AddonMenus.MENUS.register(modBus);
         AddonEffects.EFFECTS.register(modBus);
+        AddonEffects.NEOMAGIC_EFFECTS.register(modBus);
         AddonEffects.POTIONS.register(modBus);
         AddonRecipes.SERIALIZERS.register(modBus);
+        AddonEntities.ENTITIES.register(modBus);
+        AddonSounds.SOUNDS.register(modBus);
+        AddonParticles.PARTICLES.register(modBus);
+        modBus.addListener(AddonEntities::registerAttributes);
         AddonItems.ITEMS.register(modBus);
         AddonItems.TABS.register(modBus);
         modBus.addListener(AddonRegistries::commonSetup);

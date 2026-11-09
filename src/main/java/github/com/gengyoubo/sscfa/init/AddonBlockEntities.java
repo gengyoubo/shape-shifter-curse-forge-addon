@@ -1,6 +1,7 @@
 package github.com.gengyoubo.sscfa.init;
 
 import github.com.gengyoubo.sscfa.SscAddonForge;
+import github.com.gengyoubo.sscfa.block.PocketSpaceBlocks;
 import github.com.gengyoubo.sscfa.block.CreativeEnergyTankBlockEntity;
 import github.com.gengyoubo.sscfa.block.EnergyStorageTankBlockEntity;
 import github.com.gengyoubo.sscfa.block.EnergyConverterBlockEntity;
@@ -33,6 +34,14 @@ public final class AddonBlockEntities {
     public static final RegistryObject<BlockEntityType<PotionStorageBoxBlockEntity>> POTION_STORAGE_BOX =
             BLOCK_ENTITIES.register("potion_storage_box", () -> BlockEntityType.Builder.of(
                     PotionStorageBoxBlockEntity::new, AddonBlocks.POTION_STORAGE_BOX.get()).build(null));
+
+    // 口袋空间：空方块实体，保留注册以兼容旧存档
+    public static final RegistryObject<BlockEntityType<PocketSpaceBlocks.VoidWallBlockEntity>> POCKET_SPACE_BEDROCK_WALL =
+            BLOCK_ENTITIES.register("pocket_space_bedrock_wall", () -> BlockEntityType.Builder.of(
+                    PocketSpaceBlocks.VoidWallBlockEntity::new, AddonBlocks.POCKET_SPACE_BEDROCK_WALL.get()).build(null));
+    public static final RegistryObject<BlockEntityType<PocketSpaceBlocks.PortalBlockEntity>> POCKET_SPACE_PORTAL =
+            BLOCK_ENTITIES.register("pocket_space_portal", () -> BlockEntityType.Builder.of(
+                    PocketSpaceBlocks.PortalBlockEntity::new, AddonBlocks.POCKET_SPACE_PORTAL.get()).build(null));
 
     private AddonBlockEntities() {}
 }

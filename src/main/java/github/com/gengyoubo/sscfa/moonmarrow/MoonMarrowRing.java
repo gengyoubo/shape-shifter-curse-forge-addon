@@ -22,19 +22,24 @@ import java.util.function.Predicate;
  *   <li>子成就：{@link #registerFormAdvancement}。</li>
  * </ul>
  *
- * <p>目标形态由各形态迁移后自行注册到 SSC Forge 的 FormRegistry；未注册时月髓环会提示"尚不可用"并且不消耗。</p>
+ * <p>目标形态在 {@link github.com.gengyoubo.sscfa.forms.AddonForms} 注册；未注册时月髓环会提示"尚不可用"并且不消耗。</p>
+ *
+ * <p>形态 ID 使用旧路径（如 my_addon:familiar_fox_sp，而非 Fabric 版 FormIdentifiers 改名后的
+ * familiar_fox_spirit_realm_lord）：SSC Forge 强制 Origin 为 {@code form_<path>}，模型配置也按
+ * {@code ssc_form_model/origins.origin.<ns>.form_<path>.json} 查找，而现有 Origin、模型、贴图、语言键全部沿用旧路径。</p>
  */
 public final class MoonMarrowRing {
 	private static final String SSC = "shape-shifter-curse";
 	private static final String ADDON = "my_addon";
 
 	public static final ResourceLocation FAMILIAR_FOX_3 = new ResourceLocation(SSC, "familiar_fox_3");
-	public static final ResourceLocation FAMILIAR_FOX_SP = new ResourceLocation(ADDON, "familiar_fox_spirit_realm_lord");
+	public static final ResourceLocation FAMILIAR_FOX_SP = new ResourceLocation(ADDON, "familiar_fox_sp");
+	public static final ResourceLocation AXOLOTL_SP = new ResourceLocation(ADDON, "axolotl_sp");
 	public static final ResourceLocation FAMILIAR_FOX_RED = new ResourceLocation(ADDON, "familiar_fox_red");
-	public static final ResourceLocation UPGRADE_FAMILIAR_FOX = new ResourceLocation(ADDON, "familiar_fox_upgrade");
-	public static final ResourceLocation UPGRADE_AXOLOTL = new ResourceLocation(ADDON, "axolotl_upgrade");
+	public static final ResourceLocation UPGRADE_FAMILIAR_FOX = new ResourceLocation(ADDON, "upgrade_familiar_fox");
+	public static final ResourceLocation UPGRADE_AXOLOTL = new ResourceLocation(ADDON, "upgrade_axolotl");
 
-	/** 起点形态 → 月髓环进化目标形态（均为迁移后的规范 ID）。 */
+	/** 起点形态 → 月髓环进化目标形态。 */
 	private static final Map<ResourceLocation, ResourceLocation> UPGRADES = new LinkedHashMap<>();
 	private static final Map<ResourceLocation, ResourceLocation> FORM_ADVANCEMENTS = new LinkedHashMap<>();
 	private static final List<Predicate<ServerPlayer>> USE_INTERCEPTORS = new CopyOnWriteArrayList<>();
@@ -58,9 +63,9 @@ public final class MoonMarrowRing {
 
 	static {
 		registerUpgrade(FAMILIAR_FOX_3, FAMILIAR_FOX_SP);
-		registerUpgrade(new ResourceLocation(SSC, "axolotl_3"), new ResourceLocation(ADDON, "axolotl_abyssal_overlord"));
-		registerUpgrade(new ResourceLocation(SSC, "allay_sp"), new ResourceLocation(ADDON, "allay_spirit_of_the_fallen"));
-		registerUpgrade(new ResourceLocation(SSC, "anubis_wolf_3"), new ResourceLocation(ADDON, "anubis_wolf_netherjudge"));
+		registerUpgrade(new ResourceLocation(SSC, "axolotl_3"), AXOLOTL_SP);
+		registerUpgrade(new ResourceLocation(SSC, "allay_sp"), new ResourceLocation(ADDON, "fallen_allay_sp"));
+		registerUpgrade(new ResourceLocation(SSC, "anubis_wolf_3"), new ResourceLocation(ADDON, "anubis_wolf_sp"));
 		// 吸血蝙蝠：原版蝙蝠三阶段永久态 → desmodus
 		registerUpgrade(new ResourceLocation(SSC, "bat_3"), new ResourceLocation(ADDON, "bat_desmodus"));
 		// 风灵：原版豹猫永久形态 ocelot_3 → 风灵
@@ -73,7 +78,7 @@ public final class MoonMarrowRing {
 		registerUpgrade(new ResourceLocation(SSC, "snow_fox_3"), new ResourceLocation(ADDON, "snow_fox_frostspine"));
 		// SSCA 进化路线起点 → SP 形态：需解锁全部分支（见 evolutionGate）
 		registerUpgrade(UPGRADE_FAMILIAR_FOX, FAMILIAR_FOX_SP);
-		registerUpgrade(UPGRADE_AXOLOTL, new ResourceLocation(ADDON, "axolotl_abyssal_overlord"));
+		registerUpgrade(UPGRADE_AXOLOTL, AXOLOTL_SP);
 	}
 
 	private MoonMarrowRing() {}
