@@ -4,7 +4,7 @@ import net.minecraft.server.level.ChunkMap;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-/** 暴露按世界设置观察距离（protected）：口袋维度压到 3，只加载房间周围小区块，根治进房卡顿。 */
+/** 閺嗘挳婀堕幐澶夌瑯閻ｅ矁顔曠純顔款潎鐎电喕绐涚粋浼欑礄protected閿涘绱伴崣锝堫暟缂佹潙瀹抽崢瀣煂 3閿涘苯褰ч崝鐘烘祰閹村潡妫块崨銊ユ纯鐏忓繐灏崸妤嬬礉閺嶈涓嶆潻娑欏煣閸楋繝銆戦妴?*/
 @Mixin(ChunkMap.class)
 public interface ThreadedAnvilChunkStorageAccessor {
 	@Invoker("setViewDistance")

@@ -19,7 +19,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Forge 闁稿繒鍘ч?shim闁挎稒纰嶆俊?Fabric 濞戞捁宕电悮?SscAddon 闁汇劌瀚板銈夊箑娴ｇ懓鐏囬柛娑櫳戝Σ褏浜搁崟顐㈢厒 Addon* 婵炲鍔岄崬鐣屾偘閵婏絺鍋? * 濞寸姴鎳愰弫銈嗙鎼达絿妞介悹鍥ㄥ灥閸氬鈧湱娅㈢槐婵堚偓鍦仱濡绢垶宕氬┑鍡╂綏闁告牗鐗滈弫?SscAddonForge 閻犳劗鍠曢惌妤呭Υ? */
+ * Forge 闂佺绻掗崢褔顢?shim闂佹寧绋掔喊宥嗕繆?Fabric 婵炴垶鎹佸畷鐢垫偖?SscAddon 闂佹眹鍔岀€氭澘顭囬妶澶婄畱濞达絿鎳撻悘鍥煕濞戞鎴澪ｈ娴滄悂宕熼銏㈠帓 Addon* 濠电偛顦崝宀勫船閻ｅ本鍋橀柕濠忕岛閸? * 婵炲濮撮幊鎰板极閵堝棛顩查幖杈剧悼濡炰粙鎮归崶銊ョ仴闁告艾顑囬埀顒€婀卞▍銏㈡濠靛牃鍋撻崷顓炰槐婵＄虎鍨跺畷姘攽閸♀晜缍忛梺鍛婄墬閻楁粓寮?SscAddonForge 闁荤姵鍔楅崰鏇㈡儗濡ゅ懎违? */
 public final class SscAddon {
     private SscAddon() {}
 
@@ -123,7 +123,7 @@ public final class SscAddon {
     public static final Item WITHER_POTION_LINGERING = AddonItems.WITHER_POTION_LINGERING.get();
     public static final Item MUSIC_DISC_SHAPE_SHIFTERS_DREAM = AddonItems.MUSIC_DISC_SHAPE_SHIFTERS_DREAM.get();
 
-    public static final EntityType<?> FROST_BALL_ENTITY = AddonEntities.FROST_BALL.get();
+    public static final EntityType<github.com.gengyoubo.sscfa.entity.FrostBallEntity> FROST_BALL_ENTITY = null;
     public static final EntityType<?> SPELL_FROST_SPIKE_ENTITY = AddonEntities.SPELL_FROST_SPIKE.get();
     public static final EntityType<?> SPELL_FIRE_BOLT_ENTITY = AddonEntities.SPELL_FIRE_BOLT.get();
     public static final EntityType<?> SPELL_METEOR_ENTITY = AddonEntities.SPELL_METEOR.get();
@@ -132,12 +132,12 @@ public final class SscAddon {
     public static final EntityType<?> BEEP_SHEEP_ENTITY = AddonEntities.BEEP_SHEEP.get();
     public static final EntityType<github.com.gengyoubo.sscfa.entity.LunarSpiritEntity> LUNAR_SPIRIT_ENTITY = null;
     public static final EntityType<github.com.gengyoubo.sscfa.entity.LunarSpiritBoltEntity> LUNAR_SPIRIT_BOLT_ENTITY = null;
-    public static final EntityType<?> THROWN_WATER_SPEAR_ENTITY = AddonEntities.THROWN_WATER_SPEAR.get();
+    public static final EntityType<github.com.gengyoubo.sscfa.entity.ThrownWaterSpearEntity> THROWN_WATER_SPEAR_ENTITY = null;
     public static final EntityType<?> FROST_THORN_ENTITY = AddonEntities.FROST_THORN.get();
     public static final EntityType<?> FROST_ARRAY_ENTITY = AddonEntities.FROST_ARRAY.get();
-    public static final EntityType<?> FOX_FIREBALL_ENTITY = AddonEntities.FOX_FIREBALL.get();
-    public static final EntityType<?> INFECTION_SPORE_BOMB_ENTITY = AddonEntities.INFECTION_SPORE_BOMB.get();
-    public static final EntityType<?> PARASITIC_SEED_ENTITY = AddonEntities.PARASITIC_SEED.get();
+    public static final EntityType<github.com.gengyoubo.sscfa.entity.FoxFireballEntity> FOX_FIREBALL_ENTITY = null;
+    public static final EntityType<github.com.gengyoubo.sscfa.entity.InfectionSporeBombEntity> INFECTION_SPORE_BOMB_ENTITY = null;
+    public static final EntityType<github.com.gengyoubo.sscfa.entity.ParasiticSeedProjectile> PARASITIC_SEED_ENTITY = null;
     public static final EntityType<?> FROST_STORM_ENTITY = AddonEntities.FROST_STORM.get();
     public static final EntityType<?> TIDAL_ORB_ENTITY = AddonEntities.TIDAL_ORB.get();
     public static final EntityType<?> LASER_BEAM_ENTITY = AddonEntities.LASER_BEAM.get();

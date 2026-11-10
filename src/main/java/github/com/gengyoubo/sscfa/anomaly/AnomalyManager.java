@@ -3,7 +3,7 @@ package github.com.gengyoubo.sscfa.anomaly;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.LivingEntity;
 
-/** 异常管理器（Forge 简化）：保留法术/效果层所需的时钟与通知入口；完整触发队列待移植。 */
+/** 寮傚父绠＄悊鍣紙Forge 绠€鍖栵級锛氫繚鐣欐硶鏈?鏁堟灉灞傛墍闇€鐨勬椂閽熶笌閫氱煡鍏ュ彛锛涘畬鏁磋Е鍙戦槦鍒楀緟绉绘銆?*/
 public final class AnomalyManager {
     private AnomalyManager() {}
     public static long now(MinecraftServer server) { return Integer.toUnsignedLong(server.getTickCount()); }
@@ -12,5 +12,6 @@ public final class AnomalyManager {
     public static AnomalyTargetState state(LivingEntity target) {
         return target instanceof AnomalyTargetAccess access ? access.ssca$anomalyState() : null;
     }
+    public static void damageObserved(net.minecraft.world.entity.LivingEntity target) {}
     public static void init() {}
 }

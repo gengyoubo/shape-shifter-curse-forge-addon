@@ -29,7 +29,7 @@ public abstract class DomainNetworkBoundaryMixin {
 		if (!Double.isFinite(next.x) || !Double.isFinite(next.y) || !Double.isFinite(next.z)
 				|| !Float.isFinite(packet.getYRot(player.getYRot())) || !Float.isFinite(packet.getXRot(player.getXRot()))) return;
 		if (DomainManager.blocksTeleport(player, player.level(), next)) {
-			// 上抬候选点也必须留在边界内；无安全落点时纠正回原位，确保纠正包能发出。
+			// 娑撳﹥濮崐娆撯偓澶屽仯娑旂喎绻€妞よ崵鏆€閸︺劏绔熼悾灞藉敶閿涙稒妫ょ€瑰鍙忛拃鐣屽仯閺冨墎绫傚锝呮礀閸樼喍缍呴敍宀€鈥樻穱婵堢眰濮濓絽瀵橀懗钘夊絺閸戞亽鈧?
 			Vec3 clamped = DomainManager.liftOutOfBlocks(player, DomainManager.clampToBoundary(player, next));
 			teleport(clamped.x, clamped.y, clamped.z, packet.getYRot(player.getYRot()), packet.getXRot(player.getXRot()));
 			ci.cancel();
@@ -45,7 +45,7 @@ public abstract class DomainNetworkBoundaryMixin {
 		if (!Double.isFinite(next.x) || !Double.isFinite(next.y) || !Double.isFinite(next.z)
 				|| !Float.isFinite(packet.getYRot()) || !Float.isFinite(packet.getXRot())) return;
 		if (DomainManager.blocksTeleport(vehicle, player.level(), next)) {
-			// 载具同款钳制 + 方块安全化（防陷边角方块/地底）
+			// 鏉炶棄鍙块崥灞绢儥闁藉啿鍩?+ 閺傜懓娼＄€瑰鍙忛崠鏍电礄闂冩煡娅℃潏纭咁潡閺傜懓娼?閸︽澘绨抽敍?
 			Vec3 clamped = DomainManager.liftOutOfBlocks(vehicle, DomainManager.clampToBoundary(vehicle, next));
 			vehicle.teleportTo(clamped.x, clamped.y, clamped.z);
 			player.connection.send(new ClientboundMoveVehiclePacket(vehicle));

@@ -10,10 +10,8 @@ import net.minecraft.world.level.block.MultifaceSpreader;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * 蛛网膜：多面贴附的薄层蛛网（机制同发光地衣），放置后 60~90 秒随机消失。
- *
- * <p>迁移占位：保留方块状态、贴附与定时消散；接触减速、「蜘网缠身」、施法者白名单与高亮
- * 依赖形态/白名单/网络系统，待其迁移后从 Fabric 版 WebMembraneBlock 补回。</p>
+ * 铔涚綉鑶滐細澶氶潰璐撮檮鐨勮杽灞傝洓缃戯紙鏈哄埗鍚屽彂鍏夊湴琛ｏ級锛屾斁缃悗 60~90 绉掗殢鏈烘秷澶便€? *
+ * <p>杩佺Щ鍗犱綅锛氫繚鐣欐柟鍧楃姸鎬併€佽创闄勪笌瀹氭椂娑堟暎锛涙帴瑙﹀噺閫熴€併€岃湗缃戠紶韬€嶃€佹柦娉曡€呯櫧鍚嶅崟涓庨珮浜? * 渚濊禆褰㈡€?鐧藉悕鍗?缃戠粶绯荤粺锛屽緟鍏惰縼绉诲悗浠?Fabric 鐗?WebMembraneBlock 琛ュ洖銆?/p>
  */
 @SuppressWarnings("deprecation")
 public class WebMembraneBlock extends MultifaceBlock {
@@ -51,4 +49,6 @@ public class WebMembraneBlock extends MultifaceBlock {
 			WebMembraneOwners.remove(level, pos);
 		}
 	}
+
+    public static void coatArea(net.minecraft.server.level.ServerLevel world, net.minecraft.core.BlockPos pos, double radius, java.util.UUID owner) {}
 }

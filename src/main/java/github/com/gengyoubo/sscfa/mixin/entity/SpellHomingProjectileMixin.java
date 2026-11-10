@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.UUID;
 
-/** 目标ID由原版DataTracker同步；双端转向，不额外每tick发包、不扫描实体。 */
+/** 闁烩晩鍠楅悥顤廌闁汇垹宕敮顐︽偋閸︽溂taTracker闁告艾鏈鐐烘晬濞戞ê钃熺紒鏃戝灥濞村棝宕ラ幋顖滅濞戞挸绉归·鍌涘緞閺嶃劎妲╰ick闁告瑦鍨电€垫﹢濡存担椋庣憹闁规鍋呭璺ㄢ偓鍦仒缂嶅濡?*/
 @Mixin(Projectile.class)
 public abstract class SpellHomingProjectileMixin implements FormSpellStyle.HomingProjectile, SpiderSpellLink.WebProjectile, AllaySpellLink.ProjectileData, github.com.gengyoubo.sscfa.spell.BatSpellLink.ProjectileData, github.com.gengyoubo.sscfa.spell.CourtSpellLink.ProjectileData {
     @Unique private github.com.gengyoubo.sscfa.spell.CourtSpellLink.Cast ssca$court;
@@ -99,7 +99,7 @@ public abstract class SpellHomingProjectileMixin implements FormSpellStyle.Homin
     @Inject(method="tick",at=@At("HEAD"))
     private void ssca$tick(CallbackInfo ci) {
         var self=(Projectile)(Object)this;
-        // 速度包按原版量化且限幅；匀速法术从同步快照恢复真实速度，不让高速配置在客机变慢。
+        // 闂侇偆鍠庣€规娊宕犻崨顔肩樆闁告鍠撴晶妤呮煂韫囨挸顕у☉鎾存濡炬椽鐛崪鍐耿闁告牑鍋撻梺顐ゅ枑绾爼寮甸娆戠煠闁告艾鏈鐐剁疀椤愩倕寮鹃柟顓滃灩椤︽煡鎯囬悢椋庢澖闂侇偆鍠庣€规娊鏁嶇仦鑲╃憹閻犱讲鏅犻悵顕€鏌呴悢鐓庡赋缂傚喚鍠栧﹢顏嗏偓骞垮灪濠р偓闁告瑦蓱閸欏啴濡?
         if(self.level().isClientSide)ssca$syncFlightVelocity();
         if(!self.level().isClientSide&&ssca$previous!=null) {
             ssca$remaining-=self.position().distanceTo(ssca$previous);ssca$previous=self.position();
@@ -111,7 +111,7 @@ public abstract class SpellHomingProjectileMixin implements FormSpellStyle.Homin
         }
         if(!ssca$isHoming()&&ssca$previous==null)return;
         Vec3 velocity=ssca$isHoming()?ssca$guidedVelocity(self.getDeltaMovement()):self.getDeltaMovement();
-        // 临近射程终点只走剩余距离，避免高速弹体多飞一整tick。
+        // 濞戞挾顥愮换搴ｄ焊閸曨厸鏌ょ紓浣哥墢閸嬶綁宕ｉ鍥巢闁告挴鏅欑紞鎴犳崉濠靛牜鐎查柨娑樼焸娴尖晠宕楀澶屽蒋闂侇偆鍠庨懘濠冩媴閹炬剚妯嬪瀣仒缁旀挳寮壕姒燾k闁?
         if(!self.level().isClientSide&&ssca$previous!=null&&velocity.length()>ssca$remaining)
             velocity=velocity.normalize().scale(ssca$remaining);
         self.setDeltaMovement(velocity);
@@ -127,7 +127,7 @@ public abstract class SpellHomingProjectileMixin implements FormSpellStyle.Homin
         if(ssca$court!=null)nbt.put("SscaCourtLink",ssca$court.write());
         if(ssca$previous==null)return;
         var self=(Projectile)(Object)this;
-        // 本tick移动在super.tick之后发生，存档时也要结清，防反复卸载区块延长射程。
+        // 闁哄牏鎲檌ck缂佸顕ф慨鈺呭捶閳虹椃per.tick濞戞柨顑呴幃妤呭矗閹寸姵鏅搁柨娑樿嫰閻°劌顩奸敐鍡橆槯濞戞梻鍠曢々锔剧磼閹惧顏搁柨娑樼焸濡插宕ｅ鍜佹Щ闁告鐡曞ù鍥礌閸濆嫭鍋ョ€点倕鐖奸弳杈╀焊閸曨厸鏌ら柕?
         nbt.putDouble("SscaHomingRemaining",Math.max(0,ssca$remaining-self.position().distanceTo(ssca$previous)));
         nbt.putFloat("SscaFlightSpeed",(float)ssca$flightSpeedMultiplier());
         nbt.putFloat("SscaLaunchSpeed",self.getEntityData().get(SSCA_LAUNCH_SPEED));
@@ -138,7 +138,7 @@ public abstract class SpellHomingProjectileMixin implements FormSpellStyle.Homin
         var self=(Projectile)(Object)this;
         if(!self.level().isClientSide)ssca$weave.direct();
         if(!self.level().isClientSide&&hit.getEntity().getUUID().equals(ssca$target)) {
-            // 穿刺弹命中锁定目标后继续向前，不能回头追逐已命中的同一个目标。
+            // 缂佸苯鐏濋崺鈥愁嚕閻熺増鍤掑☉鎿冨弮閺€锝団偓瑙勬皑濞蹭即寮介崶褎鍊电紓浣堝懐鏁鹃柛姘灥婢х娀鏁嶇仦鑲╃憹闁煎疇妫勫ú鏍ㄥ緞绾惧瀚归梺顐ｅ姇閸戯繝宕ㄩ幋鎺曞幀闁汇劌瀚幃鎾寸▔閳ь剚绋夐鍡樼獥闁哄秴娲㈤埀?
             ssca$target=null;self.getEntityData().set(SSCA_TARGET,-1);
         }
     }

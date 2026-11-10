@@ -23,58 +23,58 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 月织蛛「蛛丝荡漾」次技能（sp_secondary）—??<b>服务端权威??/b>??
+ * 鏈堢粐铔涖€岃洓涓濊崱婕俱€嶆鎶€鑳斤紙sp_secondary锛夆€??<b>鏈嶅姟绔潈濞??/b>??
  *
- * <p>物理放客户端（{@code SwingPhysicsMixin}），本类只做：发射蛛丝飞弹、mana 权威、断丝检测?
- * TETHER 拖拽目标生物、状态广播。发射改为投射??{@link ShellProjectile}（抛物线飞行，命中方块→
- * 摆??/ 命中生物→拖?tether / miss→落地消失）?
+ * <p>鐗╃悊鏀惧鎴风锛坽@code SwingPhysicsMixin}锛夛紝鏈被鍙仛锛氬彂灏勮洓涓濋寮广€乵ana 鏉冨▉銆佹柇涓濇娴?
+ * TETHER 鎷栨嫿鐩爣鐢熺墿銆佺姸鎬佸箍鎾€傚彂灏勬敼涓烘姇灏??{@link ShellProjectile}锛堟姏鐗╃嚎椋炶锛屽懡涓柟鍧椻啋
+ * 鎽??/ 鍛戒腑鐢熺墿鈫掓嫋?tether / miss鈫掕惤鍦版秷澶憋級?
  */
 public final class SpiderMoonWeaverSwingManager {
 
-	// ==== 发??/ 飞行（已登记：bullet_speed / mana_per_block / tether_hit_mana_cost；运行时??balance 快照读取 abilities.moon_weaver_swing??====
-	private static final float BULLET_SPEED = 1.7f; // 默认；运行时?balance 快照读取
-	public static final double MANA_PER_BLOCK = 2.0; // 默认；运行时?balance 快照读取
-	public static final double TETHER_HIT_MANA_COST = 8.0; // 默认；运行时?balance 快照读取（勾中生物瞬间额外扣??mana，不足扣??0??
+	// ==== 鍙??/ 椋炶锛堝凡鐧昏锛歜ullet_speed / mana_per_block / tether_hit_mana_cost锛涜繍琛屾椂??balance 蹇収璇诲彇 abilities.moon_weaver_swing??====
+	private static final float BULLET_SPEED = 1.7f; // 榛樿锛涜繍琛屾椂?balance 蹇収璇诲彇
+	public static final double MANA_PER_BLOCK = 2.0; // 榛樿锛涜繍琛屾椂?balance 蹇収璇诲彇
+	public static final double TETHER_HIT_MANA_COST = 8.0; // 榛樿锛涜繍琛屾椂?balance 蹇収璇诲彇锛堝嬀涓敓鐗╃灛闂撮澶栨墸??mana锛屼笉瓒虫墸??0??
 
-	// ==== 绳??/ 断丝（以??6 参??client ??SwingPhysicsMixin / ShellProjectile 引用做预测镜像，常量保留不迁移） ====
+	// ==== 缁??/ 鏂笣锛堜互??6 鍙??client ??SwingPhysicsMixin / ShellProjectile 寮曠敤鍋氶娴嬮暅鍍忥紝甯搁噺淇濈暀涓嶈縼绉伙級 ====
 	public static final double MAX_ROPE_REACH = 32.0;
-	public static final double TETHER_MAX_LEN = 16.0; // 默认；运行时?balance 快照读取。tether 拴生物硬上限（绝不超，吸收远??+ 大力牵引?
-	public static final double TETHER_SOFT_BUFFER = 4.0; // 软拉缓冲：距硬上??4 格??12 格）起线性牵引，?16 大力硬??
-	public static final double TETHER_PULL_GAIN = 0.2; // 12~16 线性牵引系数（每??over 增加的牵引速度?
-	public static final double TETHER_HARD_GAIN = 0.8; // ??16 每格额外大力牵引系数（强拉回、防冲出??
+	public static final double TETHER_MAX_LEN = 16.0; // 榛樿锛涜繍琛屾椂?balance 蹇収璇诲彇銆倀ether 鎷寸敓鐗╃‖涓婇檺锛堢粷涓嶈秴锛屽惛鏀惰繙??+ 澶у姏鐗靛紩?
+	public static final double TETHER_SOFT_BUFFER = 4.0; // 杞媺缂撳啿锛氳窛纭笂??4 鏍??12 鏍硷級璧风嚎鎬х壍寮曪紝?16 澶у姏纭??
+	public static final double TETHER_PULL_GAIN = 0.2; // 12~16 绾挎€х壍寮曠郴鏁帮紙姣??over 澧炲姞鐨勭壍寮曢€熷害?
+	public static final double TETHER_HARD_GAIN = 0.8; // ??16 姣忔牸棰濆澶у姏鐗靛紩绯绘暟锛堝己鎷夊洖銆侀槻鍐插嚭??
 	public static final double MIN_ROPE_LEN = 1.5;
 	public static final double REEL_SPEED = 0.16;
 	private static final double OBSCURE_BREAK_BLOCKS = 1.0;
 
-	// 阶??5：服务端权威快照读取（快照未初始化回退默认常量??
+	// 闃??5锛氭湇鍔＄鏉冨▉蹇収璇诲彇锛堝揩鐓ф湭鍒濆鍖栧洖閫€榛樿甯搁噺??
 	private static final BalanceReader BAL = new BalanceReader("abilities.moon_weaver_swing");
-	/** 统一冷却服务的稳定技?ID（网络包触发型）??*/
+	/** 缁熶竴鍐峰嵈鏈嶅姟鐨勭ǔ瀹氭妧?ID锛堢綉缁滃寘瑙﹀彂鍨嬶級??*/
 	private static final String SKILL_ID = "my_addon:form_spider_moon_weaver_swing";
 
-	/** 服务端断丝阈值：max_rope_reach 快照?+ 3 格余量（与常量版 BREAK_OVERSTRETCH = MAX_ROPE_REACH + 3.0 等价）?*/
+	/** 鏈嶅姟绔柇涓濋槇鍊硷細max_rope_reach 蹇収?+ 3 鏍间綑閲忥紙涓庡父閲忕増 BREAK_OVERSTRETCH = MAX_ROPE_REACH + 3.0 绛変环锛?*/
 	private static double breakOverstretch() {
 		return BAL.d("max_rope_reach", MAX_ROPE_REACH) + 3.0;
 	}
 
-	// ==== 状??====
+	// ==== 鐘??====
 	public static final int STATE_IDLE = 0;
 	public static final int STATE_SWINGING = 2;
-	public static final int STATE_TETHER = 3; // 连接生物拖??
+	public static final int STATE_TETHER = 3; // 杩炴帴鐢熺墿鎷??
 
 	private static final class SwingState {
         long castId = -1;
 		int state = STATE_IDLE;
-		Vec3 anchor = Vec3.ZERO;    // SWINGING 闁库偓閻?
-		int tetherEntityId = -1;      // TETHER 目标实??id
+		Vec3 anchor = Vec3.ZERO;    // SWINGING 闂佸簱鍋撻柣?
+		int tetherEntityId = -1;      // TETHER 鐩爣瀹??id
 		double ropeLen = 0.0;
 		boolean canExtend = true;
 		int broadcastTick = 0;
-		double lastPX = Double.NaN, lastPY = 0, lastPZ = 0; // 卡死检测：??tick 玩家位置
-		int stuckTicks = 0;          // 被拉但连续不动的 tick ??
+		double lastPX = Double.NaN, lastPY = 0, lastPZ = 0; // 鍗℃妫€娴嬶細??tick 鐜╁浣嶇疆
+		int stuckTicks = 0;          // 琚媺浣嗚繛缁笉鍔ㄧ殑 tick ??
 	}
 
 	private static final Map<UUID, SwingState> STATES = new ConcurrentHashMap<>();
-	/** 蛛丝飞弹在飞的玩????弹实体（防连?+ 支持飞行中再按键取消；命?miss 时移除）?*/
+	/** 铔涗笣椋炲脊鍦ㄩ鐨勭帺????寮瑰疄浣擄紙闃茶繛?+ 鏀寔椋炶涓啀鎸夐敭鍙栨秷锛涘懡?miss 鏃剁Щ闄わ級?*/
 	private static final Map<UUID, ShellProjectile> BULLET_IN_FLIGHT = new ConcurrentHashMap<>();
 
 	private SpiderMoonWeaverSwingManager() {}
@@ -97,8 +97,8 @@ public final class SpiderMoonWeaverSwingManager {
 	}
 
 	/**
-	 * 该玩家是否正拴住（TETHER）指定实体。用于足丝拴生物的伤害增减判定（双向通用）?
-	 * 参数?{@link Entity} 以免额外 import；player/target 任一?null 或??TETHER 均返?false??
+	 * 璇ョ帺瀹舵槸鍚︽鎷翠綇锛圱ETHER锛夋寚瀹氬疄浣撱€傜敤浜庤冻涓濇嫶鐢熺墿鐨勪激瀹冲鍑忓垽瀹氾紙鍙屽悜閫氱敤锛?
+	 * 鍙傛暟?{@link Entity} 浠ュ厤棰濆 import锛沺layer/target 浠讳竴?null 鎴??TETHER 鍧囪繑?false??
 	 */
 	public static boolean isTethering(Entity player, Entity target) {
 		if (player == null || target == null) return false;
@@ -107,7 +107,7 @@ public final class SpiderMoonWeaverSwingManager {
 	}
 
 	/**
-	 * 反查正拴住（TETHER）指定实体的拴主玩家，无则返??null。用于被拴目标受伤时找拴主（敌我判??伤害分担）??
+	 * 鍙嶆煡姝ｆ嫶浣忥紙TETHER锛夋寚瀹氬疄浣撶殑鎷翠富鐜╁锛屾棤鍒欒繑??null銆傜敤浜庤鎷寸洰鏍囧彈浼ゆ椂鎵炬嫶涓伙紙鏁屾垜鍒??浼ゅ鍒嗘媴锛??
 	 */
 	public static ServerPlayer getTetheringPlayer(Entity target) {
 		if (target == null || target.getServer() == null) return null;
@@ -129,12 +129,12 @@ public final class SpiderMoonWeaverSwingManager {
 		return e.position().add(0, e.getBbHeight() * 0.5, 0);
 	}
 
-	// ==== 次键：IDLE→发?/ 否则→断??====
+	// ==== 娆￠敭锛欼DLE鈫掑彂?/ 鍚﹀垯鈫掓柇??====
 	public static void onSecondaryPress(ServerPlayer player) {
 		if (!isSpiderMoonWeaver(player)) return;
 		SwingState s = state(player);
 		if (s.state == STATE_IDLE) {
-			// 飞行中再按????取消飞弹（??remove ??onBulletMiss ??5 ??CD??
+			// 椋炶涓啀鎸????鍙栨秷椋炲脊锛??remove ??onBulletMiss ??5 ??CD??
 			ShellProjectile flying = BULLET_IN_FLIGHT.get(player.getUUID());
 			if (flying != null && flying.isAlive()) {
 				flying.discard();
@@ -146,7 +146,7 @@ public final class SpiderMoonWeaverSwingManager {
 		}
 	}
 
-	/** 发射蛛丝飞弹（抛物线投射物，碰撞后回调进入摆?/ tether）??*/
+	/** 鍙戝皠铔涗笣椋炲脊锛堟姏鐗╃嚎鎶曞皠鐗╋紝纰版挒鍚庡洖璋冭繘鍏ユ憜?/ tether锛??*/
 	private static void shootBullet(ServerPlayer player) {
 		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.ready(player, SKILL_ID)) return;
 		if (BULLET_IN_FLIGHT.containsKey(player.getUUID())) return;
@@ -154,7 +154,7 @@ public final class SpiderMoonWeaverSwingManager {
 			player.displayClientMessage(Component.translatable("message.my_addon.spider_moon_weaver.swing.no_mana"), true);
 			return;
 		}
-		// 发射即登记；CD 在断?miss 时才起算（cooldown_start = on_end??
+		// 鍙戝皠鍗崇櫥璁帮紱CD 鍦ㄦ柇?miss 鏃舵墠璧风畻锛坈ooldown_start = on_end??
 		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.begin(player, SKILL_ID)) return;
 		state(player).castId = github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.currentCastId(player, SKILL_ID);
         ShellProjectile bullet = new ShellProjectile(github.com.gengyoubo.sscfa.init.AddonEntities.SPIDER_SWING_BULLET.get(), player.level()); bullet.setOwner(player); bullet.setPos(player.getX(), player.getEyeY() - 0.1, player.getZ());
@@ -167,10 +167,10 @@ public final class SpiderMoonWeaverSwingManager {
 				SoundEvents.SPIDER_AMBIENT, SoundSource.PLAYERS, 0.6f, 1.3f);
 	}
 
-	// ==== 飞弹碰撞回调（由 ShellProjectile 调用?====
+	// ==== 椋炲脊纰版挒鍥炶皟锛堢敱 ShellProjectile 璋冪敤?====
 
-	/** 飞弹命中方????钩住进入摆荡?*/
-	public static void onBulletHitBlock(ServerPlayer player, Vec3 anchor, ShellProjectile bullet) {
+	/** 椋炲脊鍛戒腑鏂????閽╀綇杩涘叆鎽嗚崱?*/
+	public static void onBulletHitBlock(ServerPlayer player, Vec3 anchor, Object bullet) {
         if (!BULLET_IN_FLIGHT.remove(player.getUUID(), bullet)) return;
 		if (github.com.gengyoubo.sscfa.util.AbilityUseGuard.fullyControlled(player)) {
 			settleBreak(player);
@@ -186,13 +186,13 @@ public final class SpiderMoonWeaverSwingManager {
 		broadcastState(player, s);
 	}
 
-	/** 拴住目标的高光描边色：白名单友军→绿，敌人→蓝（仅施法者可见）?*/
+	/** 鎷翠綇鐩爣鐨勯珮鍏夋弿杈硅壊锛氱櫧鍚嶅崟鍙嬪啗鈫掔豢锛屾晫浜衡啋钃濓紙浠呮柦娉曡€呭彲瑙侊級?*/
 	private static int tetherHighlightColor(ServerPlayer player, LivingEntity target) {
 		return WhitelistUtils.isProtected(player, target) ? 0x3AF03A : 0x3AA0FF;
 	}
 
-	/** 飞弹命中生????连接进入 tether 拖拽?*/
-	public static void onBulletHitEntity(ServerPlayer player, LivingEntity target, ShellProjectile bullet) {
+	/** 椋炲脊鍛戒腑鐢????杩炴帴杩涘叆 tether 鎷栨嫿?*/
+	public static void onBulletHitEntity(ServerPlayer player, LivingEntity target, Object bullet) {
         if (!BULLET_IN_FLIGHT.remove(player.getUUID(), bullet)) return;
 		if (github.com.gengyoubo.sscfa.util.AbilityUseGuard.fullyControlled(player)) {
 			settleBreak(player);
@@ -203,21 +203,21 @@ public final class SpiderMoonWeaverSwingManager {
 		s.state = STATE_TETHER;
 		s.tetherEntityId = target.getId();
 		s.anchor = Vec3.ZERO;
-		s.ropeLen = BAL.d("tether_max_len", TETHER_MAX_LEN); // 固??16 格上限（不用拴住瞬间距离）：允许 0~16 自由，超 16 硬约束拉回、不可延?
+		s.ropeLen = BAL.d("tether_max_len", TETHER_MAX_LEN); // 鍥??16 鏍间笂闄愶紙涓嶇敤鎷翠綇鐬棿璺濈锛夛細鍏佽 0~16 鑷敱锛岃秴 16 纭害鏉熸媺鍥炪€佷笉鍙欢?
 		s.canExtend = true;
-		mana(player).consumeMana(BAL.d("tether_hit_mana_cost", TETHER_HIT_MANA_COST)); // 勾中生物瞬间额外??8 ??mana（自?clamp ??0 不会负、自动同步客户??mana 条??
-		SscAddonNetworking.sendWebHighlight(player, target.getId(), 40, tetherHighlightColor(player, target)); // 仅施法者可见高光（友军?敌人蓝）
+		mana(player).consumeMana(BAL.d("tether_hit_mana_cost", TETHER_HIT_MANA_COST)); // 鍕句腑鐢熺墿鐬棿棰濆??8 ??mana锛堣嚜?clamp ??0 涓嶄細璐熴€佽嚜鍔ㄥ悓姝ュ鎴??mana 鏉??
+		SscAddonNetworking.sendWebHighlight(player, target.getId(), 40, tetherHighlightColor(player, target)); // 浠呮柦娉曡€呭彲瑙侀珮鍏夛紙鍙嬪啗?鏁屼汉钃濓級
 		broadcastState(player, s);
 	}
 
-	/** 飞??miss 落地消??/ 被移????5 ??CD（幂等：仅仍在飞未命中时生效；balance break_cooldown_ticks 可覆盖）??*/
-	public static void onBulletMiss(ServerPlayer player, ShellProjectile bullet) {
+	/** 椋??miss 钀藉湴娑??/ 琚Щ????5 ??CD锛堝箓绛夛細浠呬粛鍦ㄩ鏈懡涓椂鐢熸晥锛沚alance break_cooldown_ticks 鍙鐩栵級??*/
+	public static void onBulletMiss(ServerPlayer player, Object bullet) {
         if (BULLET_IN_FLIGHT.remove(player.getUUID(), bullet)) {
 			settleBreak(player);
 		}
 	}
 
-	// ==== 断??====
+	// ==== 鏂??====
 	private static void breakWeb(ServerPlayer player, SwingState s, boolean giveCd) {
 		boolean wasActive = s.state != STATE_IDLE;
 		s.state = STATE_IDLE;
@@ -240,12 +240,12 @@ public final class SpiderMoonWeaverSwingManager {
 		broadcastState(player, s);
 	}
 
-	/** 断??miss：本次荡丝结束，?power JSON cooldown 起算?*/
+	/** 鏂??miss锛氭湰娆¤崱涓濈粨鏉燂紝?power JSON cooldown 璧风畻?*/
 	private static void settleBreak(ServerPlayer player) {
 		github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.completed(player, SKILL_ID, state(player).castId);
 	}
 
-	// ==== 每服务端 tick ====
+	// ==== 姣忔湇鍔＄ tick ====
 	public static void tick(ServerPlayer player) {
 		SwingState s = STATES.get(player.getUUID());
 		if (s == null || s.state == STATE_IDLE) return;
@@ -260,9 +260,9 @@ public final class SpiderMoonWeaverSwingManager {
 		}
 	}
 
-	/** SWINGING：断丝检??+ 定期广播 + 销点粒子（物理在客户端）??*/
+	/** SWINGING锛氭柇涓濇??+ 瀹氭湡骞挎挱 + 閿€鐐圭矑瀛愶紙鐗╃悊鍦ㄥ鎴风锛??*/
 	private static void tickSwinging(ServerPlayer player, SwingState s) {
-		player.fallDistance = 0.0f; // 服务端清摔落距离防摆荡落地摔伤（不影响客户端 fallDistance 驱动?FALL 动画?
+		player.fallDistance = 0.0f; // 鏈嶅姟绔竻鎽旇惤璺濈闃叉憜鑽¤惤鍦版憯浼わ紙涓嶅奖鍝嶅鎴风 fallDistance 椹卞姩?FALL 鍔ㄧ敾?
 		Vec3 torso = torso(player);
 		double dist = torso.distanceTo(s.anchor);
 		if (dist > breakOverstretch()) {
@@ -276,15 +276,15 @@ public final class SpiderMoonWeaverSwingManager {
 		if (++s.broadcastTick >= 3) {
 			s.broadcastTick = 0;
 			broadcastState(player, s);
-			// 锚点丝云（owner 打标：仅本人避让??
+			// 閿氱偣涓濅簯锛坥wner 鎵撴爣锛氫粎鏈汉閬胯??
 			github.com.gengyoubo.sscfa.network.DecorationParticles.spawn((ServerLevel) player.level(), player, net.minecraft.core.particles.ParticleTypes.CLOUD,
 					s.anchor.x, s.anchor.y, s.anchor.z, 2, 0.12, 0.12, 0.12, 0.0);
 		}
 	}
 
-	/** TETHER：拉目标生物向玩家（按抗性缩放，有阻力）+ 断丝检?+ 高光刷新 + 广播?*/
+	/** TETHER锛氭媺鐩爣鐢熺墿鍚戠帺瀹讹紙鎸夋姉鎬х缉鏀撅紝鏈夐樆鍔涳級+ 鏂笣妫€?+ 楂樺厜鍒锋柊 + 骞挎挱?*/
 	private static void tickTether(ServerPlayer player, SwingState s) {
-		player.fallDistance = 0.0f; // 服务端清摔落距离??tether 拖拽落地摔伤
+		player.fallDistance = 0.0f; // 鏈嶅姟绔竻鎽旇惤璺濈??tether 鎷栨嫿钀藉湴鎽斾激
 		ServerLevel world = (ServerLevel) player.level();
 		Entity target = world.getEntity(s.tetherEntityId);
 		if (!(target instanceof LivingEntity living) || !living.isAlive()) {
@@ -302,41 +302,41 @@ public final class SpiderMoonWeaverSwingManager {
 			breakWeb(player, s, true);
 			return;
 		}
-		double ropeLen = Math.max(s.ropeLen, MIN_ROPE_LEN); // 硬上限（初??16??
-		double softLen = Math.max(MIN_ROPE_LEN, ropeLen - TETHER_SOFT_BUFFER); // 软拉阈值（初??12??
-		// 牵引?2~16 线性加大（over×PULL_GAIN），?16 吸收远离 + 额外大力牵引（强拉回、防冲出 16）；纯速度不改位置??
+		double ropeLen = Math.max(s.ropeLen, MIN_ROPE_LEN); // 纭笂闄愶紙鍒??16??
+		double softLen = Math.max(MIN_ROPE_LEN, ropeLen - TETHER_SOFT_BUFFER); // 杞媺闃堝€硷紙鍒??12??
+		// 鐗靛紩?2~16 绾挎€у姞澶э紙over脳PULL_GAIN锛夛紝?16 鍚告敹杩滅 + 棰濆澶у姏鐗靛紩锛堝己鎷夊洖銆侀槻鍐插嚭 16锛夛紱绾€熷害涓嶆敼浣嶇疆??
 		if (dist > softLen) {
 			double resist = knockbackResist(living);
-			Vec3 dir = pPos.subtract(tPos).normalize(); // 目????玩??
+			Vec3 dir = pPos.subtract(tPos).normalize(); // 鐩????鐜??
 			Vec3 tv = living.getDeltaMovement();
-			double over = dist - softLen; // 12 閺?0閿?6 閺?4
-			double pull = over * TETHER_PULL_GAIN; // 12 起线性加大牵?
+			double over = dist - softLen; // 12 闁?0闁?6 闁?4
+			double pull = over * TETHER_PULL_GAIN; // 12 璧风嚎鎬у姞澶х壍?
 			double cap = 0.55;
 			if (dist > ropeLen) {
-				pull += (dist - ropeLen) * TETHER_HARD_GAIN; // ??16 额外大力（线性更陡，靠牵引力防过远、不硬吸收速度、不卡）
-				cap = 0.9; // 放宽速度上限给大?
+				pull += (dist - ropeLen) * TETHER_HARD_GAIN; // ??16 棰濆澶у姏锛堢嚎鎬ф洿闄★紝闈犵壍寮曞姏闃茶繃杩溿€佷笉纭惛鏀堕€熷害銆佷笉鍗★級
+				cap = 0.9; // 鏀惧閫熷害涓婇檺缁欏ぇ?
 			}
-			pull *= (1.0 - resist); // 按抗性：轻目标主要拉目标，重目标靠客户端把玩家拉过去
+			pull *= (1.0 - resist); // 鎸夋姉鎬э細杞荤洰鏍囦富瑕佹媺鐩爣锛岄噸鐩爣闈犲鎴风鎶婄帺瀹舵媺杩囧幓
 			if (pull > 0.001) {
 				double toward = tv.dot(dir);
-				if (toward < pull) tv = tv.add(dir.scale(pull - toward)); // 回拉向玩??
+				if (toward < pull) tv = tv.add(dir.scale(pull - toward)); // 鍥炴媺鍚戠帺??
 			}
 			double sp = tv.length();
-			if (sp > cap) tv = tv.scale(cap / sp); // 速度上限防爆冲（??16 放宽给大力）
+			if (sp > cap) tv = tv.scale(cap / sp); // 閫熷害涓婇檺闃茬垎鍐诧紙??16 鏀惧缁欏ぇ鍔涳級
 			living.setDeltaMovement(tv);
 			living.hurtMarked = true;
 			living.hasImpulse = true;
 		}
-		// 高光刷新（仅施法者可见；友军?敌人蓝）——降频每 10t 刷一次：时??20t，半程续期不闪断??
-		// 省掉 tether 期??tick 一个高光包??~20??冗余（对??NightmareDreamManager 描边刷新惯例?
+		// 楂樺厜鍒锋柊锛堜粎鏂芥硶鑰呭彲瑙侊紱鍙嬪啗?鏁屼汉钃濓級鈥斺€旈檷棰戞瘡 10t 鍒蜂竴娆★細鏃??20t锛屽崐绋嬬画鏈熶笉闂柇??
+		// 鐪佹帀 tether 鏈??tick 涓€涓珮鍏夊寘??~20??鍐椾綑锛堝??NightmareDreamManager 鎻忚竟鍒锋柊鎯緥?
 		if (world.getGameTime() % 10L == 0L) {
 			SscAddonNetworking.sendWebHighlight(player, living.getId(), 20, tetherHighlightColor(player, living));
 		}
-		// 卡死保底：被拉（dist>绳长）但连续不动 ??2 秒后自动断丝解脱（防永久卡死?
+		// 鍗℃淇濆簳锛氳鎷夛紙dist>缁抽暱锛変絾杩炵画涓嶅姩 ??2 绉掑悗鑷姩鏂笣瑙ｈ劚锛堥槻姘镐箙鍗℃?
 		if (dist > ropeLen + 0.5) {
 			if (!Double.isNaN(s.lastPX)) {
 				double dx = pPos.x - s.lastPX, dy = pPos.y - s.lastPY, dz = pPos.z - s.lastPZ;
-				if (dx * dx + dy * dy + dz * dz < 0.0016) { // 缁夎濮?< 0.04 閺?
+				if (dx * dx + dy * dy + dz * dz < 0.0016) { // 缂佸顕ф慨?< 0.04 闁?
 					if (++s.stuckTicks > 20) {
 						breakWeb(player, s, true);
 						return;
@@ -364,20 +364,20 @@ public final class SpiderMoonWeaverSwingManager {
 	}
 
 	/**
-	 * 客户端每 2 tick 上报一次绳?+ 收放意图?1 ?/ -1 ?/ 0）。服务端信任客户?ropeLen（转?+ 断丝参考）??
-	 * 放绳权威?mana（每包扣 2 tick 的量），mana 不足?canExtend=false 广播阻止继续放绳。SWINGING / TETHER 均适用?
+	 * 瀹㈡埛绔瘡 2 tick 涓婃姤涓€娆＄怀?+ 鏀舵斁鎰忓浘?1 ?/ -1 ?/ 0锛夈€傛湇鍔＄淇′换瀹㈡埛?ropeLen锛堣浆?+ 鏂笣鍙傝€冿級??
+	 * 鏀剧怀鏉冨▉?mana锛堟瘡鍖呮墸 2 tick 鐨勯噺锛夛紝mana 涓嶈冻?canExtend=false 骞挎挱闃绘缁х画鏀剧怀銆係WINGING / TETHER 鍧囬€傜敤?
 	 */
 	public static void onReelSync(ServerPlayer player, double clientRopeLen, int reel) {
 		SwingState s = STATES.get(player.getUUID());
 		if (s == null || (s.state != STATE_SWINGING && s.state != STATE_TETHER)) return;
-		// tether 拴生物：最大间??16 且禁止放绳延长；swinging 荡漾仍可??32 并放?
+		// tether 鎷寸敓鐗╋細鏈€澶ч棿??16 涓旂姝㈡斁缁冲欢闀匡紱swinging 鑽℃季浠嶅彲??32 骞舵斁?
 		double maxLen = (s.state == STATE_TETHER) ? BAL.d("tether_max_len", TETHER_MAX_LEN) : MAX_ROPE_REACH;
 		s.ropeLen = Mth.clamp(clientRopeLen, MIN_ROPE_LEN, maxLen);
-		if (s.state == STATE_TETHER) reel = 0; // tether 不能延长蛛丝，忽略放绳意??
+		if (s.state == STATE_TETHER) reel = 0; // tether 涓嶈兘寤堕暱铔涗笣锛屽拷鐣ユ斁缁虫剰??
 		boolean prev = s.canExtend;
 		if (reel < 0) {
-			// 客户端每 2 tick 上报一次，每包?2 tick 的放绳量（REEL_SPEED 为??tick 放绳长度）??
-			// 保持与原??tick 上报时相同??mana 消耗速??
+			// 瀹㈡埛绔瘡 2 tick 涓婃姤涓€娆★紝姣忓寘?2 tick 鐨勬斁缁抽噺锛圧EEL_SPEED 涓??tick 鏀剧怀闀垮害锛??
+			// 淇濇寔涓庡師??tick 涓婃姤鏃剁浉鍚??mana 娑堣€楅€??
 			double cost = REEL_SPEED * 2.0 / BAL.d("mana_per_block", MANA_PER_BLOCK);
 			github.com.gengyoubo.sscfa.compat.ManaComponent m = mana(player);
 			if (m.getMana() >= cost) {

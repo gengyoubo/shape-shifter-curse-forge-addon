@@ -13,17 +13,17 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 领域爆炸隔离（jackcooper，2026-09-22 需求核实）：爆炸射线不认识黑色球壳（壳非方块），
- * 爆炸波及范围内的跨界方块会被照常炸毁——外界 TNT 能炸掉领域内方块、内部爆炸也能炸外界。
+ * 妫板棗鐓欓悥鍡欏仮闂呮梻顬囬敍鍧朼ckcooper閿?026-09-22 闂団偓濮瑰倹鐗崇€圭儑绱氶敍姘卞瀻閻愮鐨犵痪澶哥瑝鐠併倛鐦戞鎴ｅ閻炲啫锛撻敍鍫濓紦闂堢偞鏌熼崸妤嬬礆閿?
+ * 閻栧棛鍋㈠▔銏犲挤閼煎啫娲块崘鍛畱鐠恒劎鏅弬鐟版健娴兼俺顫﹂悡褍鐖堕悙鍛婄槈閳ユ柡鈧柨顦婚悾?TNT 閼崇晫鍋㈤幒澶愵暙閸╃喎鍞撮弬鐟版健閵嗕礁鍞撮柈銊у瀻閻愰晲绡冮懗鐣屽仮婢舵牜鏅妴?
  *
- * <p>实体伤害已由 {@code SscAddonLivingEntityMixin.damage} 的跨界拦截覆盖（爆炸
- * DamageSource.getPosition 无显式坐标时回退爆源实体坐标，已反编译核实）；
- * 本 mixin 只补方块面：{@code collectBlocksAndDamageEntities} TAIL 过滤
- * {@code affectedBlocks} 中与爆心分属壳内外的方块（复用 {@link
- * DomainManager#blocksCrossBoundary}，壳间算内，与传送/声音语义一致）。</p>
+ * <p>鐎圭偘缍嬫导銈咁唺瀹歌尙鏁?{@code SscAddonLivingEntityMixin.damage} 閻ㄥ嫯娉曢悾灞惧閹搭亣顩惄鏍电礄閻栧棛鍋?
+ * DamageSource.getPosition 閺冪姵妯夊蹇撴綏閺嶅洦妞傞崶鐐衡偓鈧悥鍡樼爱鐎圭偘缍嬮崸鎰垼閿涘苯鍑￠崣宥囩椽鐠囨垶鐗崇€圭儑绱氶敍?
+ * 閺?mixin 閸欘亣藟閺傜懓娼￠棃顫窗{@code collectBlocksAndDamageEntities} TAIL 鏉╁洦鎶?
+ * {@code affectedBlocks} 娑擃厺绗岄悥鍡楃妇閸掑棗鐫樻竟鍐插敶婢舵牜娈戦弬鐟版健閿涘牆顦查悽?{@link
+ * DomainManager#blocksCrossBoundary}閿涘苯锛撻梻瀵哥暬閸愬拑绱濇稉搴濈炊闁?婢逛即鐓剁拠顓濈疅娑撯偓閼疯揪绱氶妴?/p>
  *
- * <p>仅服务端（方块破坏只在服务端结算）；被过滤的方块不炸不掉落，爆炸视觉粒子
- * 照常（客户端表现，无破坏语义）。</p>
+ * <p>娴犲懏婀囬崝锛勵伂閿涘牊鏌熼崸妤冪壃閸у繐褰ч崷銊︽箛閸旓紕顏紒鎾剁暬閿涘绱辩悮顐ョ箖濠娿倗娈戦弬鐟版健娑撳秶鍋㈡稉宥嗗竴閽€鏂ょ礉閻栧棛鍋㈢憴鍡氼潕缁帒鐡?
+ * 閻撗冪埗閿涘牆顓归幋椋庮伂鐞涖劎骞囬敍灞炬￥閻潙娼栫拠顓濈疅閿涘鈧?/p>
  */
 @Mixin(Explosion.class)
 public abstract class DomainExplosionBoundaryMixin {

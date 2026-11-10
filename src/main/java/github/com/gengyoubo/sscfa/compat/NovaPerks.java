@@ -2,9 +2,11 @@ package github.com.gengyoubo.sscfa.compat;
 
 import net.minecraft.world.entity.player.Player;
 
-/** 新星（Nova）形态加成占位实现：待 Apoli perk 层移植后替换。 */
+/** 鏂版槦锛圢ova锛夊舰鎬佸姞鎴愬崰浣嶅疄鐜帮細寰?Apoli perk 灞傜Щ妞嶅悗鏇挎崲銆?*/
 public final class NovaPerks {
     private NovaPerks() {}
+
+    public static int hungerDiscount(Player player) { return 0; }
 
     public static boolean hasLongPounce(Player player) {
         return false;

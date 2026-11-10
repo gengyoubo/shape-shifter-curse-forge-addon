@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** 读取存档时记录服务端玩家的原始血量，交 {@link LoginHealthRestoreHandler} 在最大生命值修饰符挂上后补回。 */
+/** 鐠囪褰囩€涙ɑ銆傞弮鎯邦唶瑜版洘婀囬崝锛勵伂閻溾晛顔嶉惃鍕斧婵顢呴柌蹇ョ礉娴?{@link LoginHealthRestoreHandler} 閸︺劍娓舵径褏鏁撻崨钘夆偓闂存叏妤楁壆顑侀幐鍌欑瑐閸氬氦藟閸ョ偑鈧?*/
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityLoginHealthMixin {
 	@Inject(method = "readAdditionalSaveData", at = @At("TAIL"))

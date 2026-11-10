@@ -2,9 +2,11 @@ package github.com.gengyoubo.sscfa.compat;
 
 import net.minecraft.world.entity.player.Player;
 
-/** 风灵（Wind Spirit）形态加成占位实现：待 Apoli perk 层移植后替换。 */
+/** 椋庣伒锛圵ind Spirit锛夊舰鎬佸姞鎴愬崰浣嶅疄鐜帮細寰?Apoli perk 灞傜Щ妞嶅悗鏇挎崲銆?*/
 public final class WindSpiritPerks {
     private WindSpiritPerks() {}
+
+    public static int hungerDiscount(Player player) { return 0; }
 
     public static boolean hasLongPounce(Player player) {
         return false;

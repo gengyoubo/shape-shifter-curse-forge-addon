@@ -10,8 +10,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 口袋维度逐玩家区块过滤：区块数据只经 {@code sendChunkPacket} 一处发出（1.20.1 源码核实），
- * 在此拦下不属于玩家所在房间槽位的区块 → 客户端墙外永远只有虚空。其他维度不受影响。
+ * 閸欙綀顣扮紒鏉戝闁劗甯虹€硅泛灏崸妤勭箖濠娿倧绱伴崠鍝勬健閺佺増宓侀崣顏嗙病 {@code sendChunkPacket} 娑撯偓婢跺嫬褰傞崙鐚寸礄1.20.1 濠ф劗鐖滈弽绋跨杽閿涘绱?
+ * 閸︺劍顒濋幏锔跨瑓娑撳秴鐫樻禍搴ｅ负鐎硅埖澧嶉崷銊﹀煣闂傚瓨蝎娴ｅ秶娈戦崠鍝勬健 閳?鐎广垺鍩涚粩顖氼暰婢舵牗妗堟潻婊冨涧閺堝娅勭粚鎭掆偓鍌氬従娴犳牜娣惔锔跨瑝閸欐濂栭崫宥冣偓?
  */
 @Mixin(ServerPlayer.class)
 public abstract class PocketSpaceChunkFilterMixin {
