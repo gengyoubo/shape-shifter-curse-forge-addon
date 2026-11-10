@@ -54,6 +54,16 @@ public final class SscAddonForge {
         AddonNetwork.clientbound(SscAddonNetworking.PACKET_WHITELIST_GUI_SYNC);
         AddonNetwork.clientbound(SscAddonNetworking.PACKET_EVO_ROUTES_SYNC);
         AddonNetwork.clientbound(SscAddonNetworking.PACKET_ANIM_DEBUG_TOGGLE);
+        AddonNetwork.clientbound(DomainManager.STATE);
+        AddonNetwork.clientbound(DomainManager.SOUND);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.DecorationParticles.ID);
+        github.com.gengyoubo.sscfa.network.SustainedVisuals.init();
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.SustainedVisuals.STATE);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.anomaly.AnomalyNetwork.STATE);
+        github.com.gengyoubo.sscfa.spell.DeathFinaleManager.init();
+        github.com.gengyoubo.sscfa.tutorial.SpellTutorialManager.register();
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.tutorial.SpellTutorialManager.OFFER);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.spell.DeathFinaleManager.SNAPSHOT);
 
         BalanceIntegration.initServer(SscBalanceSchema.create());
         SkillCooldownSync.init();
@@ -87,7 +97,11 @@ public final class SscAddonForge {
             event.addListener(SpellRegistry.INSTANCE);
             event.addListener(github.com.gengyoubo.sscfa.evolution.EvolutionRegistry.INSTANCE);
         });
-        MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent event) -> SpellDamageSource.bind(event.getServer()));
+        MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent event) -> {
+            github.com.gengyoubo.sscfa.anomaly.AnomalyManager.init();
+            github.com.gengyoubo.sscfa.anomaly.FrozenControl.init();
+            SpellDamageSource.bind(event.getServer());
+        });
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, AddonServerConfig.SPEC);
     }

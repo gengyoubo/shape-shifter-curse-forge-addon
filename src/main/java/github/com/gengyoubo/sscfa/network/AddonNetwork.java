@@ -54,10 +54,17 @@ public final class AddonNetwork {
 
     /** 在模组构造时调用一次。 */
     public static void init() {
-        CHANNEL.messageBuilder(Payload.class, 0, NetworkDirection.PLAY_TO_SERVER)
-                .encoder(Payload::encode).decoder(Payload::decode).consumerMainThread(AddonNetwork::handleServerbound).add();
-        CHANNEL.messageBuilder(Payload.class, 1, NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(Payload::encode).decoder(Payload::decode).consumerMainThread(AddonNetwork::handleClientbound).add();
+        // 两个方向必须用不同的消息类：SimpleChannel 编码时按「消息类」查编号，同一个类注册两次，
+        // 后注册的会覆盖前者，客户端发往服务端的包就会带上 PLAY_TO_CLIENT 的编号，
+        // 服务端校验方向失败后直接踢人（Illegal packet received, terminating connection）。
+        CHANNEL.messageBuilder(Serverbound.class, 0, NetworkDirection.PLAY_TO_SERVER)
+                .encoder((message, out) -> message.payload().encode(out))
+                .decoder(in -> new Serverbound(Payload.decode(in)))
+                .consumerMainThread((message, context) -> handleServerbound(message.payload(), context)).add();
+        CHANNEL.messageBuilder(Clientbound.class, 1, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder((message, out) -> message.payload().encode(out))
+                .decoder(in -> new Clientbound(Payload.decode(in)))
+                .consumerMainThread((message, context) -> handleClientbound(message.payload(), context)).add();
     }
 
     // ===== 注册 =====
@@ -89,17 +96,17 @@ public final class AddonNetwork {
     }
 
     public static void sendToPlayer(ServerPlayer player, ResourceLocation id, FriendlyByteBuf buf) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new Payload(id, buf));
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new Clientbound(new Payload(id, buf)));
     }
 
     /** 发给正在追踪该玩家的所有客户端和该玩家自己（旁人也要看到的表现状态用）。 */
     public static void sendToTrackingAndSelf(ServerPlayer player, ResourceLocation id, FriendlyByteBuf buf) {
-        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player), new Payload(id, buf));
+        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player), new Clientbound(new Payload(id, buf)));
     }
 
     /** 只在客户端调用。 */
     public static void sendToServer(ResourceLocation id, FriendlyByteBuf buf) {
-        CHANNEL.sendToServer(new Payload(id, buf));
+        CHANNEL.sendToServer(new Serverbound(new Payload(id, buf)));
     }
 
     // ===== 分发 =====
@@ -123,6 +130,12 @@ public final class AddonNetwork {
         }
         receiver.receive(payload.data());
     }
+
+    /** 客户端 → 服务端的消息类型。 */
+    record Serverbound(Payload payload) {}
+
+    /** 服务端 → 客户端的消息类型。 */
+    record Clientbound(Payload payload) {}
 
     /** 通道 ID + 数据；解码时把字节复制出来，接收器可以在主线程安全读取。 */
     record Payload(ResourceLocation id, FriendlyByteBuf data) {

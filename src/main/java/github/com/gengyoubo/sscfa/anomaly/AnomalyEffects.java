@@ -220,6 +220,23 @@ public final class AnomalyEffects {
         return target != null && (cache(target) != null || target.hasEffect(AddonEffects.FROZEN.get()));
     }
 
+    public record EffectView(String id, int ticks, double strength) {}
+
+    /** Client-display mirror of the currently managed anomaly effects. */
+    public static List<EffectView> effectSnapshot(LivingEntity target) {
+        if (target == null) return List.of();
+        List<EffectView> views = new ArrayList<>();
+        for (Map.Entry<String, MobEffect> entry : EFFECTS.entrySet()) {
+            MobEffectInstance instance = target.getEffect(entry.getValue());
+            if (instance != null) {
+                views.add(new EffectView(entry.getKey(), instance.getDuration(), instance.getAmplifier() + 1));
+            }
+        }
+        MobEffectInstance frozen = target.getEffect(AddonEffects.FROZEN.get());
+        if (frozen != null) views.add(new EffectView("frozen", frozen.getDuration(), frozen.getAmplifier() + 1));
+        return List.copyOf(views);
+    }
+
     public static boolean isManaged(MobEffect effect) {
         return effect instanceof github.com.gengyoubo.sscfa.effect.AnomalyMarkerEffect
                 || effect == AddonEffects.FROZEN_RECOVERY.get();

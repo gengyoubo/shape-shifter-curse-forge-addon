@@ -60,15 +60,20 @@ public final class AddonClientEvents {
         event.registerEntityRenderer(AddonEntities.TIDAL_ORB.get(), github.com.gengyoubo.sscfa.client.renderer.TidalOrbRenderer::new);
         event.registerEntityRenderer(AddonEntities.GHOST_CAT.get(), github.com.gengyoubo.sscfa.client.renderer.GhostCatRenderer::new);
         event.registerEntityRenderer(AddonEntities.FROST_THORN.get(), github.com.gengyoubo.sscfa.client.renderer.FrostThornEntityRenderer::new);
-        event.registerEntityRenderer(AddonEntities.FROST_ARRAY.get(), NoopRenderer::new);
+        event.registerEntityRenderer(AddonEntities.FROST_ARRAY.get(), github.com.gengyoubo.sscfa.client.renderer.FrostArrayRenderer::new);
         event.registerEntityRenderer(AddonEntities.FROST_STORM.get(), NoopRenderer::new);
-        event.registerEntityRenderer(AddonEntities.LASER_BEAM.get(), NoopRenderer::new);
+        event.registerEntityRenderer(AddonEntities.LASER_BEAM.get(), github.com.gengyoubo.sscfa.client.renderer.FluorescentLaserRenderer::new);
     }
 
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         SpellcastKeybindings.init();
         SpellcastKeybindings.register(event);
+    }
+
+    @SubscribeEvent
+    public static void registerClientReloadListeners(net.minecraftforge.client.event.RegisterClientReloadListenersEvent event) {
+        github.com.gengyoubo.sscfa.client.tutorial.FormTutorialLessons.register(event);
     }
 
     @SubscribeEvent
@@ -107,6 +112,7 @@ public final class AddonClientEvents {
             JumpKillSilkClient.register();
             UpgradeAxolotlSpearRenderState.register();
             FrostSpikeChargeClientState.register();
+            FrostSpikeClient.register();
             SpiderMoonWeaverSwingClient.register();
             SpiderMoonWeaverSwingRenderer.register();
             SpiderMoonWeaverDoubleJumpClient.register();
@@ -121,6 +127,14 @@ public final class AddonClientEvents {
             github.com.gengyoubo.sscfa.client.hud.SpellbookHudRenderer.register();
             github.com.gengyoubo.sscfa.client.hud.SkillCooldownBarRenderer.register();
             github.com.gengyoubo.sscfa.client.renderer.CurseMarkIconRenderer.register();
+            github.com.gengyoubo.sscfa.client.renderer.DomainRenderer.register();
+            github.com.gengyoubo.sscfa.client.particle.FirstPersonParticles.init();
+            github.com.gengyoubo.sscfa.client.SustainedVisualClient.init();
+            github.com.gengyoubo.sscfa.client.AnomalyClient.init();
+            github.com.gengyoubo.sscfa.client.renderer.AnomalyBadgeRenderer.register();
+            github.com.gengyoubo.sscfa.client.DeathFinaleClient.register();
+            github.com.gengyoubo.sscfa.client.tutorial.FormTutorialClient.register();
+            github.com.gengyoubo.sscfa.client.tutorial.SpellTutorialClient.register();
             MenuScreens.register(AddonMenus.ENERGY_BOTTLER.get(), EnergyBottlerScreen::new);
             MenuScreens.register(AddonMenus.POTION_STORAGE_BOX.get(), PotionStorageBoxScreen::new);
         MenuScreens.register(AddonMenus.SPELLBOOK_SCREEN_HANDLER.get(), SpellbookScreen::new);

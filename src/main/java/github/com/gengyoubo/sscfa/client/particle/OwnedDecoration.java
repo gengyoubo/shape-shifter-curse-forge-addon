@@ -1,8 +1,14 @@
 package github.com.gengyoubo.sscfa.client.particle;
 
-import java.util.UUID;
+import net.minecraft.client.Camera;
 
-/** 粒子归属标记：带主人 UUID 的装饰性粒子。 */
-public interface OwnedDecoration {
-    void ssca$setDecorationOwner(UUID owner);
+/** Only explicitly identified, nonessential effects opt into first-person avoidance. */
+public interface OwnedDecoration extends ParticleOwnership {
+    double ssca$cameraDistance(Camera camera, float tickDelta);
+
+    float ssca$cameraVisibility(Camera camera, float tickDelta);
+
+    float ssca$getRenderAlpha();
+
+    void ssca$setRenderAlpha(float alpha);
 }

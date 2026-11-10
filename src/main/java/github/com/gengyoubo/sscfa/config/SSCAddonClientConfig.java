@@ -2,6 +2,8 @@ package github.com.gengyoubo.sscfa.config;
 
 /** 客户端配置（Forge 简化版）：保留 HUD 布局/开关字段，后续可接入 Forge Config。 */
 public class SSCAddonClientConfig {
+    public github.com.gengyoubo.sscfa.client.particle.ParticleAvoidance.Strength firstPersonParticleAvoidance =
+            github.com.gengyoubo.sscfa.client.particle.ParticleAvoidance.Strength.OFF;
     public boolean showChargeBar = true;
     public boolean showCdBar = true;
     public boolean showCdSeconds = true;
