@@ -8,9 +8,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * 形态协同快照（Forge 简化实现）。保留施法流程所需的 Timing/plan/pay/effect 接口；
- * 各形态链接（悦灵/蝙蝠/王庭/冰霜/豹猫/月织蛛）与原生法力支付待能力层移植后补回。
- */
+ * 鐟滆埇鍨洪埀顑跨瀹曟宕ョ仦鑺ュ渐闁绘挆宥囩Forge 缂佺姭鍋撻柛鏍ㄧ墪閻ゅ嫰鎮崇敮顔剧闁靛棗鍊风换姘舵偩濞嗘劖鐓㈡繛澶嬫礃缁侊妇绮欑€ｎ偄顣查梻鍥ｅ亾闁?Timing/plan/pay/effect 闁规亽鍎辫ぐ娑㈡晬? * 闁告艾瀚懜浼村箑娓氣偓閹藉ジ骞掗妷顖滅闁诡噯濡囨导?闁撅附鐟ㄥ?闁绘粌顑呭☉?闁告劒鍗冲﹢?閻犵偛婀辩亸?闁哄牆鐗忕划鎰版憘濞戝磭绀嗗☉鎾抽鐢偊鎮介悢鍝ャ€婇柛鏃€绋掗弫顔界濡櫣绐￠柤瀹犳婵繒浠﹂崒婧炩晛顪冨鍛€甸悶娑栧劚濞叉牠濡? */
 public final class FormSpellStyle {
     private static final ThreadLocal<FormSpellStyle> EFFECT = new ThreadLocal<>();
 
@@ -133,5 +131,6 @@ public final class FormSpellStyle {
         return best;
     }
 
-    public static void register() {}
+    public static CourtSpellLink.Cast currentCourt() { return null; }
+public static void register() {}
 }

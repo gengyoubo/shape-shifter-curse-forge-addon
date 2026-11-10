@@ -3,7 +3,7 @@ package github.com.gengyoubo.sscfa.compat;
 import net.minecraft.world.entity.player.Player;
 import net.onixary.shapeShifterCurseForge.power.FormActivePowerService;
 
-/** 娉曞姏璧勬簮鍏煎灞傦細鏄犲皠鍒?Forge SSC 鐨?FormActivePowerService銆?*/
+/** 法力资源兼容层：映射?Forge SSC ?FormActivePowerService?*/
 public final class ManaUtils {
     private ManaUtils() {}
 

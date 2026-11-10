@@ -9,6 +9,7 @@ import github.com.gengyoubo.sscfa.client.screen.EnergyBottlerScreen;
 import github.com.gengyoubo.sscfa.client.renderer.PotionStorageBoxRenderer;
 import github.com.gengyoubo.sscfa.client.screen.PotionStorageBoxScreen;
 import github.com.gengyoubo.sscfa.client.screen.SpellbookScreen;
+import github.com.gengyoubo.sscfa.client.screen.PotionBagScreen;
 import github.com.gengyoubo.sscfa.client.mana.AllaySPManaBar;
 import github.com.gengyoubo.sscfa.client.mana.AnubisWolfSPSoulBar;
 import github.com.gengyoubo.sscfa.client.mana.BatDesmodusBloodBar;
@@ -44,7 +45,7 @@ public final class AddonClientEvents {
         event.registerBlockEntityRenderer(AddonBlockEntities.ENERGY_STORAGE_TANK.get(), EnergyStorageTankRenderer::new);
         event.registerBlockEntityRenderer(AddonBlockEntities.ENERGY_BOTTLER.get(), EnergyBottlerRenderer::new);
         event.registerBlockEntityRenderer(AddonBlockEntities.POTION_STORAGE_BOX.get(), PotionStorageBoxRenderer::new);
-        // 实体渲染器尚未迁移：先注册不可见的占位渲染器（缺渲染器的实体一进入视野客户端就会崩溃）
+        // 瀹炰綋娓叉煋鍣ㄥ皻鏈縼绉伙細鍏堟敞鍐屼笉鍙鐨勫崰浣嶆覆鏌撳櫒锛堢己娓叉煋鍣ㄧ殑瀹炰綋涓€杩涘叆瑙嗛噹瀹㈡埛绔氨浼氬穿婧冿級
         AddonEntities.shellProjectiles().forEach(type -> event.registerEntityRenderer(type.get(), NoopRenderer::new));
         event.registerEntityRenderer(AddonEntities.SPELL_FIRE_BOLT.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(AddonEntities.SPELL_FROST_SPIKE.get(), github.com.gengyoubo.sscfa.client.renderer.SpellFrostSpikeRenderer::new);
@@ -82,6 +83,7 @@ public final class AddonClientEvents {
             MenuScreens.register(AddonMenus.ENERGY_BOTTLER.get(), EnergyBottlerScreen::new);
             MenuScreens.register(AddonMenus.POTION_STORAGE_BOX.get(), PotionStorageBoxScreen::new);
         MenuScreens.register(AddonMenus.SPELLBOOK_SCREEN_HANDLER.get(), SpellbookScreen::new);
+        MenuScreens.register(AddonMenus.POTION_BAG_SCREEN_HANDLER.get(), PotionBagScreen::new);
         SimpleResourceBarRenderer.register(new AllaySPManaBar());
         SimpleResourceBarRenderer.register(new AnubisWolfSPSoulBar());
         SimpleResourceBarRenderer.register(new BatDesmodusBloodBar());

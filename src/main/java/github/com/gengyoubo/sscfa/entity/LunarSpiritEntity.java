@@ -6,7 +6,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.UUID;
 
-/** 月灵实体（Forge 简化）：保留目标联动所需接口。 */
+/** 閺堝牏浼掔€圭偘缍嬮敍鍦榦rge 缁犫偓閸栨牭绱氶敍姘箽閻ｆ瑧娲伴弽鍥粓閸斻劍澧嶉棁鈧幒銉ュ經閵?*/
 public class LunarSpiritEntity extends ShellMob {
     public static final int TIER_OWNER_ATTACKED = 1;
     public static final int TIER_DEFENSE = 2;
@@ -24,6 +24,14 @@ public class LunarSpiritEntity extends ShellMob {
     public void setOwnerUuid(UUID ownerUuid) {
         this.ownerUuid = ownerUuid;
     }
+
+    public void ssca$summonAnomaly(Object anomaly) {}
+
+    public void setLifeTicks(int ticks) {}
+
+    public void setVariant(int variant) {}
+
+    public void setFormationSlot(int slot) {}
 
     public void offerTarget(Entity target, int tier) {
     }

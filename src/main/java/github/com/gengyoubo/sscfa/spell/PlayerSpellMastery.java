@@ -3,7 +3,7 @@ package github.com.gengyoubo.sscfa.spell;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
-/** 法术熟练度（Forge 占位）：经验/等级机制待 NeoMagic 运行时移植后补回。 */
+/** 娉曟湳鐔熺粌搴︼紙Forge 鍗犱綅锛夛細缁忛獙/绛夌骇鏈哄埗寰?NeoMagic 杩愯鏃剁Щ妞嶅悗琛ュ洖銆?*/
 public final class PlayerSpellMastery {
     public static final int EXPERIENCE_PER_LEVEL_TEN = 6000;
 
@@ -26,6 +26,8 @@ public final class PlayerSpellMastery {
     public static int bonus(int experience) {
         return tier(experience) * 50;
     }
+
+    public static int clientExpTen() { return 0; }
 
     public static void grant(ServerPlayer player, ItemStack book, int expTen) {
     }

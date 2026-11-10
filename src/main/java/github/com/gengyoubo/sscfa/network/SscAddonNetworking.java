@@ -4,9 +4,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * 闂傚倸鍊搁崐鎼佸磹閸濄儮鍋撳鐓庡闁逞屽墯閸戝綊宕滈悢鐓庣畾闁割偅鎯婇悢鍏煎殐闁冲搫鍠涚槐鎾⒒娴ｇ儤鍤€妞ゆ洦鍘介幈銊╂倻閽樺顔夐梺鍝勬储閸ㄦ椽鍩涢幋鐐簻闁规澘澧庨崚浼存煕濠靛棙鎯堥棁?ID 闂傚倸鍊搁崐鎼佸磹缁嬭娑樜旈埀顒冪亱濠德板€曢幊搴ｇ不閺嶎厼绠规繛锝庡墮婵′粙鏌￠崪浣稿⒋闁哄本鐩弫鍌涙姜閹稿孩娑e 闂傚倸鍊烽懗鍓佸垝椤栫偑鈧啴宕ㄧ€涙ê浜遍梺缁樺姇閻忔岸锝為弴鐔稿弿婵☆垱瀵х涵鐐交濠靛洨绠鹃柟鎯х摠閻ㄦ垿鏌ｅΔ浣稿胶ric 闂傚倸鍊烽懗鍓佸垝椤栫偑鈧啴宕ㄧ€涙ê浜遍棅顐㈡处缁嬫垿寮?{@code ServerPlayNetworking} ?ResourceLocation
- * 分通道；这里保留同样的通?????ID，实际收发??{@link AddonNetwork}? *
- * <p>目前只声明法术系统需要的通道；其余能力相关通道随能力层移植逐步补?????/p>
+ * 闂傚倸鍊搁崐鎼佸磹閹间礁纾归柛婵勫劗閸嬫挸顫濋悡搴☆潾闂侀€炲苯澧柛鎴濈秺瀹曟粓鎮㈤悡搴ｇ暰闂佸壊鍋呴幆濠囨偄閸忕厧娈愰梺鍐叉惈閸犳稓妲愰幘顔解拻濞达絿鍎ら崵鈧銈嗘处閸樹粙骞堥妸鈺傚€婚柦妯侯槺椤斿姊洪崫鍕偍闁搞劍妞介崺娑㈠箣閻愵亙绨婚梺瑙勬緲婢у酣宕氭导瀛樼厱婵犻潧妫欓幆鍫ユ?ID 闂傚倸鍊搁崐鎼佸磹閹间礁纾圭紒瀣嚦濞戞鏃堝焵椤掑啰浜辨繝寰锋澘鈧洟骞婃惔锝囦笉闁哄稁鍘肩粻瑙勭箾閿濆骸澧┑鈥茬矙閺岋繝宕担绋库拫闂佸搫鏈惄顖炲极閸屾稒濮滈柟绋垮濞戭湱e 闂傚倸鍊搁崐鐑芥嚄閸撲礁鍨濇い鏍亼閳ь剙鍟村畷銊р偓娑櫭禍閬嶆⒑缂佹ê濮囬柣蹇斿哺閿濈偤寮撮悢绋垮伎濠碘槅鍨辩€笛呮兜閻愵剚浜ゆ繝闈涙川缁犻箖鏌熼幆褏鎽犻柣銊﹀灴閺岋絽螖娴ｇ鑳秗ic 闂傚倸鍊搁崐鐑芥嚄閸撲礁鍨濇い鏍亼閳ь剙鍟村畷銊р偓娑櫭禍閬嶆椤愩垺澶勭紒瀣灴瀵?{@code ServerPlayNetworking} ?ResourceLocation
+ * 鍒嗛€氶亾锛涜繖閲屼繚鐣欏悓鏍风殑閫?????ID锛屽疄闄呮敹鍙??{@link AddonNetwork}? *
+ * <p>鐩墠鍙０鏄庢硶鏈郴缁熼渶瑕佺殑閫氶亾锛涘叾浣欒兘鍔涚浉鍏抽€氶亾闅忚兘鍔涘眰绉绘閫愭琛?????/p>
  */
 public final class SscAddonNetworking {
 	public static final ResourceLocation PACKET_SPELL_CAST = new ResourceLocation("my_addon", "spell_cast");
@@ -26,7 +26,7 @@ public final class SscAddonNetworking {
 
 	private SscAddonNetworking() {}
 
-	/** 服务端接收器注册入口（???{@link AddonNetwork#init()} 之后调???*/
+	/** 鏈嶅姟绔帴鏀跺櫒娉ㄥ唽鍏ュ彛锛???{@link AddonNetwork#init()} 涔嬪悗璋???*/
 	public static void registerServerReceivers() {
 		AddonNetwork.registerServerReceiver(PACKET_SPELL_CAST, (player, buf) -> {
 			int slot = buf.readVarInt();
@@ -67,7 +67,7 @@ public final class SscAddonNetworking {
 				github.com.gengyoubo.sscfa.evolution.EvolutionManager.checkAndMigrate(player));
 	}
 
-	/** 白??GUI 同步（能力层移植后接入?????*/
+	/** 鐧??GUI 鍚屾锛堣兘鍔涘眰绉绘鍚庢帴鍏?????*/
 	public static void syncFallenAllayVexWindow(ServerPlayer player, int windowTicks) {}
 	public static void syncFrostSpikeChargeState(ServerPlayer player, boolean charging) {}
 
@@ -93,4 +93,5 @@ public final class SscAddonNetworking {
 	public static void syncSwingState(ServerPlayer player, boolean active, double x, double y, double z) {}
 	public static void syncSwingState(ServerPlayer player, boolean active, double x, double y, double z, double ropeLen, int state, boolean canExtend, int tetherId) {}
 	public static void syncSpearChargeState(ServerPlayer player, boolean charging) {}
+	public static void sendOpenJobChange(ServerPlayer player) {}
 }

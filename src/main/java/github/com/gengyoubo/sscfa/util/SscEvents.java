@@ -25,7 +25,7 @@ import net.minecraftforge.event.server.ServerStoppingEvent;
 
 import java.util.function.Consumer;
 
-/** Forge 浜嬩欢閫傞厤灞傦細???Fabric 椋庢牸鍥炶皟娉ㄥ唽鏈嶅姟绔簨浠???*/
+/** Forge 事件适配层：???Fabric 风格回调注册服务端事???*/
 public final class SscEvents {
     private SscEvents() {}
 
