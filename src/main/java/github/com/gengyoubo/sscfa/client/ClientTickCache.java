@@ -19,9 +19,28 @@ public final class ClientTickCache {
         return book == null || book.isEmpty() ? null : book;
     }
 
-    public static boolean isWearing(Item item) { return false; }
+    public static boolean isWearing(Item item) {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.player != null && TrinketUtils.isWearing(mc.player, item);
+    }
+
     public static float frostForgeProgress() { return -1f; }
-    public static boolean hasHoverThorn() { return false; }
-    public static int hoverThornCount() { return 0; }
+
+    public static boolean hasHoverThorn() { return hoverThornCount() > 0; }
+
+    public static int hoverThornCount() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return 0;
+        java.util.UUID owner = mc.player.getUUID();
+        var scan = mc.player.getBoundingBox().inflate(8.0);
+        int count = 0;
+        for (var thorn : mc.level.getEntitiesOfClass(
+                github.com.gengyoubo.sscfa.entity.FrostThornEntity.class, scan,
+                e -> e.isHover() && owner.equals(e.getOwnerUuid().orElse(null)))) {
+            count++;
+        }
+        return count;
+    }
+
     public static double tidalTetherFraction() { return -1.0; }
 }

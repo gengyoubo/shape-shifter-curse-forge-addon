@@ -33,8 +33,32 @@ public final class SscAddonForge {
         AddonRegistries.init(bus);
         AddonForms.init();
         AddonNetwork.init();
+
+        // 客户端表现层 S2C 通道声明：服务端据此判断对端能否接收
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_CLAW_STATE);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_DASH_STATE);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_NOVA_LEAP_WINDOW);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_FALLEN_ALLAY_VEX_WINDOW);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_SPOOK_GHOST);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_WEB_HIGHLIGHT);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_DREAM_VEIL);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_FEAR_STATE);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_FEAR_HIDE);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_FEAR_REVEAL);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_JUMP_KILL_SILK_STATE);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_SPEAR_CHARGE_STATE);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_FROST_SPIKE_CHARGE_STATE);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_SPIDER_MOON_WEAVER_SWING_STATE);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_TIDAL_TETHER);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_OPEN_JOB_CHANGE);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_WHITELIST_GUI_SYNC);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_EVO_ROUTES_SYNC);
+        AddonNetwork.clientbound(SscAddonNetworking.PACKET_ANIM_DEBUG_TOGGLE);
+
         BalanceIntegration.initServer(SscBalanceSchema.create());
         SkillCooldownSync.init();
+        github.com.gengyoubo.sscfa.network.CountdownSync.init();
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.CountdownSync.STATE);
         AddonPowerTypes.init();
 
         // 法术系统

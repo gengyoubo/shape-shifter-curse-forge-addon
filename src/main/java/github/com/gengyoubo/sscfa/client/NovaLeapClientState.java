@@ -17,6 +17,18 @@ public final class NovaLeapClientState {
     private NovaLeapClientState() {
     }
 
+    public static void register() {
+        github.com.gengyoubo.sscfa.network.AddonNetwork.registerClientReceiver(
+                github.com.gengyoubo.sscfa.network.SscAddonNetworking.PACKET_NOVA_LEAP_WINDOW, buf -> {
+                    int ticks = buf.readVarInt();
+                    net.minecraft.client.multiplayer.ClientLevel world =
+                            net.minecraft.client.Minecraft.getInstance().level;
+                    update(ticks, world == null ? 0L : world.getGameTime());
+                });
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) -> clear());
+    }
+
     /** 窗口开启（>0，anchorTick 为收到时的客户端 tick）或关闭（0）。 */
     public static void update(int ticks, long anchorTick) {
         windowTicks = Math.max(0, ticks);

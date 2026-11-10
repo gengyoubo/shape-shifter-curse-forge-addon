@@ -26,6 +26,8 @@ public final class AddonSkillKeys {
 	}
 
 	private static volatile Router router = primary -> null;
+	private static final VirtualSkillKey PRIMARY = new VirtualSkillKey(AddonPowerTypes.SP_PRIMARY_KEY, true);
+	private static final VirtualSkillKey SECONDARY = new VirtualSkillKey(AddonPowerTypes.SP_SECONDARY_KEY, false);
 
 	private AddonSkillKeys() {}
 
@@ -35,8 +37,18 @@ public final class AddonSkillKeys {
 
 	/** 客户端初始化时调用一次。 */
 	public static void init() {
-		SscClientKeys.register(new VirtualSkillKey(AddonPowerTypes.SP_PRIMARY_KEY, true));
-		SscClientKeys.register(new VirtualSkillKey(AddonPowerTypes.SP_SECONDARY_KEY, false));
+		SscClientKeys.register(PRIMARY);
+		SscClientKeys.register(SECONDARY);
+	}
+
+	/** 主技能虚拟键（isDown 动态计算）。 */
+	public static KeyMapping primaryKey() {
+		return PRIMARY;
+	}
+
+	/** 副技能虚拟键（isDown 动态计算）。 */
+	public static KeyMapping secondaryKey() {
+		return SECONDARY;
 	}
 
 	/** 技能键当前是否按下。 */
@@ -44,6 +56,7 @@ public final class AddonSkillKeys {
 		Minecraft minecraft = Minecraft.getInstance();
 		// 任何界面打开时不触发技能（与原版键位一致）
 		if (minecraft.screen != null || minecraft.player == null || AbilityUseGuard.blocked(minecraft.player)) return false;
+		if (github.com.gengyoubo.sscfa.client.PlayDeadEndClient.blocksSkillInput(primary)) return false;
 		Boolean routed = router.pressed(primary);
 		if (routed != null) return routed;
 		int slot = primary ? 0 : 1;

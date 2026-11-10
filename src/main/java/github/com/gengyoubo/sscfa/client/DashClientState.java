@@ -25,6 +25,14 @@ public final class DashClientState {
     private DashClientState() {
     }
 
+    public static void register() {
+        github.com.gengyoubo.sscfa.network.AddonNetwork.registerClientReceiver(
+                github.com.gengyoubo.sscfa.network.SscAddonNetworking.PACKET_DASH_STATE, buf ->
+                        update(buf.readInt(), buf.readDouble(), buf.readDouble(), buf.readDouble()));
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) -> reset());
+    }
+
     public static void update(int p, double y) {
         update(p, y, 16.0, 3.0);
     }

@@ -19,15 +19,16 @@ public final class PowerUtils {
 		return (int) Math.round(FormActivePowerService.resource(player, resourceId));
 	}
 
-	/** 客户端读取（HUD 等）。 */
+	/** 客户端读取（HUD 等）；有倒计时预测时优先使用预测值。 */
 	public static int getClientResourceValue(Player player, ResourceLocation resourceId) {
-		return getResourceValue(player, resourceId);
+		Integer predicted = github.com.gengyoubo.sscfa.network.CountdownPrediction.predicted(player, resourceId);
+		return predicted != null ? predicted : getResourceValue(player, resourceId);
 	}
 
 	/** 客户端读取当前值与上限：{@code {current, max}}，上限缺失时为 1。 */
 	public static int[] getClientResourceValueAndMax(Player player, ResourceLocation resourceId) {
 		int max = getResourceMax(resourceId);
-		return new int[]{getResourceValue(player, resourceId), max > 0 ? max : 1};
+		return new int[]{getClientResourceValue(player, resourceId), max > 0 ? max : 1};
 	}
 
 	/** 设值（按 JSON 上下限夹取）并同步给本人。 */
@@ -42,9 +43,12 @@ public final class PowerUtils {
 		setResourceValue(player, resourceId, value);
 	}
 
-	/** 每 tick 递减的倒计时资源；SSC Forge 的资源同步只在值变化时发包。 */
+	/** 每 tick 递减的倒计时资源；登记到倒计时批量同步以减少每 tick 小包。 */
 	public static void countDownAndSync(ServerPlayer player, ResourceLocation resourceId, int value) {
 		setResourceValue(player, resourceId, value);
+		if (player != null && !player.level().isClientSide()) {
+			github.com.gengyoubo.sscfa.network.CountdownSync.mark(player, resourceId);
+		}
 	}
 
 	/** 增减（按 JSON 上下限夹取）并同步。 */
@@ -61,6 +65,12 @@ public final class PowerUtils {
 	public static int getResourceMax(ResourceLocation resourceId) {
 		JsonObject definition = PowerJson.definition(resourceId);
 		return definition != null && definition.has("max") ? definition.get("max").getAsInt() : 0;
+	}
+
+	/** 资源下限（JSON 的 min）；未写时按 0。 */
+	public static int getResourceMin(ResourceLocation resourceId) {
+		JsonObject definition = PowerJson.definition(resourceId);
+		return definition != null && definition.has("min") ? definition.get("min").getAsInt() : 0;
 	}
 
 	public static int getResourceMax(ServerPlayer player, ResourceLocation resourceId) {

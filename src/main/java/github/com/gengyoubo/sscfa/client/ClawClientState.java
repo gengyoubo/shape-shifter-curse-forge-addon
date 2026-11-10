@@ -17,6 +17,20 @@ public final class ClawClientState {
     private ClawClientState() {
     }
 
+    public static void register() {
+        github.com.gengyoubo.sscfa.network.AddonNetwork.registerClientReceiver(
+                github.com.gengyoubo.sscfa.network.SscAddonNetworking.PACKET_CLAW_STATE, buf -> {
+                    int newPhase = buf.readInt();
+                    float progress = buf.readFloat();
+                    float step = buf.readFloat();
+                    long serverTime = buf.readLong();
+                    buf.readResourceLocation();
+                    update(newPhase, progress, step, serverTime);
+                });
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) -> reset());
+    }
+
     public static void update(int newPhase, float progress, float step, long serverTime) {
         phase = newPhase;
         crosshairProgress = progress;

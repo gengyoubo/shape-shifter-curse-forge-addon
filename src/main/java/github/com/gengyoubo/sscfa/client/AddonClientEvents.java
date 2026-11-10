@@ -57,6 +57,12 @@ public final class AddonClientEvents {
         event.registerEntityRenderer(AddonEntities.GHOST_CAT.get(), NoopRenderer::new);
         event.registerEntityRenderer(AddonEntities.WITCH_FAMILIAR.get(), NoopRenderer::new);
         event.registerEntityRenderer(AddonEntities.AXOLOTL_SHIFTER.get(), NoopRenderer::new);
+        event.registerEntityRenderer(AddonEntities.TIDAL_ORB.get(), github.com.gengyoubo.sscfa.client.renderer.TidalOrbRenderer::new);
+        event.registerEntityRenderer(AddonEntities.GHOST_CAT.get(), github.com.gengyoubo.sscfa.client.renderer.GhostCatRenderer::new);
+        event.registerEntityRenderer(AddonEntities.FROST_THORN.get(), github.com.gengyoubo.sscfa.client.renderer.FrostThornEntityRenderer::new);
+        event.registerEntityRenderer(AddonEntities.FROST_ARRAY.get(), NoopRenderer::new);
+        event.registerEntityRenderer(AddonEntities.FROST_STORM.get(), NoopRenderer::new);
+        event.registerEntityRenderer(AddonEntities.LASER_BEAM.get(), NoopRenderer::new);
     }
 
     @SubscribeEvent
@@ -73,13 +79,48 @@ public final class AddonClientEvents {
     @SubscribeEvent
     public static void registerScreens(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            runMixinAuditIfRequested();
             BalanceClient.init(SscBalanceSchema.create());
+            CountdownClient.register();
             SkillCooldownClient.init();
             AddonSkillKeys.init();
+            ClientTickCache.register();
+            ClawClientState.register();
+            DashClientState.register();
+            NovaLeapClientState.register();
+            FallenAllayVexClientState.register();
+            AxolotlSprintKeyClient.register();
+            FluorescentKeyClient.register();
+            JumpKillClient.register();
+            UpgradeAxolotlSkillClient.register();
+            VenomSkillClient.register();
+            VortexChargeClient.register();
+            PlayDeadEndClient.register();
+            SheepFormCameraController.register();
+            WindSpiritClawClient.register();
+            WindDashClient.register();
+            MancianimaCrosshairTracker.register();
+            NightmareSpookClient.register();
+            WebHighlightClient.register();
+            DreamVeilRenderer.register();
+            NightmareFearClient.register();
+            JumpKillSilkClient.register();
+            UpgradeAxolotlSpearRenderState.register();
+            FrostSpikeChargeClientState.register();
+            SpiderMoonWeaverSwingClient.register();
+            SpiderMoonWeaverSwingRenderer.register();
+            SpiderMoonWeaverDoubleJumpClient.register();
+            SpiderMoonWeaverAnimDebugHud.register();
+            github.com.gengyoubo.sscfa.client.renderer.TidalTetherBeamRenderer.register();
+            github.com.gengyoubo.sscfa.client.evolution.JobChangeSelectScreen.register();
+            github.com.gengyoubo.sscfa.client.screen.WhitelistManageScreen.register();
+            github.com.gengyoubo.sscfa.client.evolution.EvolutionClientSync.register();
             SpellcastClient.register();
             CastingVisualState.register();
             SpellbookStatusClient.init();
             github.com.gengyoubo.sscfa.client.hud.SpellbookHudRenderer.register();
+            github.com.gengyoubo.sscfa.client.hud.SkillCooldownBarRenderer.register();
+            github.com.gengyoubo.sscfa.client.renderer.CurseMarkIconRenderer.register();
             MenuScreens.register(AddonMenus.ENERGY_BOTTLER.get(), EnergyBottlerScreen::new);
             MenuScreens.register(AddonMenus.POTION_STORAGE_BOX.get(), PotionStorageBoxScreen::new);
         MenuScreens.register(AddonMenus.SPELLBOOK_SCREEN_HANDLER.get(), SpellbookScreen::new);
@@ -91,7 +132,6 @@ public final class AddonClientEvents {
         SimpleResourceBarRenderer.register(new SnowFoxSPManaBar());
         github.com.gengyoubo.sscfa.client.NineLivesHudRenderer.register();
         github.com.gengyoubo.sscfa.client.SeedEnergyHudRenderer.register();
-        github.com.gengyoubo.sscfa.client.SkillCooldownClient.init();
         github.com.gengyoubo.sscfa.client.MoistureWaterRecoveryClient.register();
             var empty = new ResourceLocation(SscAddonForge.MOD_ID, "empty");
             for (var item : java.util.List.of(AddonItems.INFINITE_ENERGY_POTION, AddonItems.INFINITE_ENERGY_POTION_SPLASH, AddonItems.INFINITE_ENERGY_POTION_LINGERING)) {
@@ -104,4 +144,12 @@ public final class AddonClientEvents {
         });
     }
 
+    /** 开发用：以 {@code -Dssca.mixinAudit=true} 启动时，把客户端 mixin 的目标类全部加载一遍并把失败项写进日志。 */
+    private static void runMixinAuditIfRequested() {
+        if (!Boolean.getBoolean("ssca.mixinAudit")) return;
+        var failures = github.com.gengyoubo.sscfa.util.MixinAudit.run("mixins", "client");
+        var logger = org.slf4j.LoggerFactory.getLogger("ssc_addon/MixinAudit");
+        failures.forEach(failure -> logger.error("MixinAudit FAILED {}", failure));
+        logger.info("MixinAudit finished: {} failure(s)", failures.size());
+    }
 }

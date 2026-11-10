@@ -56,6 +56,8 @@
     "entity.ParasiticAbsorptionMixin",
     "item.BrewingStandInfinitePotionMixin",
     "item.MoonDustBrewingMixin",
+    "item.MoonDustBrewingInventoryMixin",
+    "item.MoonDustBrewingSlotMixin",
     "item.WitherPotionStackMixin",
     "item.BrewingRegistryInfiniteMixin",
     "item.ScreenHandlerMixin",
@@ -81,7 +83,11 @@
     "InstinctAnchorMixin",
     "SscAddonCodexStatusMixin",
     "player.PlayerInventoryMixin",
-    "player.PlayerDisconnectCleanupMixin"
+    "player.PlayerDisconnectCleanupMixin",
+    "player.SscPlayerMixin",
+    "entity.FallenAllayVexMixin",
+    "entity.MancianimaProjectileMixin",
+    "entity.windspirit.WindSpiritProjectilePressureMixin"
   ],
   "client": [
     "client.FrozenNativeStateAccessor",
@@ -101,7 +107,24 @@
     "client.LunarTargetOutlineMixin",
     "client.DomainCameraWallMixin",
     "client.LunarTargetColorMixin",
-    "client.PotionBagCooldownBypassMixin"
+    "client.PotionBagCooldownBypassMixin",
+    "client.FrozenScreenMixin",
+    "client.SpookGhostVisibleMixin",
+    "client.CreativePotionStackMixin",
+    "client.EntityWebGlowMixin",
+    "client.FearFogMixin",
+    "client.FearHideRendererMixin",
+    "client.SpellCastFirstPersonMixin",
+    "client.SpellCastPoseMixin",
+    "input.SheepFormInputMixin",
+    "input.SpellcastMouseScrollMixin",
+    "input.StunnedCameraMixin",
+    "input.StunnedInputMixin",
+    "input.StunnedKeyBindingMixin",
+    "render.WaterSpearInventoryMixin",
+    "render.SheepFormRenderMixin",
+    "render.UpgradeAxolotlFirstPersonSpearMixin",
+    "render.UpgradeAxolotlThirdPersonSpearMixin"
   ],
   "injectors": {
     "defaultRequire": 1

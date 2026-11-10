@@ -1,0 +1,72 @@
+package github.com.gengyoubo.sscfa.mixin.client;
+
+import io.github.apace100.apoli.component.PowerHolderComponent;
+import github.com.gengyoubo.sscfa.item.PotionTestTubes;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.PotionItem;
+import io.github.apace100.apoli.power.ModifyPotionStackPower;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+
+/**
+ * 创造模式物品栏：让使魔等「药水可叠加」形态在创造界面拿取药水时，把叠加上限从原版的 1
+ * 提升为形态赋予的 {@link ModifyPotionStackPower} 的 count（N），使三键手感与普通可叠加物品一致：
+ * 左键逐个 +1、中键(CLONE)/Shift 一次拿满 N、右键 -1。
+ *
+ * <p>原理：原版 {@code CreativeInventoryScreen.onMouseClick} 用 {@link ItemStack#getMaxStackSize()}（药水固定 1）
+ * 判定堆叠/拿取上限，不走生存物品栏那条 {@code Slot.getMaxItemCount} 路径，所以创造模式叠不起来。
+ * 这里仅对药水、且玩家持有 {@link ModifyPotionStackPower} 时把该上限改为 N；非药水或未持有时保持原版行为。
+ */
+@Mixin(CreativeModeInventoryScreen.class)
+public class CreativePotionStackMixin {
+
+	@WrapOperation(
+			method = "slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ClickType;)V",
+			at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;getMaxStackSize()I"),
+			require = 0
+	)
+	private int ssc_addon$potionCreativeStackLimit(ItemStack stack, Operation<Integer> original) {
+		if (PotionTestTubes.hasCustomStackLimit(stack)) {
+			return PotionTestTubes.stackLimit(stack, Minecraft.getInstance().player);
+		}
+		if (stack.getItem() instanceof github.com.gengyoubo.sscfa.item.WitherPotionItem) {
+			return Math.max(github.com.gengyoubo.sscfa.item.WitherPotionItem
+					.getStackLimitFor(Minecraft.getInstance().player), original.call(stack));
+		}
+		// 通用能量药水：与生存物品栏同源，按 ModifyPotionStackPower 抬升拿取上限
+		if (stack.getItem() instanceof github.com.gengyoubo.sscfa.item.UniversalEnergyPotionItem) {
+			Player player = Minecraft.getInstance().player;
+			if (player != null) {
+				int n = PowerHolderComponent.getPowers(player, ModifyPotionStackPower.class)
+						.stream()
+						.filter(power -> !power.isOnlyWaterPotion())
+						.mapToInt(ModifyPotionStackPower::getCount)
+						.max()
+						.orElse(0);
+				if (n > 0) {
+					return Math.max(n, original.call(stack));
+				}
+			}
+			return original.call(stack);
+		}
+		if (stack.getItem() instanceof PotionItem) {
+			Player player = Minecraft.getInstance().player;
+			if (player != null) {
+				int n = PowerHolderComponent.getPowers(player, ModifyPotionStackPower.class)
+						.stream()
+						.mapToInt(ModifyPotionStackPower::getCount)
+						.max()
+						.orElse(0);
+				if (n > 0) {
+					return Math.max(n, original.call(stack));
+				}
+			}
+		}
+		return original.call(stack);
+	}
+}

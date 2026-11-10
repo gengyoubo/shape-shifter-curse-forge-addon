@@ -92,6 +92,11 @@ public final class AddonNetwork {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new Payload(id, buf));
     }
 
+    /** 发给正在追踪该玩家的所有客户端和该玩家自己（旁人也要看到的表现状态用）。 */
+    public static void sendToTrackingAndSelf(ServerPlayer player, ResourceLocation id, FriendlyByteBuf buf) {
+        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player), new Payload(id, buf));
+    }
+
     /** 只在客户端调用。 */
     public static void sendToServer(ResourceLocation id, FriendlyByteBuf buf) {
         CHANNEL.sendToServer(new Payload(id, buf));
