@@ -19,6 +19,14 @@ public final class AddonPowerTypes {
 		SscJavaRegistries.registerPowerType(FamiliarSkill.TYPE, new FamiliarSkill());
 		SscJavaRegistries.registerPowerType(BatSonicWaveAbilityPower.TYPE, new BatSonicWaveAbilityPower());
 		SscJavaRegistries.registerPowerType(MistFormAbilityPower.TYPE, new MistFormAbilityPower());
+		SscJavaRegistries.registerPowerType(TrueInvisibilityAbilityPower.TYPE, new TrueInvisibilityAbilityPower());
+		SscJavaRegistries.registerPowerType(TrueInvisibilityDashAbilityPower.TYPE, new TrueInvisibilityDashAbilityPower());
+		SscJavaRegistries.registerPowerType(ParasiticFruitSeedPower.TYPE, new ParasiticFruitSeedPower());
+		SscJavaRegistries.registerPowerType(ParasiticSporeBombPower.TYPE, new ParasiticSporeBombPower());
+		SscJavaRegistries.registerPowerType(FruitBatPlantGrowthPower.TYPE, new FruitBatPlantGrowthPower());
+		SscJavaRegistries.registerPowerType(SnowFoxSpFormSpeedPower.TYPE, new SnowFoxSpFormSpeedPower());
+		SscJavaRegistries.registerPowerType(BlueFireRingVisualPower.TYPE, new BlueFireRingVisualPower());
+		SscJavaRegistries.registerPowerType(EffectEfficiencyReductionPower.TYPE, new EffectEfficiencyReductionPower());
 		AddonActionsAndConditions.init();
 	}
 }

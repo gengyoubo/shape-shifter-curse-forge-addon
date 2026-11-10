@@ -115,7 +115,7 @@ public abstract class MobEntityMixin {
         }
     }
 
-    @Inject(method = "mobTick", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "customServerAiStep", at = @At("HEAD"), cancellable = true)
     private void ssc_addon$onMobTick(CallbackInfo ci) {
         Mob mob = (Mob) (Object) this;
         if (!mob.level().isClientSide) {

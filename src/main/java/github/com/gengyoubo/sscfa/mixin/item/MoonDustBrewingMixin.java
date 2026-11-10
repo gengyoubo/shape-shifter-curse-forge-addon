@@ -31,16 +31,16 @@ public abstract class MoonDustBrewingMixin {
 
 @Mixin(BrewingStandBlockEntity.class)
 abstract class MoonDustBrewingInventoryMixin {
-    @Shadow public abstract ItemStack getStack(int slot);
-    @Inject(method = "isValid", at = @At("HEAD"), cancellable = true)
+    @Shadow public abstract ItemStack getItem(int slot);
+    @Inject(method = "canPlaceItem", at = @At("HEAD"), cancellable = true)
     private void ssca$moonDustBottle(int slot, ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
-        if (slot >= 0 && slot < 3 && MoonDustBrewing.isBottle(stack)) cir.setReturnValue(getStack(slot).isEmpty());
+        if (slot >= 0 && slot < 3 && MoonDustBrewing.isBottle(stack)) cir.setReturnValue(getItem(slot).isEmpty());
     }
 }
 
 @Mixin(targets = "net.minecraft.world.inventory.BrewingStandMenu$PotionSlot")
 abstract class MoonDustBrewingSlotMixin {
-    @Inject(method = "matches", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "mayPlaceItem", at = @At("HEAD"), cancellable = true)
     private static void ssca$moonDustBottle(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
         if (MoonDustBrewing.isBottle(stack)) cir.setReturnValue(true);
     }

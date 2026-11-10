@@ -48,18 +48,14 @@ public class PreInvisibilityEffect extends MobEffect {
 					SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 1.0f, 1.0f);
 
 			// 3. Find Power to get duration
-			int duration = 100; // Default 5s
-			List<TrueInvisibilityAbilityPower> powers = PowerHolderComponent.getPowers(entity, TrueInvisibilityAbilityPower.class);
-			if (!powers.isEmpty()) {
-				duration = powers.get(0).getEffectDuration();
-			}
+			int duration = TrueInvisibilityAbilityPower.getEffectDuration(entity, 100); // 没有该能力时默认 5 秒
 
 			// 4. Apply True Invisibility
 			entity.addEffect(new MobEffectInstance(github.com.gengyoubo.sscfa.init.AddonEffects.TRUE_INVISIBILITY.get(), duration, 0, false, false, true));
 			// 同步叠加原版隐身，确保服务器把“不可见”状态同步给其他客户端???
 			entity.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, duration, 0, false, false, false));
 			if (entity.hasEffect(github.com.gengyoubo.sscfa.init.AddonEffects.TRUE_INVISIBILITY.get())) {
-				for (TrueInvisibilityAbilityPower power : powers) power.onInvisibilityReleased();
+				TrueInvisibilityAbilityPower.onInvisibilityReleased(entity);
 			}
 
 			// 5. Notify Player

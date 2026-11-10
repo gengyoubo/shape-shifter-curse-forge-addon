@@ -57,6 +57,8 @@
     "item.BrewingStandInfinitePotionMixin",
     "item.MoonDustBrewingMixin",
     "item.WitherPotionStackMixin",
+    "item.BrewingRegistryInfiniteMixin",
+    "item.ScreenHandlerMixin",
     "FrozenEntityMixin",
     "FrozenExplosionKnockbackMixin",
     "FrozenNetworkMixin",
@@ -69,6 +71,7 @@
     "entity.ItemFrameGuardMixin",
     "entity.IronGolemAllayFlowerMixin",
     "entity.MobEntityMixin",
+    "entity.SscAddonLivingEntityMixin",
     "WanderingTraderTradeMixin",
     "item.BrewingPotionSlotMixin",
     "FormRegistryAliasMixin",
@@ -85,7 +88,20 @@
     "client.LivingEntityStatusEffectsAccessor",
     "render.LivingEntityRendererShadowFixMixin",
     "render.PlayerEntityModelAccessor",
-    "render.TrueInvisibilityArmorMixin"
+    "render.TrueInvisibilityArmorMixin",
+    "client.SoundRangeIdMixin",
+    "client.SoundRangeTrackingMixin",
+    "client.SoundRangePositionedMixin",
+    "client.SoundRangeSystemMixin",
+    "client.SoundManagerDeafenMixin",
+    "client.DomainSoundBarrierMixin",
+    "client.ClawCrosshairMixin",
+    "client.SpellbookHudLayerMixin",
+    "client.NovaSprintLockMixin",
+    "client.LunarTargetOutlineMixin",
+    "client.DomainCameraWallMixin",
+    "client.LunarTargetColorMixin",
+    "client.PotionBagCooldownBypassMixin"
   ],
   "injectors": {
     "defaultRequire": 1

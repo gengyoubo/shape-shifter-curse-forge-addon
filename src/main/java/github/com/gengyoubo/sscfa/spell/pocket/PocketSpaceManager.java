@@ -28,6 +28,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
+import github.com.gengyoubo.sscfa.block.PocketSpaceBlocks;
+import github.com.gengyoubo.sscfa.init.AddonBlocks;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -495,8 +497,8 @@ public final class PocketSpaceManager {
 			for (int blockZ = layout.minZ() - 3; blockZ <= layout.minZ() - 2; blockZ++) {
 				BlockPos pos = new BlockPos(blockX, PocketSpaceLayout.FLOOR_Y + 1, blockZ);
 				BlockState current = pocket.getBlockState(pos);
-				if (current.is(PocketSpaceBlocks.PORTAL)) {
-					BlockState expected = PocketSpaceBlocks.portalState(layout, blockX, blockZ);
+				if (current.is(AddonBlocks.POCKET_SPACE_PORTAL.get())) {
+					BlockState expected = portalState(layout, blockX, blockZ);
 					if (current != expected) pocket.setBlock(pos, expected, Block.UPDATE_CLIENTS);
 					if (pocket.getBlockEntity(pos) == null) {
 						pocket.setBlockEntity(new PocketSpaceBlocks.PortalBlockEntity(pos, pocket.getBlockState(pos)));
@@ -706,10 +708,10 @@ public final class PocketSpaceManager {
 					cursor++;
 					used++;
 					BlockState state = null;
-					if (layout.isPortal(blockX, blockY, blockZ)) state = PocketSpaceBlocks.portalState(layout, blockX, blockZ);
+					if (layout.isPortal(blockX, blockY, blockZ)) state = portalState(layout, blockX, blockZ);
 					else if (layout.isShell(blockX, blockY, blockZ)) {
-						state = blockY == PocketSpaceLayout.FLOOR_Y ? PocketSpaceBlocks.FLOOR.defaultBlockState()
-								: PocketSpaceBlocks.BEDROCK_WALL.defaultBlockState();
+						state = blockY == PocketSpaceLayout.FLOOR_Y ? AddonBlocks.POCKET_SPACE_FLOOR.get().defaultBlockState()
+								: AddonBlocks.POCKET_SPACE_BEDROCK_WALL.get().defaultBlockState();
 					}
 					if (state != null) world.setBlock(new BlockPos(blockX, blockY, blockZ), state, Block.UPDATE_CLIENTS);
 				}
@@ -718,5 +720,16 @@ public final class PocketSpaceManager {
 			}
 			return used;
 		}
+	}
+
+	/** 出口方块按它在出口凹槽里的位置取朝向。 */
+	private static BlockState portalState(PocketSpaceLayout layout, int blockX, int blockZ) {
+		net.minecraft.core.Direction facing = switch (layout.portalRotation(blockX, blockZ)) {
+			case 90 -> net.minecraft.core.Direction.EAST;
+			case 180 -> net.minecraft.core.Direction.SOUTH;
+			case 270 -> net.minecraft.core.Direction.WEST;
+			default -> net.minecraft.core.Direction.NORTH;
+		};
+		return AddonBlocks.POCKET_SPACE_PORTAL.get().defaultBlockState().setValue(PocketSpaceBlocks.PORTAL_FACING, facing);
 	}
 }

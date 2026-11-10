@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.At;
 /** Covers vanilla /particle, Apoli spawn_particles and SSC circles without changing their spawning logic. */
 @Mixin(ServerLevel.class)
 public abstract class DecorationParticlePacketMixin {
-    @WrapOperation(method = "sendParticles", at = @At(value = "INVOKE",
+    @WrapOperation(method = "sendParticles(Lnet/minecraft/server/level/ServerPlayer;ZDDDLnet/minecraft/network/protocol/Packet;)Z", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/server/network/ServerGamePacketListenerImpl;send(Lnet/minecraft/network/protocol/Packet;)V"))
     private void ssca$sendDecoration(ServerGamePacketListenerImpl handler, Packet<?> packet, Operation<Void> original) {
         if (!DecorationParticles.trySendScoped((ServerLevel) (Object) this, handler.player, packet))

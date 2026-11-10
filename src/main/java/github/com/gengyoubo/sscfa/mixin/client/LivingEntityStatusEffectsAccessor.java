@@ -9,12 +9,9 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * 恐惧视野限制用：直接暴露 {@code LivingEntity.activeStatusEffects}（效果实例 Map）。
- *
- * <p>背景：恐惧的雾需要「失明」作为载体（vanilla 雾管线 + 光影 blindness uniform 都认它），
- * 但受害者形态的 Apoli 效果免疫拦死 addStatusEffect 全部路径，故直接写 Map 绕过施加链
- * （免疫管不到 Map 写入，而雾管线每帧只查 Map）。光影下失明雾被 IrisShaderPackMixin
- * 内存替换为「粉色 + 12→16 格」版本；无光影时由 FearFogMixin 覆盖雾距/雾色。</p>
+ * 閹劖鍎崇憴鍡涘櫣闂勬劕鍩楅悽顭掔窗閻╁瓨甯撮弳鎾苟 {@code LivingEntity.activeStatusEffects}閿涘牊鏅ラ弸婊冪杽娓?Map閿涘鈧? *
+ * <p>閼冲本娅欓敍姘汗閹呮畱闂嗛箖娓剁憰浣碘偓灞姐亼閺勫簺鈧秳缍旀稉楦挎祰娴ｆ搫绱檝anilla 闂嗗墽顓哥痪?+ 閸忓濂?blindness uniform 闁€燁吇鐎瑰喛绱氶敍? * 娴ｅ棗褰堢€瑰疇鈧懎鑸伴幀浣烘畱 Apoli 閺佸牊鐏夐崗宥囨焻閹凤附顒?addStatusEffect 閸忋劑鍎寸捄顖氱窞閿涘本鏅犻惄瀛樺复閸?Map 缂佹洝绻冮弬钘夊闁? * 閿涘牆鍘ら悿顐ゎ吀娑撳秴鍩?Map 閸愭瑥鍙嗛敍宀冣偓宀勬禈缁狅紕鍤庡В蹇撴姎閸欘亝鐓?Map閿涘鈧倸鍘滆ぐ鍙樼瑓婢惰鲸妲戦梿鎹愵潶 IrisShaderPackMixin
+ * 閸愬懎鐡ㄩ弴鎸庡床娑撴亽鈧瞼鐭囬懝?+ 12閳?6 閺嶇鈧秶澧楅張顒婄幢閺冪姴鍘滆ぐ杈ㄦ閻?FearFogMixin 鐟曞棛娲婇梿鎹愮獩/闂嗘崘澹婇妴?/p>
  */
 @Mixin(LivingEntity.class)
 public interface LivingEntityStatusEffectsAccessor {

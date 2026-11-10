@@ -52,6 +52,7 @@ public final class ControlledAbilityInterruption {
         FluorescentTidalManager.interruptControl(player);
         FrostSpikeManager.interruptControl(player);
         AllaySPGroupHeal.interruptControl(player);
+        github.com.gengyoubo.sscfa.power.TrueInvisibilityAbilityPower.interruptControl(player);
         
         
         for (var cast : casts) {

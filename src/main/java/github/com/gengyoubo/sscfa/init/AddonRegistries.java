@@ -22,8 +22,6 @@ public final class AddonRegistries {
         modBus.addListener(AddonEntities::registerAttributes);
         AddonItems.ITEMS.register(modBus);
         AddonItems.TABS.register(modBus);
-        github.com.gengyoubo.sscfa.spell.pocket.PocketSpaceBlocks.BLOCKS.register(modBus);
-        github.com.gengyoubo.sscfa.spell.pocket.PocketSpaceBlocks.BLOCK_ENTITIES.register(modBus);
         modBus.addListener(AddonRegistries::commonSetup);
     }
 
