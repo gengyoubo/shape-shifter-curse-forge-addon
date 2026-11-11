@@ -1,7 +1,6 @@
 package github.com.gengyoubo.sscfa.mixin.item;
 
-import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.apoli.power.ModifyPotionStackPower;
+import github.com.gengyoubo.sscfa.compat.PotionStackLimit;
 import github.com.gengyoubo.sscfa.item.PotionTestTubes;
 import github.com.gengyoubo.sscfa.item.UniversalEnergyPotionItem;
 import github.com.gengyoubo.sscfa.item.WitherPotionItem;
@@ -41,12 +40,7 @@ public abstract class WitherPotionStackMixin {
             return;
         }
         if (stack.getItem() instanceof UniversalEnergyPotionItem) {
-            int limit = PowerHolderComponent.getPowers(playerInventory.player, ModifyPotionStackPower.class)
-                    .stream()
-                    .filter(power -> !power.isOnlyWaterPotion())
-                    .mapToInt(ModifyPotionStackPower::getCount)
-                    .max()
-                    .orElse(1);
+            int limit = PotionStackLimit.of(playerInventory.player);
             if (limit > 1) {
                 cir.setReturnValue(Math.max(cir.getReturnValue(), limit));
             }

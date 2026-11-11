@@ -59,9 +59,18 @@ public final class SscAddonForge {
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.DecorationParticles.ID);
         github.com.gengyoubo.sscfa.network.SustainedVisuals.init();
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.SustainedVisuals.STATE);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.visual.ParametricVisuals.STATE);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.visual.ParametricVisuals.DELTA);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.visual.ParametricVisuals.MOTION);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.visual.ParametricVisuals.CIRCLE);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.visual.ParametricVisuals.MIST_FORM_CAPABILITY);
+        github.com.gengyoubo.sscfa.network.visual.ParametricVisuals.init();
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.anomaly.AnomalyNetwork.STATE);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.anomaly.AnomalyNetwork.CONFIG);
         github.com.gengyoubo.sscfa.spell.DeathFinaleManager.init();
         github.com.gengyoubo.sscfa.tutorial.SpellTutorialManager.register();
+        github.com.gengyoubo.sscfa.spell.research.FormationResearchNetworking.register();
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.spell.research.FormationResearchNetworking.STATE);
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.tutorial.SpellTutorialManager.OFFER);
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.spell.DeathFinaleManager.SNAPSHOT);
 
@@ -96,6 +105,7 @@ public final class SscAddonForge {
         MinecraftForge.EVENT_BUS.addListener((AddReloadListenerEvent event) -> {
             event.addListener(SpellRegistry.INSTANCE);
             event.addListener(github.com.gengyoubo.sscfa.evolution.EvolutionRegistry.INSTANCE);
+            event.addListener(github.com.gengyoubo.sscfa.anomaly.AnomalyRules.INSTANCE);
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent event) -> {
             github.com.gengyoubo.sscfa.anomaly.AnomalyManager.init();

@@ -1,9 +1,7 @@
 package github.com.gengyoubo.sscfa.mixin;
 
-import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.apoli.power.PowerType;
-import io.github.apace100.apoli.power.PowerTypeRegistry;
 import net.minecraft.resources.ResourceLocation;
+import net.onixary.shapeShifterCurseForge.power.FormPowerRegistry;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import org.jetbrains.annotations.Nullable;
@@ -26,12 +24,8 @@ public class SscAddonTargetPredicateMixin {
 		// form_familiar_fox_sp_visibility 娴犲懏宸挎禍鍫滆⒈娑擃亞甯虹€硅泛鑸伴幀渚婄礄origins 瀹稿弶鐗抽敍澶涚礉
 		// 閸?instanceof PlayerEntity 缁鐡垾鏂衡偓鏃傜卜婢堆冾樋閺?targetEntity 閺勵垱鈧亞澧块敍宀€娲块幒銉ㄧ箲閸ョ偛甯崐纭风礉
 		// 閸忓秴骞撻悜顓＄熅瀵板嫪绗傞惃鍕暈閸愬矁銆冮弻銉嚄娑?O(power閺? 閹殿偅寮块妴?
-		if (!(targetEntity instanceof net.minecraft.world.entity.player.Player)
-				|| !PowerTypeRegistry.contains(SSCA_FOX_SP_VISIBILITY)) {
-			return d;
-		}
-		PowerType<?> powerType = PowerTypeRegistry.get(SSCA_FOX_SP_VISIBILITY);
-		if (PowerHolderComponent.KEY.get(targetEntity).hasPower(powerType)) {
+		if (targetEntity instanceof net.minecraft.world.entity.player.Player player
+				&& FormPowerRegistry.has(player, SSCA_FOX_SP_VISIBILITY)) {
 			return d * 0.67D;
 		}
 		return d;

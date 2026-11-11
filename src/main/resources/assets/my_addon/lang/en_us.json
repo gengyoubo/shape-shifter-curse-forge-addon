@@ -3342,4 +3342,18 @@
   "tutorial.ssc_addon.form.lesson.fire_extinguish.trigger": "Catch fire while retaining at least 10 moisture.",
   "tutorial.ssc_addon.form.lesson.fire_extinguish.effect": "Automatically spend 10 moisture to extinguish yourself.",
   "tutorial.ssc_addon.form.lesson.fire_extinguish.note": "Leave the fire block first to avoid reigniting. Insufficient moisture prevents automatic extinguishing."
+,
+  "jade.ssc_addon.energy": "Energy: %s / %s",
+  "jade.ssc_addon.analysis": "Analysis: %ss / %ss",
+  "jade.ssc_addon.analysis_status.empty": "No scroll or formation inserted",
+  "jade.ssc_addon.analysis_status.unsupported": "This item cannot be analyzed",
+  "jade.ssc_addon.analysis_status.no_paper": "Blank formation paper required",
+  "jade.ssc_addon.analysis_status.output_full": "Output slot is full",
+  "jade.ssc_addon.analysis_status.ready": "Ready to analyze",
+  "jade.ssc_addon.analysis_status.complete": "Analysis complete",
+  "jade.ssc_addon.spellbook": "Spellbook Lv.%s · Formations %s",
+  "jade.ssc_addon.tether": "Tether: %ss / %ss"
+,
+  "config.jade.plugin_ssc_addon.block_tooltip": "SSCA Block Info",
+  "config.jade.plugin_ssc_addon.tidal_orb": "SSCA Tidal Orb"
 }

@@ -112,9 +112,12 @@ public final class AddonItems {
     public static final RegistryObject<Item> WITHER_POTION = ITEMS.register("wither_potion", () -> new ShellItem(new Item.Properties().stacksTo(1), true));
     public static final RegistryObject<Item> WITHER_POTION_SPLASH = ITEMS.register("wither_potion_splash", () -> new ShellItem(new Item.Properties().stacksTo(1), true));
     public static final RegistryObject<Item> WITHER_POTION_LINGERING = ITEMS.register("wither_potion_lingering", () -> new ShellItem(new Item.Properties().stacksTo(1), true));
-    public static final RegistryObject<Item> MOON_DUST_VIAL = ITEMS.register("moon_dust_vial", () -> new ShellItem(new Item.Properties().stacksTo(3)));
-    public static final RegistryObject<Item> MOON_DUST_BOTTLE = ITEMS.register("moon_dust_bottle", () -> new ShellItem(new Item.Properties().stacksTo(1)));
-    public static final RegistryObject<Item> MOON_DUST_SPLASH = ITEMS.register("moon_dust_splash", () -> new ShellItem(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> MOON_DUST_VIAL = ITEMS.register("moon_dust_vial",
+            () -> github.com.gengyoubo.sscfa.item.MoonDustReliefItem.vial());
+    public static final RegistryObject<Item> MOON_DUST_BOTTLE = ITEMS.register("moon_dust_bottle",
+            () -> github.com.gengyoubo.sscfa.item.MoonDustReliefItem.bottle());
+    public static final RegistryObject<Item> MOON_DUST_SPLASH = ITEMS.register("moon_dust_splash",
+            () -> github.com.gengyoubo.sscfa.item.MoonDustReliefItem.splash());
     public static final RegistryObject<Item> TEST_TUBE = ITEMS.register("test_tube", () -> new Item(new Item.Properties().stacksTo(64)));
     /** 装药试管：一瓶分三支，饮用按 1/3 剂量（见 PotionTestTubes）。 */
     public static final RegistryObject<Item> TEST_TUBE_POTION = ITEMS.register("test_tube_potion", () -> new PotionTestTubes.FilledTube(new Item.Properties().stacksTo(PotionTestTubes.DEFAULT_STACK_LIMIT)));

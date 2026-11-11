@@ -1,7 +1,7 @@
 package github.com.gengyoubo.sscfa.mixin.entity;
 
-import io.github.apace100.apoli.component.PowerHolderComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.onixary.shapeShifterCurseForge.power.FormPowerRegistry;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownPotion;
@@ -22,8 +22,7 @@ public class RedFoxThrowDistanceMixin {
 	private void modifyThrowVelocity(ThrownPotion instance, Entity entity, float pitch, float yaw, float roll, float speed, float divergence, Operation<Void> original) {
 		if (entity instanceof Player player) {
 			// Check if player has the specific power indicating Red Fox form
-			boolean isRedFox = PowerHolderComponent.KEY.get(player).getPowers().stream()
-					.anyMatch(power -> power.getType().getIdentifier().equals(RED_FOX_MANA_POWER));
+			boolean isRedFox = FormPowerRegistry.has(player, RED_FOX_MANA_POWER);
 
 			if (isRedFox) {
 				speed *= 1.5F; // Increase by 50%

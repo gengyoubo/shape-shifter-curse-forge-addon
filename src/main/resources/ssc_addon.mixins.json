@@ -110,6 +110,7 @@
     "client.LunarTargetColorMixin",
     "client.PotionBagCooldownBypassMixin",
     "client.FrozenScreenMixin",
+    "client.MinecraftClientSetScreenMixin",
     "client.SpookGhostVisibleMixin",
     "client.CreativePotionStackMixin",
     "client.EntityWebGlowMixin",
@@ -130,6 +131,7 @@
     "input.StunnedKeyBindingMixin",
     "render.WaterSpearInventoryMixin",
     "render.SheepFormRenderMixin",
+    "render.AllaySkinColorMixin",
     "render.UpgradeAxolotlFirstPersonSpearMixin",
     "render.UpgradeAxolotlThirdPersonSpearMixin"
   ],

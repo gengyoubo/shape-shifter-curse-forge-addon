@@ -1,13 +1,10 @@
 package github.com.gengyoubo.sscfa.item;
 
-import io.github.apace100.apoli.component.PowerHolderComponent;
-import github.com.gengyoubo.sscfa.power.VirtualTotemPower;
 import net.onixary.shapeShifterCurseForge.items.accessory.AccessoryItem;
 import github.com.gengyoubo.sscfa.util.FormUtils;
 import github.com.gengyoubo.sscfa.util.TrinketUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.effect.MobEffects;
@@ -48,15 +45,6 @@ public class AnkhStoneItem extends AccessoryItem {
 		// 消除凋零和虚弱效果（保留火焰抗性??
 		player.removeEffect(MobEffects.WITHER);
 		player.removeEffect(MobEffects.WEAKNESS);
-
-		// 闁告垵绻愰惃?VirtualTotemPower 闁告劕鍢插畵?80%
-		java.util.Collection<VirtualTotemPower> powers = PowerHolderComponent.getPowers(player, VirtualTotemPower.class);
-		for (VirtualTotemPower power : powers) {
-			int remaining = power.getRemainingTicks();
-			int reduction = (int) (remaining * 0.8);
-			power.modify(-reduction);
-			PowerHolderComponent.syncPower(player, power.getType());
-		}
 
 		// 消耗安卡纹石（只消耗第一个）
 		ankhStack.shrink(1);

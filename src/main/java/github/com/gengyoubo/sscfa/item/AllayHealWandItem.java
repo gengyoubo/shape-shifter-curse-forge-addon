@@ -1,10 +1,6 @@
 package github.com.gengyoubo.sscfa.item;
 
-import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.apoli.power.Power;
-import io.github.apace100.apoli.power.PowerType;
-import io.github.apace100.apoli.power.PowerTypeRegistry;
-import io.github.apace100.apoli.power.VariableIntPower;
+import github.com.gengyoubo.sscfa.util.PowerUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -107,49 +103,17 @@ public class AllayHealWandItem extends Item {
 	}
 
 	private static int getManaValue(ServerPlayer player) {
-		try {
-			var powerHolder = PowerHolderComponent.KEY.get(player);
-			PowerType<?> powerType = PowerTypeRegistry.get(MANA_RESOURCE_ID);
-			Power power = powerHolder.getPower(powerType);
-			if (power instanceof VariableIntPower variablePower) {
-				return variablePower.getValue();
-			}
-		} catch (Exception e) {
-			// Resource not found
-		}
-		return 0;
+		return PowerUtils.getResourceValue(player, MANA_RESOURCE_ID);
 	}
 
 	// ===== Mana resource read/write =====
 
 	private static void setManaValue(ServerPlayer player, int value) {
-		try {
-			var powerHolder = PowerHolderComponent.KEY.get(player);
-			PowerType<?> powerType = PowerTypeRegistry.get(MANA_RESOURCE_ID);
-			Power power = powerHolder.getPower(powerType);
-			if (power instanceof VariableIntPower variablePower) {
-				variablePower.setValue(Math.max(0, value));
-				// 閸欘亜鎮撳顧砤na鏉╂瑤绔存稉鐚祇wer閿涘矂浼╅崗宥呭弿闁插紥ync闁插秶鐤嗘妯昏癁power鐎广垺鍩涚粩顖滄畱ascendProgress
-				PowerHolderComponent.syncPower(player, powerType);
-			}
-		} catch (Exception e) {
-			// Resource not found
-		}
+		PowerUtils.setResourceValueAndSync(player, MANA_RESOURCE_ID, Math.max(0, value));
 	}
 
 	private static void triggerManaCooldown(ServerPlayer player) {
-		try {
-			var powerHolder = PowerHolderComponent.KEY.get(player);
-			PowerType<?> powerType = PowerTypeRegistry.get(MANA_COOLDOWN_ID);
-			Power power = powerHolder.getPower(powerType);
-			if (power instanceof VariableIntPower variablePower) {
-				variablePower.setValue(70); // 3.5 seconds cooldown
-				// 閸欘亜鎮撳顧﹐oldown鏉╂瑤绔存稉鐚祇wer
-				PowerHolderComponent.syncPower(player, powerType);
-			}
-		} catch (Exception e) {
-			// Resource not found
-		}
+		PowerUtils.setResourceValueAndSync(player, MANA_COOLDOWN_ID, 70);
 	}
 
 	@Override

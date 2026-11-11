@@ -1,13 +1,12 @@
 package github.com.gengyoubo.sscfa.mixin.client;
 
-import io.github.apace100.apoli.component.PowerHolderComponent;
+import github.com.gengyoubo.sscfa.compat.PotionStackLimit;
 import github.com.gengyoubo.sscfa.item.PotionTestTubes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.PotionItem;
-import io.github.apace100.apoli.power.ModifyPotionStackPower;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import org.spongepowered.asm.mixin.Mixin;
@@ -40,32 +39,12 @@ public class CreativePotionStackMixin {
 		}
 		// 通用能量药水：与生存物品栏同源，按 ModifyPotionStackPower 抬升拿取上限
 		if (stack.getItem() instanceof github.com.gengyoubo.sscfa.item.UniversalEnergyPotionItem) {
-			Player player = Minecraft.getInstance().player;
-			if (player != null) {
-				int n = PowerHolderComponent.getPowers(player, ModifyPotionStackPower.class)
-						.stream()
-						.filter(power -> !power.isOnlyWaterPotion())
-						.mapToInt(ModifyPotionStackPower::getCount)
-						.max()
-						.orElse(0);
-				if (n > 0) {
-					return Math.max(n, original.call(stack));
-				}
-			}
-			return original.call(stack);
+			int n = PotionStackLimit.of(Minecraft.getInstance().player);
+			return n > 1 ? Math.max(n, original.call(stack)) : original.call(stack);
 		}
 		if (stack.getItem() instanceof PotionItem) {
-			Player player = Minecraft.getInstance().player;
-			if (player != null) {
-				int n = PowerHolderComponent.getPowers(player, ModifyPotionStackPower.class)
-						.stream()
-						.mapToInt(ModifyPotionStackPower::getCount)
-						.max()
-						.orElse(0);
-				if (n > 0) {
-					return Math.max(n, original.call(stack));
-				}
-			}
+			int n = PotionStackLimit.of(Minecraft.getInstance().player);
+			if (n > 1) return Math.max(n, original.call(stack));
 		}
 		return original.call(stack);
 	}

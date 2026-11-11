@@ -5,7 +5,6 @@
  */
 package github.com.gengyoubo.sscfa.ability;
 
-import io.github.apace100.apoli.component.PowerHolderComponent;
 import github.com.gengyoubo.sscfa.balance.BalanceReader;
 import github.com.gengyoubo.sscfa.util.FormIdentifiers;
 import net.minecraft.ChatFormatting;
@@ -17,6 +16,7 @@ import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.onixary.shapeShifterCurseForge.power.FormPowerRegistry;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
@@ -159,12 +159,7 @@ public final class SeedEnergyEatingHandler {
     }
 
     private static boolean hasSeedEnergyPower(Player player) {
-        try {
-            return PowerHolderComponent.KEY.get(player).getPowers().stream()
-                    .anyMatch(p -> p.getType().getIdentifier().equals(FormIdentifiers.BAT_PARASITIC_FRUIT_SEED_ENERGY));
-        } catch (Exception e) {
-            return false;
-        }
+        return FormPowerRegistry.has(player, FormIdentifiers.BAT_PARASITIC_FRUIT_SEED_ENERGY);
     }
     /** Keep unexpired quotas across reconnects; discard only entries whose window has elapsed. */
     public static void pruneAll(long now) {

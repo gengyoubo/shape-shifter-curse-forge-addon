@@ -27,7 +27,6 @@ import github.com.gengyoubo.sscfa.util.FormIdentifiers;
 import github.com.gengyoubo.sscfa.util.FormUtils;
 import github.com.gengyoubo.sscfa.util.PowerUtils;
 import github.com.gengyoubo.sscfa.util.UndeadNeutralState;
-import io.github.apace100.apoli.component.PowerHolderComponent;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;

@@ -109,6 +109,10 @@ dependencies {
     }
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // Optional recipe viewer / tooltip integrations (compile only; loaded only when installed at runtime)
+    implementation fg.deobf('curse.maven:jei-238222:9205046')
+    implementation fg.deobf('curse.maven:jade-324717:8479276')
 }
 
 mixin {

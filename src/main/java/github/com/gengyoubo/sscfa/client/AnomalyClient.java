@@ -99,7 +99,14 @@ public final class AnomalyClient {
             }
             invalidateTargets();
         });
-        MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> clear());
+        AddonNetwork.registerClientReceiver(AnomalyNetwork.CONFIG, buf -> {
+            String json = buf.readUtf(AnomalyNetwork.MAX_CONFIG_CHARS);
+            github.com.gengyoubo.sscfa.anomaly.AnomalyRules.acceptClientSnapshot(json);
+        });
+        MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
+            clear();
+            github.com.gengyoubo.sscfa.anomaly.AnomalyRules.clearClientSnapshot();
+        });
         MinecraftForge.EVENT_BUS.addListener((LevelEvent.Unload event) -> {
             if (event.getLevel() instanceof ClientLevel level && level == world) clear();
         });

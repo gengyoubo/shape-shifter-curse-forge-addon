@@ -1,6 +1,5 @@
 package github.com.gengyoubo.sscfa.effect;
 
-import io.github.apace100.apoli.component.PowerHolderComponent;
 import github.com.gengyoubo.sscfa.power.TrueInvisibilityAbilityPower;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;

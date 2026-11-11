@@ -3342,4 +3342,18 @@
   "tutorial.ssc_addon.form.lesson.fire_extinguish.trigger": "身上着火时，保持至少 10 点湿润度。",
   "tutorial.ssc_addon.form.lesson.fire_extinguish.effect": "自动消耗 10 点湿润度，将自己身上的火焰熄灭。",
   "tutorial.ssc_addon.form.lesson.fire_extinguish.note": "先离开火焰方块，避免刚熄灭又被点燃；湿润不足时无法自动灭火。"
+,
+  "jade.ssc_addon.energy": "能量：%s / %s",
+  "jade.ssc_addon.analysis": "解析：%s 秒 / %s 秒",
+  "jade.ssc_addon.analysis_status.empty": "未放入卷轴或法阵",
+  "jade.ssc_addon.analysis_status.unsupported": "该物品无法解析",
+  "jade.ssc_addon.analysis_status.no_paper": "需要空白法阵纸",
+  "jade.ssc_addon.analysis_status.output_full": "输出槽已满",
+  "jade.ssc_addon.analysis_status.ready": "可开始解析",
+  "jade.ssc_addon.analysis_status.complete": "解析完成",
+  "jade.ssc_addon.spellbook": "法术书 Lv.%s · 法阵 %s",
+  "jade.ssc_addon.tether": "束缚：%s 秒 / %s 秒"
+,
+  "config.jade.plugin_ssc_addon.block_tooltip": "SSCA 方块信息",
+  "config.jade.plugin_ssc_addon.tidal_orb": "SSCA 潮汐法球"
 }

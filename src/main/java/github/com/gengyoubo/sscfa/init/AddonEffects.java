@@ -74,7 +74,8 @@ public final class AddonEffects {
     public static final RegistryObject<MobEffect> ANOMALY_FIRE_ZONE = EFFECTS.register("anomaly_fire_zone", () -> new AnomalyMarkerEffect(0xE57F46));
 
     // ===== 月尘缓解（瞬时，作用于崩解度，待新魔法运行时迁移） =====
-    public static final RegistryObject<MobEffect> MOON_DUST_RELIEF = shell("moon_dust_relief", () -> new ShellEffect.Instant(MobEffectCategory.BENEFICIAL, MOON_DUST_COLOR));
+    public static final RegistryObject<MobEffect> MOON_DUST_RELIEF = EFFECTS.register("moon_dust_relief",
+            () -> github.com.gengyoubo.sscfa.item.MoonDustReliefItem.RELIEF);
     public static final RegistryObject<MobEffect> MOON_DUST_TUBE_RELIEF = shell("moon_dust_tube_relief", () -> new ShellEffect.Instant(MobEffectCategory.BENEFICIAL, MOON_DUST_COLOR));
     public static final RegistryObject<Potion> MOON_DUST_TUBE = POTIONS.register("moon_dust_tube", () ->
             new Potion(new MobEffectInstance(MOON_DUST_TUBE_RELIEF.get(), 1)));

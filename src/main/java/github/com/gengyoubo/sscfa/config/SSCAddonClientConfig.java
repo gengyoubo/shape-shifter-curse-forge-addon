@@ -36,6 +36,12 @@ public class SSCAddonClientConfig {
 
     public java.util.Map<String, Integer> hudScalePercent = new java.util.HashMap<>();
 
+    /** 是否用附属高级调色界面替换 SSC 原版形态颜色选择菜单。 */
+    public boolean enableColorEditor = true;
+
+    /** 已观看过颜色编辑器教程的存档/服务器标识。 */
+    public java.util.List<String> colorTutorialSeenSaves = new java.util.ArrayList<>();
+
     public void migrateSkillHudLayout() {
         // Forge 简化版：不再执行旧版布局迁移。
         skillHudLayoutVersion = 4;

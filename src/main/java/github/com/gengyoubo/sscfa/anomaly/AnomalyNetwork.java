@@ -17,6 +17,8 @@ import java.util.UUID;
 /** 异常快照的变更驱动同步；倒计时由客户端按服务端时间锚插值。 */
 public final class AnomalyNetwork {
     public static final ResourceLocation STATE = new ResourceLocation("ssc_addon", "anomaly_snapshot");
+    public static final ResourceLocation CONFIG = new ResourceLocation("ssc_addon", "anomaly_rules");
+    public static final int MAX_CONFIG_CHARS = 262144;
 
     private static final AnomalySnapshot EMPTY =
             new AnomalySnapshot(AnomalyLedger.MAXIMUM, java.util.Map.of(), 0, "", 0, List.of());
@@ -30,6 +32,16 @@ public final class AnomalyNetwork {
     public static void init() {
         if (initialized) return;
         initialized = true;
+        MinecraftForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent event) -> {
+            if (event.getEntity() instanceof ServerPlayer player) configuration(player);
+        });
+        AnomalyRules.onReload(() -> {
+            net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (server == null) return;
+            server.execute(() -> {
+                for (ServerPlayer player : server.getPlayerList().getPlayers()) configuration(player);
+            });
+        });
         MinecraftForge.EVENT_BUS.addListener((PlayerEvent.StartTracking event) -> {
             if (event.getTarget() instanceof LivingEntity living
                     && (AnomalyManager.state(living) != null || AnomalyEffects.hasState(living))
@@ -61,6 +73,14 @@ public final class AnomalyNetwork {
             if (viewer != target && viewer.distanceToSqr(target) > 128.0 * 128.0) continue;
             send(target, viewer, snapshot);
         }
+    }
+
+    private static void configuration(ServerPlayer player) {
+        if (!AddonNetwork.canSend(player, CONFIG)) return;
+        FriendlyByteBuf buffer = AddonNetwork.buffer();
+        buffer.writeUtf(AnomalyRules.snapshotJson(), MAX_CONFIG_CHARS);
+        AddonNetwork.sendToPlayer(player, CONFIG, buffer);
+        AnomalyManager.recordPacket();
     }
 
     private static void send(LivingEntity target, ServerPlayer player, AnomalySnapshot snapshot) {

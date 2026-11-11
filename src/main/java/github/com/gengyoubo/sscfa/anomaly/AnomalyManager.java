@@ -18,6 +18,7 @@ public final class AnomalyManager {
     public static void init() {
         if (initialized) return;
         initialized = true;
+        github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.amountResolver(AnomalyRules::amount);
         AnomalyEffects.init();
         AnomalyNetwork.init();
     }

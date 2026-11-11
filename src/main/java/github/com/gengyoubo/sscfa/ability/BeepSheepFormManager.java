@@ -1,13 +1,13 @@
 package github.com.gengyoubo.sscfa.ability;
 
-import io.github.apace100.apoli.power.CooldownPower;
-import io.github.apace100.apoli.power.Power;
 import github.com.gengyoubo.sscfa.util.FormIdentifiers;
 import github.com.gengyoubo.sscfa.util.FormUtils;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.onixary.shapeShifterCurseForge.power.FormActivePowerService;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -69,12 +69,7 @@ public final class BeepSheepFormManager {
 			return; // 已是?无形态（理论不可达）：不快照不切??
 		}
 		// Apoli 原??CD 快照（CooldownPower.lastUseTime 随切形态重建清零；切回后回写续走??
-		Map<String, Integer> cds = new HashMap<>();
-		for (Power power : io.github.apace100.apoli.component.PowerHolderComponent.KEY.get(player).getPowers()) {
-			if (power instanceof CooldownPower cooldown && cooldown.getRemainingTicks() > 0) {
-				cds.put(power.getType().getIdentifier().toString(), cooldown.getRemainingTicks());
-			}
-		}
+		Map<String, Integer> cds = captureCooldowns(player);
 		long now = player.level().getGameTime();
 		SNAPSHOTS.put(player.getUUID(), new SheepSnapshot(originalId, cds, now));
 
@@ -111,22 +106,47 @@ public final class BeepSheepFormManager {
 		// 遍历玩家当??power ??type id 匹配快照（PowerTypeRegistry ??get(Identifier) API，不依赖它??
 		if (snapshot != null && !snapshot.cooldowns().isEmpty()) {
 			long elapsed = Math.max(0, player.level().getGameTime() - snapshot.sheepStartTime());
-			var holder = io.github.apace100.apoli.component.PowerHolderComponent.KEY.get(player);
-			for (Power power : holder.getPowers()) {
-				if (!(power instanceof CooldownPower cooldown)) continue;
-				Integer snap = snapshot.cooldowns().get(power.getType().getIdentifier().toString());
-				if (snap == null) continue;
-				int remaining = (int) Math.max(0, snap - elapsed);
-				if (remaining > 0) {
-					cooldown.setCooldown(remaining);
-					io.github.apace100.apoli.component.PowerHolderComponent.syncPower(player, power.getType());
-				}
-			}
+			restoreCooldowns(player, snapshot.cooldowns(), elapsed);
 		}
 	}
 
 	/** 兜底扫描（??END_SERVER_TICK）：效果没了但还卡在羊形???切回?
 	 *  覆盖：牛奶外的一切非正常路径（死亡重生清效??指令清效??reload 清效果等）??*/
+	private static Map<String, Integer> captureCooldowns(ServerPlayer player) {
+		Map<String, Integer> result = new HashMap<>();
+		Map<ResourceLocation, Integer> cooldowns = cooldownMap(player);
+		if (cooldowns != null) {
+			cooldowns.forEach((id, ticks) -> {
+				if (ticks > 0) result.put(id.toString(), ticks);
+			});
+		}
+		return result;
+	}
+
+	private static void restoreCooldowns(ServerPlayer player, Map<String, Integer> snapshot, long elapsed) {
+		Map<ResourceLocation, Integer> cooldowns = cooldownMap(player);
+		if (cooldowns == null) return;
+		snapshot.forEach((key, ticks) -> {
+			ResourceLocation id = ResourceLocation.tryParse(key);
+			if (id == null) return;
+			int remaining = (int) Math.max(0, ticks - elapsed);
+			if (remaining > 0) cooldowns.put(id, remaining);
+		});
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Map<ResourceLocation, Integer> cooldownMap(ServerPlayer player) {
+		try {
+			Field field = FormActivePowerService.class.getDeclaredField("COOLDOWNS");
+			field.setAccessible(true);
+			Map<UUID, Map<ResourceLocation, Integer>> all =
+					(Map<UUID, Map<ResourceLocation, Integer>>) field.get(null);
+			return all.computeIfAbsent(player.getUUID(), key -> new HashMap<>());
+		} catch (ReflectiveOperationException | RuntimeException ignored) {
+			return null;
+		}
+	}
+
 	public static void tickSweep(net.minecraft.server.MinecraftServer server) {
 		for (var world : server.getAllLevels()) {
 			for (ServerPlayer sp : world.players()) {

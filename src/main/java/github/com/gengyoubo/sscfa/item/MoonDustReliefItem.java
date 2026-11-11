@@ -3,11 +3,8 @@ package github.com.gengyoubo.sscfa.item;
 import java.util.List;
 import github.com.gengyoubo.sscfa.balance.BalanceReader;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
 // [forge-port] removed yarn wildcard import net.minecraft.item.*
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -38,9 +35,31 @@ public final class MoonDustReliefItem extends Item {
     private static final BalanceReader BAL = new BalanceReader("systems.moon_dust_potions");
     private static final String DOSE_KEY = "MoonDustReliefAmount";
     public static final int COLOR = 0xA7EDF5;
-    public static final MoonDustReliefItem VIAL = new MoonDustReliefItem("vial", 20, 16, false);
-    public static final MoonDustReliefItem BOTTLE = new MoonDustReliefItem("bottle", 60, 40, false);
-    public static final MoonDustReliefItem SPLASH = new MoonDustReliefItem("splash", 35, 0, true);
+    public static MoonDustReliefItem VIAL;
+    public static MoonDustReliefItem BOTTLE;
+    public static MoonDustReliefItem SPLASH;
+
+    private static void ensureItems() {
+        if (VIAL != null) return;
+        VIAL = new MoonDustReliefItem("vial", 20, 16, false);
+        BOTTLE = new MoonDustReliefItem("bottle", 60, 40, false);
+        SPLASH = new MoonDustReliefItem("splash", 35, 0, true);
+    }
+
+    public static MoonDustReliefItem vial() {
+        ensureItems();
+        return VIAL;
+    }
+
+    public static MoonDustReliefItem bottle() {
+        ensureItems();
+        return BOTTLE;
+    }
+
+    public static MoonDustReliefItem splash() {
+        ensureItems();
+        return SPLASH;
+    }
     // 閸樼喓澧楅懡顖涙寜鐎圭偘缍嬬拹鐔荤煑绾扮増鎸掗妴浣稿磹瀵板嫬娲撻弽鑹扳€滈崙蹇嬧偓浣割吂閹撮顏潻鍊熼嚋閸滃奔绻氱€涙ɑ浠径宥忕幢娑撳秶鏁ら崠鍨倳鐎圭偘缍嬮幋鏍у弿閺堝秶甯虹€硅埖澹傞幓蹇嬧偓?    
     public static final MobEffect RELIEF = new MobEffect(MobEffectCategory.BENEFICIAL, COLOR) {
         @Override public boolean isInstantenous() { return true; }
@@ -133,10 +152,4 @@ public final class MoonDustReliefItem extends Item {
         if (this == VIAL) lines.add(Component.translatable("tooltip.ssc_addon.test_tube_stack").withStyle(ChatFormatting.GRAY));
     }
 
-    public static void register() {
-        Registry.register(BuiltInRegistries.MOB_EFFECT, new ResourceLocation("ssc_addon", "moon_dust_relief"), RELIEF);
-        Registry.register(BuiltInRegistries.ITEM, new ResourceLocation("ssc_addon", "moon_dust_vial"), VIAL);
-        Registry.register(BuiltInRegistries.ITEM, new ResourceLocation("ssc_addon", "moon_dust_bottle"), BOTTLE);
-        Registry.register(BuiltInRegistries.ITEM, new ResourceLocation("ssc_addon", "moon_dust_splash"), SPLASH);
-    }
 }

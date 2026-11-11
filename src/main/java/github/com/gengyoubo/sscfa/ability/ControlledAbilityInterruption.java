@@ -1,8 +1,5 @@
 package github.com.gengyoubo.sscfa.ability;
 
-import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.apoli.power.Active;
-import io.github.apace100.apoli.power.PowerTypeRegistry;
 import github.com.gengyoubo.sscfa.action.SscAddonActions;
 import github.com.gengyoubo.sscfa.cooldown.SkillCastManager;
 import github.com.gengyoubo.sscfa.spell.SpellChannelManager;
@@ -10,6 +7,10 @@ import github.com.gengyoubo.sscfa.util.AbilityUseGuard;
 import github.com.gengyoubo.sscfa.util.PowerUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.onixary.shapeShifterCurseForge.power.AirJumpService;
+import net.onixary.shapeShifterCurseForge.power.FormPowerRegistry;
+import net.onixary.shapeShifterCurseForge.power.FrostDiveService;
+import net.onixary.shapeShifterCurseForge.power.SurfaceGrappleService;
 
 /** Cancels live casting state before a queued release can execute. Repeated calls are harmless. */
 public final class ControlledAbilityInterruption {
@@ -18,11 +19,9 @@ public final class ControlledAbilityInterruption {
     public static void interrupt(ServerPlayer player) {
         if (!AbilityUseGuard.fullyControlled(player)) return;
         cancelTransient(player);
-        // SSC charge/grapple/dive powers expose their normal cleanup through onRemoved().
-        for (var power : PowerHolderComponent.KEY.get(player).getPowers()) {
-            if (power instanceof Active && power.getClass().getName().startsWith(
-                    "net.onixary.shapeShifterCurseFabric.additional_power.")) power.onRemoved();
-        }
+        AirJumpService.clearTransient(player);
+        FrostDiveService.clear(player);
+        SurfaceGrappleService.cancel(player);
     }
 
     /** Cancel owned controls before reload/death, preserving autonomous released effects. */
@@ -67,8 +66,7 @@ public final class ControlledAbilityInterruption {
                 ? skill.substring(0, skill.length() - "_key_activation".length()) : skill;
         for (String suffix : new String[]{"_charging_state", "_charge_timer", "_heal_execute", "_toggle_state"}) {
             ResourceLocation id = ResourceLocation.tryParse(root + suffix);
-            if (id != null && PowerTypeRegistry.contains(id)
-                    && PowerHolderComponent.KEY.get(player).hasPower(PowerTypeRegistry.get(id))
+            if (id != null && FormPowerRegistry.has(player, id)
                     && PowerUtils.getResourceValue(player, id) != 0) PowerUtils.setResourceValueAndSync(player, id, 0);
         }
         if (root.startsWith("my_addon:form_familiar_fox_")

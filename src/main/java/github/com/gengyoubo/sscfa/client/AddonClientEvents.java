@@ -74,6 +74,7 @@ public final class AddonClientEvents {
     @SubscribeEvent
     public static void registerClientReloadListeners(net.minecraftforge.client.event.RegisterClientReloadListenersEvent event) {
         github.com.gengyoubo.sscfa.client.tutorial.FormTutorialLessons.register(event);
+        github.com.gengyoubo.sscfa.client.renderer.AllaySkinColor.init(event);
     }
 
     @SubscribeEvent
@@ -130,11 +131,15 @@ public final class AddonClientEvents {
             github.com.gengyoubo.sscfa.client.renderer.DomainRenderer.register();
             github.com.gengyoubo.sscfa.client.particle.FirstPersonParticles.init();
             github.com.gengyoubo.sscfa.client.SustainedVisualClient.init();
+            github.com.gengyoubo.sscfa.client.ParametricVisualClient.init();
             github.com.gengyoubo.sscfa.client.AnomalyClient.init();
             github.com.gengyoubo.sscfa.client.renderer.AnomalyBadgeRenderer.register();
             github.com.gengyoubo.sscfa.client.DeathFinaleClient.register();
             github.com.gengyoubo.sscfa.client.tutorial.FormTutorialClient.register();
             github.com.gengyoubo.sscfa.client.tutorial.SpellTutorialClient.register();
+            github.com.gengyoubo.sscfa.client.FormationResearchClient.register();
+            MenuScreens.register(AddonMenus.SPELL_RESEARCH_TABLE_SCREEN_HANDLER.get(),
+                    github.com.gengyoubo.sscfa.client.screen.SpellResearchTableScreen::new);
             MenuScreens.register(AddonMenus.ENERGY_BOTTLER.get(), EnergyBottlerScreen::new);
             MenuScreens.register(AddonMenus.POTION_STORAGE_BOX.get(), PotionStorageBoxScreen::new);
         MenuScreens.register(AddonMenus.SPELLBOOK_SCREEN_HANDLER.get(), SpellbookScreen::new);
