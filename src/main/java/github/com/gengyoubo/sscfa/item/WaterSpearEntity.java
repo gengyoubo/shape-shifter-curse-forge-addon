@@ -23,11 +23,12 @@ import java.util.List;
 
 public class WaterSpearEntity extends ThrownTrident {
 
-	private ItemStack waterSpearStack = new ItemStack(github.com.gengyoubo.sscfa.SscAddon.WATER_SPEAR);
+	private ItemStack waterSpearStack;
 
 	public WaterSpearEntity(EntityType<? extends ThrownTrident> entityType, Level world) {
 		super(github.com.gengyoubo.sscfa.SscAddon.WATER_SPEAR_ENTITY, world);
-		// 涓嶅彲鎷惧彇锛氭按鐭涘彧鑳藉悎鎴愯幏寰楋紙璧?5 绉?CD + 鏈€澶氫竴鎶婏級锛屾墧鍑哄嵆娑堣€?
+		this.waterSpearStack = new ItemStack(github.com.gengyoubo.sscfa.init.AddonItems.WATER_SPEAR.get());
+		// 涓嶅彲鎷惧彇锛氭按鐭涘彧鑳藉悎鎴愯幏寰楋紙璧?5 �?CD + 鏈€澶氫竴鎶婏級锛屾墧鍑哄嵆娑堣�?
 		this.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
 	}
 

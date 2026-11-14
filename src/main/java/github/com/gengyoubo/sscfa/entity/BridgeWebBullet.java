@@ -28,7 +28,7 @@ public class BridgeWebBullet extends WebBulletBase {
 	}
 
 	public BridgeWebBullet(LivingEntity owner, int tier) {
-		super(RegAddonEntities.BRIDGE_WEB_BULLET, owner.level());
+		super(github.com.gengyoubo.sscfa.init.AddonEntities.BRIDGE_WEB_BULLET.get(), owner.level());
 		this.owner = owner;
 		this.Tier = tier;
 		this.setOwner(owner);

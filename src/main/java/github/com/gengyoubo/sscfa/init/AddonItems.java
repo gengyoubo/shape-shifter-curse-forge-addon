@@ -10,6 +10,7 @@ import github.com.gengyoubo.sscfa.item.PortableFridgeItem;
 import github.com.gengyoubo.sscfa.item.PortableMoisturizerItem;
 import github.com.gengyoubo.sscfa.item.PotionTestTubes;
 import github.com.gengyoubo.sscfa.item.SnowballLauncherItem;
+import github.com.gengyoubo.sscfa.item.WaterSpearItem;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.RecordItem;
 import net.minecraftforge.common.ForgeSpawnEggItem;
@@ -90,7 +91,7 @@ public final class AddonItems {
     public static final RegistryObject<Item> BLOODLUST_RING = ITEMS.register("bloodlust_ring", () -> new ShellItem(new Item.Properties().stacksTo(1).fireResistant()));
     public static final RegistryObject<Item> HUMUS_RING = ITEMS.register("humus_ring", () -> new ShellItem(new Item.Properties().stacksTo(1).fireResistant()));
     public static final RegistryObject<Item> TWIN_POD = ITEMS.register("twin_pod", () -> new ShellItem(new Item.Properties().stacksTo(1).fireResistant()));
-    public static final RegistryObject<Item> WATER_SPEAR = ITEMS.register("water_spear", () -> new ShellItem(new Item.Properties().durability(60)));
+    public static final RegistryObject<Item> WATER_SPEAR = ITEMS.register("water_spear", () -> new WaterSpearItem(new Item.Properties().durability(60)));
     public static final RegistryObject<Item> EVOLUTION_STONE = ITEMS.register("evolution_stone", () -> new ShellItem(new Item.Properties().stacksTo(1).fireResistant()));
     public static final RegistryObject<Item> PSIONIC_ORB = ITEMS.register("psionic_orb", () -> new ShellItem(new Item.Properties().stacksTo(16).fireResistant()));
     public static final RegistryObject<Item> ACTIVE_CORAL_NECKLACE = ITEMS.register("active_coral_necklace", () -> new ShellItem(new Item.Properties().stacksTo(1)));

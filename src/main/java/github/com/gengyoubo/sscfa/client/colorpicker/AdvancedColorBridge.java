@@ -193,7 +193,24 @@ public final class AdvancedColorBridge {
 
     /** 兼容 API：Forge 移植没有对应的附属颜色同步包，因此不做任何事。 */
     public static void sendColors(WorkingState s) {
-        // no-op
+        if (s == null) return;
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) return;
+        PlayerSkinData skin = SscApi.currentSkin(player).orElse(null);
+        boolean keepOriginal = skin != null && skin.isKeepOriginalSkin();
+        net.onixary.shapeShifterCurseForge.network.ModNetwork.CHANNEL.sendToServer(
+                new net.onixary.shapeShifterCurseForge.network.UpdateSkinPacket(
+                        true,
+                        keepOriginal,
+                        s.enabled,
+                        FormTextureUtils.argb2Abgr(s.colorsARGB[IDX_PRIMARY]),
+                        FormTextureUtils.argb2Abgr(s.colorsARGB[IDX_ACCENT1]),
+                        FormTextureUtils.argb2Abgr(s.colorsARGB[IDX_ACCENT2]),
+                        FormTextureUtils.argb2Abgr(s.colorsARGB[IDX_EYE_A]),
+                        FormTextureUtils.argb2Abgr(s.colorsARGB[IDX_EYE_B]),
+                        s.greyReverse[GR_IDX_PRIMARY],
+                        s.greyReverse[GR_IDX_ACCENT1],
+                        s.greyReverse[GR_IDX_ACCENT2]));
     }
 
     /** 把颜色编码进本地缓冲区（不发送）。 */

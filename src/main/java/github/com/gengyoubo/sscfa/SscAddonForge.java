@@ -33,6 +33,9 @@ public final class SscAddonForge {
         AddonRegistries.init(bus);
         AddonForms.init();
         AddonNetwork.init();
+        github.com.gengyoubo.sscfa.ability.LunarSpiritTargetLink.init();
+        github.com.gengyoubo.sscfa.event.WitchFamiliarSpawnHandler.register();
+        github.com.gengyoubo.sscfa.event.AxolotlShifterSpawnHandler.register();
 
         // 客户端表现层 S2C 通道声明：服务端据此判断对端能否接收
         AddonNetwork.clientbound(SscAddonNetworking.PACKET_CLAW_STATE);
@@ -91,6 +94,8 @@ public final class SscAddonForge {
         AddonNetwork.clientbound(SpellChannelManager.SUPPRESSION);
         AddonNetwork.clientbound(SharedSpellCooldowns.SYNC);
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.SpellbookStatusSync.STATE);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.neomagic.NeoNetwork.HUD);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.neomagic.NeoNetwork.HUD_V2);
         SpellChannelManager.init();
         SharedSpellCooldowns.init();
         github.com.gengyoubo.sscfa.network.SpellbookStatusSync.init();

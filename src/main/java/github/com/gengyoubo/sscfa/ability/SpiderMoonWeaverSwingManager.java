@@ -1,6 +1,6 @@
 package github.com.gengyoubo.sscfa.ability;
 
-import github.com.gengyoubo.sscfa.entity.ShellProjectile;
+import github.com.gengyoubo.sscfa.entity.SpiderSwingBullet;
 import github.com.gengyoubo.sscfa.balance.BalanceReader;
 import github.com.gengyoubo.sscfa.network.SscAddonNetworking;
 import github.com.gengyoubo.sscfa.util.FormIdentifiers;
@@ -75,7 +75,7 @@ public final class SpiderMoonWeaverSwingManager {
 
 	private static final Map<UUID, SwingState> STATES = new ConcurrentHashMap<>();
 	/** 铔涗笣椋炲脊鍦ㄩ鐨勭帺????寮瑰疄浣擄紙闃茶繛?+ 鏀寔椋炶涓啀鎸夐敭鍙栨秷锛涘懡?miss 鏃剁Щ闄わ級?*/
-	private static final Map<UUID, ShellProjectile> BULLET_IN_FLIGHT = new ConcurrentHashMap<>();
+	private static final Map<UUID, SpiderSwingBullet> BULLET_IN_FLIGHT = new ConcurrentHashMap<>();
 
 	private SpiderMoonWeaverSwingManager() {}
 
@@ -135,7 +135,7 @@ public final class SpiderMoonWeaverSwingManager {
 		SwingState s = state(player);
 		if (s.state == STATE_IDLE) {
 			// 椋炶涓啀鎸????鍙栨秷椋炲脊锛??remove ??onBulletMiss ??5 ??CD??
-			ShellProjectile flying = BULLET_IN_FLIGHT.get(player.getUUID());
+			SpiderSwingBullet flying = BULLET_IN_FLIGHT.get(player.getUUID());
 			if (flying != null && flying.isAlive()) {
 				flying.discard();
 				return;
@@ -157,7 +157,7 @@ public final class SpiderMoonWeaverSwingManager {
 		// 鍙戝皠鍗崇櫥璁帮紱CD 鍦ㄦ柇?miss 鏃舵墠璧风畻锛坈ooldown_start = on_end??
 		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.begin(player, SKILL_ID)) return;
 		state(player).castId = github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.currentCastId(player, SKILL_ID);
-        ShellProjectile bullet = new ShellProjectile(github.com.gengyoubo.sscfa.init.AddonEntities.SPIDER_SWING_BULLET.get(), player.level()); bullet.setOwner(player); bullet.setPos(player.getX(), player.getEyeY() - 0.1, player.getZ());
+        SpiderSwingBullet bullet = new SpiderSwingBullet(player); bullet.setPos(player.getX(), player.getEyeY() - 0.1, player.getZ());
 		bullet.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0f,
 				(float) BAL.d("bullet_speed", BULLET_SPEED), 0.0f);
 		player.level().addFreshEntity(bullet);

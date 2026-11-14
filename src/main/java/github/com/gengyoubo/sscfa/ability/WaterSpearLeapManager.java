@@ -150,9 +150,9 @@ public final class WaterSpearLeapManager {
 	private static void throwSpear(ServerPlayer player, LeapState s) {
 		ServerLevel sw = (ServerLevel) player.level();
 		Vec3 dir = player.getLookAngle().normalize();
-		ShellProjectile spear = new ShellProjectile(github.com.gengyoubo.sscfa.init.AddonEntities.THROWN_WATER_SPEAR.get(), sw); spear.setOwner(player);
+		github.com.gengyoubo.sscfa.entity.ThrownWaterSpearEntity spear = new github.com.gengyoubo.sscfa.entity.ThrownWaterSpearEntity(sw, player);
 		spear.setPos(player.getX() + dir.x * 0.6, player.getEyeY() - 0.1 + dir.y * 0.6, player.getZ() + dir.z * 0.6);
-		spear.shoot(dir.x, dir.y, dir.z, 1.5f, 0.0f);
+		spear.setDirection(dir);
 		sw.addFreshEntity(spear);
 		// ?swingHand：与 vanilla 水矛（三叉戟）投掷一致——矛从举矛蓄力姿势直接飞出、手臂落回正常，
 		// 而非普通攻击挥手（TridentItem.onStoppedUsing 同样不挥手）?

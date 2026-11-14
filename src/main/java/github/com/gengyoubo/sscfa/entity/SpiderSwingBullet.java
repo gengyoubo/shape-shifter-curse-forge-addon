@@ -41,7 +41,7 @@ public class SpiderSwingBullet extends WebBulletBase {
 	}
 
 	public SpiderSwingBullet(LivingEntity owner) {
-		super(RegAddonEntities.SPIDER_SWING_BULLET, owner.level());
+		super(github.com.gengyoubo.sscfa.init.AddonEntities.SPIDER_SWING_BULLET.get(), owner.level());
 		this.owner = owner;
 		this.setOwner(owner);
 		this.setPos(owner.getX(), owner.getEyeY() - 0.1, owner.getZ());

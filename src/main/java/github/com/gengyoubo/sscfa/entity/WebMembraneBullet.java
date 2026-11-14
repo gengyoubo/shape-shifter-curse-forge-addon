@@ -29,7 +29,7 @@ public class WebMembraneBullet extends WebBulletBase {
 	}
 
 	public WebMembraneBullet(LivingEntity owner, int tier) {
-		super(RegAddonEntities.WEB_MEMBRANE_BULLET, owner.level());
+		super(github.com.gengyoubo.sscfa.init.AddonEntities.WEB_MEMBRANE_BULLET.get(), owner.level());
 		this.owner = owner;
 		this.Tier = tier;
 		this.setOwner(owner);

@@ -41,12 +41,15 @@ public final class NeoMagic {
     }
 
     public static net.minecraft.network.chat.MutableComponent text(String key, Object... args) {
-        return net.minecraft.network.chat.Component.translatable("ssca_neomagic." + key, args);
+        return net.minecraft.network.chat.Component.translatable("neomagic." + key, args);
     }
 
     public static void init(IEventBus modBus) {
         EFFECTS.register(modBus);
         MinecraftForge.EVENT_BUS.addListener(NeoMagic::addReloadListeners);
+        NeoNetwork.register();
+        NeoRuntime.register();
+        NeoEffects.register();
     }
 
     private static void addReloadListeners(AddReloadListenerEvent event) {

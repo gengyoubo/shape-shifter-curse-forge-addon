@@ -251,7 +251,7 @@ public final class SpiderMoonWeaverWebManager {
 
 	// 攻击模式：发射蛛丝弹（命中铺减速网??
 	private static void fireAttack(ServerPlayer player, int tier) {
-		ShellProjectile bullet = new ShellProjectile(github.com.gengyoubo.sscfa.init.AddonEntities.WEB_MEMBRANE_BULLET.get(), player.level()); bullet.setOwner(player);
+		github.com.gengyoubo.sscfa.entity.WebMembraneBullet bullet = new github.com.gengyoubo.sscfa.entity.WebMembraneBullet(player, tier);
 		bullet.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0f, 1.6f, 1.0f);
 		player.level().addFreshEntity(bullet);
 		ServerLevel sw = (ServerLevel) player.level();
@@ -275,7 +275,7 @@ public final class SpiderMoonWeaverWebManager {
 
 	// 搭路模式-发射：发射附???BridgeWebBullet 蛛丝弹（命中方块走移植??BuildWebLadder 建蛛丝梯——梯块可替代网膜；命中实体施缠绕???
 	private static void fireBridgeShoot(ServerPlayer player, int tier) {
-		ShellProjectile bullet = new ShellProjectile(github.com.gengyoubo.sscfa.init.AddonEntities.BRIDGE_WEB_BULLET.get(), player.level()); bullet.setOwner(player);
+		github.com.gengyoubo.sscfa.entity.BridgeWebBullet bullet = new github.com.gengyoubo.sscfa.entity.BridgeWebBullet(player, tier);
 		bullet.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0f, 2.0f, 1.0f); // 原??speed=2, divergence=1
 		player.level().addFreshEntity(bullet);
 	}

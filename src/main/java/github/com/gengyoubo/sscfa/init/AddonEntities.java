@@ -4,8 +4,12 @@ import github.com.gengyoubo.sscfa.SscAddonForge;
 import github.com.gengyoubo.sscfa.entity.GhostCatEntity;
 import github.com.gengyoubo.sscfa.entity.ShellMob;
 import github.com.gengyoubo.sscfa.entity.ShellProjectile;
+import github.com.gengyoubo.sscfa.entity.LunarSpiritEntity;
+import github.com.gengyoubo.sscfa.entity.WitchFamiliarEntity;
+import github.com.gengyoubo.sscfa.entity.AxolotlShifterEntity;
 import github.com.gengyoubo.sscfa.entity.BeepSheepEntity;
 import github.com.gengyoubo.sscfa.entity.FrostArrayEntity;
+import github.com.gengyoubo.sscfa.entity.FrostBallEntity;
 import github.com.gengyoubo.sscfa.entity.FrostThornEntity;
 import github.com.gengyoubo.sscfa.entity.LaserBeamEntity;
 import github.com.gengyoubo.sscfa.entity.TidalOrbEntity;
@@ -15,6 +19,17 @@ import github.com.gengyoubo.sscfa.entity.SpellFireBoltEntity;
 import github.com.gengyoubo.sscfa.entity.SpellFrostSpikeEntity;
 import github.com.gengyoubo.sscfa.entity.SpellMeteorEntity;
 import github.com.gengyoubo.sscfa.entity.SpellMoonlightArrowEntity;
+import github.com.gengyoubo.sscfa.entity.FoxFireballEntity;
+import github.com.gengyoubo.sscfa.entity.InfectionSporeBombEntity;
+import github.com.gengyoubo.sscfa.entity.ParasiticSeedProjectile;
+import github.com.gengyoubo.sscfa.entity.LunarSpiritBoltEntity;
+import github.com.gengyoubo.sscfa.entity.ThrownWaterSpearEntity;
+import github.com.gengyoubo.sscfa.entity.AllayFriendMarkerEntity;
+import github.com.gengyoubo.sscfa.entity.AllayClearMarkerEntity;
+import github.com.gengyoubo.sscfa.entity.BridgeWebBullet;
+import github.com.gengyoubo.sscfa.entity.WebMembraneBullet;
+import github.com.gengyoubo.sscfa.entity.SpiderSwingBullet;
+import github.com.gengyoubo.sscfa.item.WaterSpearEntity;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -36,43 +51,43 @@ public final class AddonEntities {
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, SscAddonForge.MOD_ID);
     private static final List<RegistryObject<EntityType<ShellProjectile>>> SHELL_PROJECTILES = new ArrayList<>();
 
-    // ===== 投射?/ 场地实体（空??=====
-    public static final RegistryObject<EntityType<ShellProjectile>> FROST_BALL = projectile("frost_ball", 0.25f, 0.25f, 4, 10);
+    // ===== 投射物 / 场地实体 =====
+    public static final RegistryObject<EntityType<FrostBallEntity>> FROST_BALL = entity("frost_ball", FrostBallEntity::new, 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<SpellFrostSpikeEntity>> SPELL_FROST_SPIKE = entity("spell_frost_spike", SpellFrostSpikeEntity::new, 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<SpellFireBoltEntity>> SPELL_FIRE_BOLT = entity("spell_fire_bolt", SpellFireBoltEntity::new, 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<SpellMeteorEntity>> SPELL_METEOR = entity("spell_meteor", SpellMeteorEntity::new, 0.5f, 0.5f, 4, 10);
     public static final RegistryObject<EntityType<SpellMoonlightArrowEntity>> SPELL_MOONLIGHT_ARROW = entity("spell_moonlight_arrow", SpellMoonlightArrowEntity::new, 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<SpellCurseMarkEntity>> SPELL_CURSE_MARK = entity("spell_curse_mark", SpellCurseMarkEntity::new, 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<BeepSheepEntity>> BEEP_SHEEP = entity("beep_sheep", BeepSheepEntity::new, 0.25f, 0.25f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> LUNAR_SPIRIT_BOLT = projectile("lunar_spirit_bolt", 0.2f, 0.2f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> THROWN_WATER_SPEAR = projectile("thrown_water_spear", 0.4f, 0.4f, 4, 10);
+    public static final RegistryObject<EntityType<LunarSpiritBoltEntity>> LUNAR_SPIRIT_BOLT = entity("lunar_spirit_bolt", LunarSpiritBoltEntity::new, 0.2f, 0.2f, 4, 10);
+    public static final RegistryObject<EntityType<ThrownWaterSpearEntity>> THROWN_WATER_SPEAR = entity("thrown_water_spear", ThrownWaterSpearEntity::new, 0.4f, 0.4f, 4, 10);
     public static final RegistryObject<EntityType<FrostThornEntity>> FROST_THORN = entity("frost_thorn", FrostThornEntity::new, 0.3f, 0.3f, 8, 1);
     public static final RegistryObject<EntityType<FrostArrayEntity>> FROST_ARRAY = entity("frost_array", FrostArrayEntity::new, 0.3f, 0.3f, 4, 1);
-    public static final RegistryObject<EntityType<ShellProjectile>> FOX_FIREBALL = projectile("fox_fireball", 0.25f, 0.25f, 4, 2);
-    public static final RegistryObject<EntityType<ShellProjectile>> INFECTION_SPORE_BOMB = projectile("infection_spore_bomb", 0.25f, 0.25f, 4, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> PARASITIC_SEED = projectile("parasitic_seed", 0.25f, 0.25f, 4, 10);
+    public static final RegistryObject<EntityType<FoxFireballEntity>> FOX_FIREBALL = entity("fox_fireball", FoxFireballEntity::new, 0.25f, 0.25f, 4, 2);
+    public static final RegistryObject<EntityType<InfectionSporeBombEntity>> INFECTION_SPORE_BOMB = entity("infection_spore_bomb", InfectionSporeBombEntity::new, 0.25f, 0.25f, 4, 10);
+    public static final RegistryObject<EntityType<ParasiticSeedProjectile>> PARASITIC_SEED = entity("parasitic_seed", ParasiticSeedProjectile::new, 0.25f, 0.25f, 4, 10);
     public static final RegistryObject<EntityType<FrostStormEntity>> FROST_STORM = entity("frost_storm", FrostStormEntity::new, 1.0f, 2.0f, 4, 10);
     public static final RegistryObject<EntityType<TidalOrbEntity>> TIDAL_ORB = entity("tidal_orb", TidalOrbEntity::new, 0.5f, 0.5f, 4, 1);
     public static final RegistryObject<EntityType<LaserBeamEntity>> LASER_BEAM = entity("laser_beam", LaserBeamEntity::new, 0.5f, 0.5f, 6, 1);
-    public static final RegistryObject<EntityType<ShellProjectile>> WATER_SPEAR = projectile("water_spear", 0.5f, 0.5f, 1, 20);
-    public static final RegistryObject<EntityType<ShellProjectile>> FRIEND_MARKER = projectile("friend_marker", 0.25f, 0.25f, 1, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> CLEAR_FRIEND_MARKER = projectile("clear_friend_marker", 0.25f, 0.25f, 1, 10);
-    public static final RegistryObject<EntityType<ShellProjectile>> BRIDGE_WEB_BULLET = projectile("bridge_web_bullet", 0.5f, 0.5f, 10, 1);
-    public static final RegistryObject<EntityType<ShellProjectile>> WEB_MEMBRANE_BULLET = projectile("web_membrane_bullet", 0.5f, 0.5f, 10, 1);
-    public static final RegistryObject<EntityType<ShellProjectile>> SPIDER_SWING_BULLET = projectile("spider_swing_bullet", 0.4f, 0.4f, 10, 1);
+    public static final RegistryObject<EntityType<WaterSpearEntity>> WATER_SPEAR = entity("water_spear", WaterSpearEntity::new, 0.5f, 0.5f, 1, 20);
+    public static final RegistryObject<EntityType<AllayFriendMarkerEntity>> FRIEND_MARKER = entity("friend_marker", AllayFriendMarkerEntity::new, 0.25f, 0.25f, 1, 10);
+    public static final RegistryObject<EntityType<AllayClearMarkerEntity>> CLEAR_FRIEND_MARKER = entity("clear_friend_marker", AllayClearMarkerEntity::new, 0.25f, 0.25f, 1, 10);
+    public static final RegistryObject<EntityType<BridgeWebBullet>> BRIDGE_WEB_BULLET = entity("bridge_web_bullet", BridgeWebBullet::new, 0.5f, 0.5f, 10, 1);
+    public static final RegistryObject<EntityType<WebMembraneBullet>> WEB_MEMBRANE_BULLET = entity("web_membrane_bullet", WebMembraneBullet::new, 0.5f, 0.5f, 10, 1);
+    public static final RegistryObject<EntityType<SpiderSwingBullet>> SPIDER_SWING_BULLET = entity("spider_swing_bullet", SpiderSwingBullet::new, 0.4f, 0.4f, 10, 1);
 
     // ===== 鐢??=====
-    public static final RegistryObject<EntityType<ShellMob>> LUNAR_SPIRIT = ENTITIES.register("lunar_spirit", () ->
-            EntityType.Builder.<ShellMob>of(ShellMob::new, MobCategory.MISC).sized(0.4f, 0.6f)
+    public static final RegistryObject<EntityType<LunarSpiritEntity>> LUNAR_SPIRIT = ENTITIES.register("lunar_spirit", () ->
+            EntityType.Builder.<LunarSpiritEntity>of(LunarSpiritEntity::new, MobCategory.MISC).sized(0.4f, 0.6f)
                     .clientTrackingRange(4).updateInterval(1).build("lunar_spirit"));
     public static final RegistryObject<EntityType<GhostCatEntity>> GHOST_CAT = ENTITIES.register("ghost_cat", () ->
             EntityType.Builder.<GhostCatEntity>of(GhostCatEntity::new, MobCategory.MISC).sized(0.6f, 0.8f)
                     .clientTrackingRange(1).updateInterval(2).build("ghost_cat"));
-    public static final RegistryObject<EntityType<ShellMob>> WITCH_FAMILIAR = ENTITIES.register("witch_familiar", () ->
-            EntityType.Builder.<ShellMob>of(ShellMob::new, MobCategory.MONSTER).sized(0.5f, 0.7f)
+    public static final RegistryObject<EntityType<WitchFamiliarEntity>> WITCH_FAMILIAR = ENTITIES.register("witch_familiar", () ->
+            EntityType.Builder.<WitchFamiliarEntity>of(WitchFamiliarEntity::new, MobCategory.MONSTER).sized(0.5f, 0.7f)
                     .clientTrackingRange(4).updateInterval(3).build("witch_familiar"));
-    public static final RegistryObject<EntityType<ShellMob>> AXOLOTL_SHIFTER = ENTITIES.register("axolotl_shifter", () ->
-            EntityType.Builder.<ShellMob>of(ShellMob::new, MobCategory.AXOLOTLS).sized(0.6f, 1.8f)
+    public static final RegistryObject<EntityType<AxolotlShifterEntity>> AXOLOTL_SHIFTER = ENTITIES.register("axolotl_shifter", () ->
+            EntityType.Builder.<AxolotlShifterEntity>of(AxolotlShifterEntity::new, MobCategory.AXOLOTLS).sized(0.6f, 1.8f)
                     .clientTrackingRange(4).updateInterval(3).build("axolotl_shifter"));
 
     private AddonEntities() {}
