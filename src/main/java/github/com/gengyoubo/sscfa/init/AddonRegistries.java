@@ -19,6 +19,7 @@ public final class AddonRegistries {
         AddonEntities.ENTITIES.register(modBus);
         AddonSounds.SOUNDS.register(modBus);
         AddonParticles.PARTICLES.register(modBus);
+        github.com.gengyoubo.sscfa.enchantment.RegAddonEnchantments.ENCHANTMENTS.register(modBus);
         modBus.addListener(AddonEntities::registerAttributes);
         AddonItems.ITEMS.register(modBus);
         AddonItems.TABS.register(modBus);

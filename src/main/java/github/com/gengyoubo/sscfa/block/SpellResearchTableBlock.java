@@ -128,6 +128,8 @@ public class SpellResearchTableBlock extends BaseEntityBlock {
 		}
 		MenuProvider factory = state.getMenuProvider(world, pos);
 		if (factory != null) {
+			if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer)
+				github.com.gengyoubo.sscfa.spell.FormationKnowledgeComponent.sync(serverPlayer);
 			player.openMenu(factory);
 		}
 		return InteractionResult.CONSUME;

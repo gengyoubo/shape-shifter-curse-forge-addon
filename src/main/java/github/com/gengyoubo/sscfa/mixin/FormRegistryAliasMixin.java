@@ -13,7 +13,7 @@ public abstract class FormRegistryAliasMixin {
     @ModifyVariable(
             method = "get(Lnet/minecraft/resources/ResourceLocation;)Lnet/onixary/shapeShifterCurseForge/form/FormDefinition;",
             at = @At("HEAD"), argsOnly = true, remap = false)
-    private static ResourceLocation ssca$canonicalFormId(ResourceLocation id) {
-        return FormIdMigration.canonical(id);
+    private static ResourceLocation ssca$registeredFormId(ResourceLocation id) {
+        return FormIdMigration.legacy(id);
     }
 }

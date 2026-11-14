@@ -56,6 +56,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(LivingEntity.class)
 public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess {
     @Unique
+    private static final net.minecraft.world.entity.EquipmentSlot[] ssca$armorSlots = {
+            net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST,
+            net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET};
+    @Unique
     private NpcCombatState ssca$npcCombatState;
 
     @Override
@@ -157,6 +161,21 @@ public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess 
         if (!BindingAnkletItem.isRaiderFaction(attacker)) return amount;
         if (!BindingAnkletItem.hasAnkletAuraNearby(attacker)) return amount;
         return amount * BindingAnkletItem.DAMAGE_MULTIPLIER;
+    }
+
+    @ModifyVariable(method = "hurt", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    private float ssca$spellResistance(float amount, DamageSource source) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (self.level().isClientSide || amount <= 0 || source == null
+                || (!source.is(github.com.gengyoubo.sscfa.spell.SpellDamageSource.SPELL_DAMAGE)
+                && !AnomalyEffects.isReaction(source))) return amount;
+        int level = 0;
+        for (net.minecraft.world.entity.EquipmentSlot slot : ssca$armorSlots) {
+            level += net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(
+                    github.com.gengyoubo.sscfa.enchantment.RegAddonEnchantments.SPELL_RESISTANCE.get(), self.getItemBySlot(slot));
+        }
+        level = Math.min(level, github.com.gengyoubo.sscfa.enchantment.SpellResistanceEnchantment.MAX_LEVEL);
+        return amount * (1.0f - github.com.gengyoubo.sscfa.enchantment.SpellResistanceEnchantment.REDUCTION_PER_LEVEL * level);
     }
 
     @ModifyVariable(method = "hurt", at = @At("HEAD"), argsOnly = true, ordinal = 0)

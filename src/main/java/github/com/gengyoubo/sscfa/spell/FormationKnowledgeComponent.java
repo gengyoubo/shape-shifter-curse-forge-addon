@@ -8,6 +8,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
@@ -56,9 +57,19 @@ private void ensureResearchMigration() {
     research.migrated = true;
 }
 
-private static final Map<java.util.UUID, FormationKnowledgeComponent> STORE = new java.util.concurrent.ConcurrentHashMap<>();
+public static final ResourceLocation SYNC = new ResourceLocation("ssc_addon", "formation_knowledge_sync");
+private static final Map<java.util.UUID, FormationKnowledgeComponent> CLIENT_STORE = new java.util.concurrent.ConcurrentHashMap<>();
 public static FormationKnowledgeComponent get(Player player) {
-return STORE.computeIfAbsent(player.getUUID(), ignored -> new FormationKnowledgeComponent());
+if (!player.level().isClientSide() && player.getServer() != null) {
+    return FormationKnowledgeSavedData.get(player.getServer()).getOrCreate(player.getUUID());
+}
+return CLIENT_STORE.computeIfAbsent(player.getUUID(), ignored -> new FormationKnowledgeComponent());
+}
+
+public static void acceptClient(java.util.UUID id, CompoundTag tag) {
+    FormationKnowledgeComponent component = new FormationKnowledgeComponent();
+    component.readFromNbt(tag);
+    CLIENT_STORE.put(id, component);
 }
 
 // ---- 瀛樺偍閿?----
@@ -193,6 +204,16 @@ nbt.put("RuneResearch", research().write());
 
 /** 鏈嶅姟绔彉鏇村悗鍚屾缁欏鎴风锛堢爺绌跺彴 GUI 闇€瑕佸疄鏃惰锛夈€?*/
 public static void sync(ServerPlayer player) {
+    var data = FormationKnowledgeSavedData.get(player.getServer());
+    FormationKnowledgeComponent component = data.getOrCreate(player.getUUID());
+    data.setDirty();
+    if (!github.com.gengyoubo.sscfa.network.AddonNetwork.canSend(player, SYNC)) return;
+    CompoundTag tag = new CompoundTag();
+    component.writeToNbt(tag);
+    var buf = github.com.gengyoubo.sscfa.network.AddonNetwork.buffer();
+    buf.writeUUID(player.getUUID());
+    buf.writeNbt(tag);
+    github.com.gengyoubo.sscfa.network.AddonNetwork.sendToPlayer(player, SYNC, buf);
 }
 
 private static int clampLevel(int lv) {

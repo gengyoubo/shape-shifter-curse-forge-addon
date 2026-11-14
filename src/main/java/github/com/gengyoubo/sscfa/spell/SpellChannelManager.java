@@ -131,6 +131,8 @@ public final class SpellChannelManager {
 	private static boolean startInternal(ServerPlayer player, Spell spell, ItemStack scroll, int level,
 			boolean solo, int token, int mana, int cooldown, BooleanSupplier sourceValid, Consumer<Vec3> effect,
 			IntConsumer settleCooldown, Runnable consumeUse, RuneModifiers modifiers) {
+		if (github.com.gengyoubo.sscfa.anomaly.AnomalyTeleportGuard.isTeleportSpell(spell)
+				&& github.com.gengyoubo.sscfa.anomaly.AnomalyTeleportGuard.reject(player)) return false;
 		if (!github.com.gengyoubo.sscfa.spell.research.RuneScheme.validScroll(player, scroll, spell)) return false;
 		if (ArcaneAnalysis.isUnanalyzed(scroll)) {
 			player.displayClientMessage(Component.translatable("message.ssc_addon.analysis.required"), true);

@@ -54,6 +54,7 @@ public final class MoonScarStoryManager {
 	}
 
 	public static void register() {
+		github.com.gengyoubo.sscfa.moonmarrow.MoonMarrowRing.registerUseInterceptor(MoonScarStoryManager::tryFreeRevertFromStoryRed);
 		// sp 使魔在诅咒之月夜晚上???进入「剧情真睡」（真睡眠、仅顶住 SSC 禁睡、阻止跳夜，睡满??5 秒后叫醒??red）??
 		MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.player.PlayerSleepInBedEvent event) -> { var entity = event.getEntity(); var sleepingPos = event.getPos();
 			if (entity instanceof ServerPlayer player && !player.level().isClientSide) {
@@ -172,7 +173,7 @@ public final class MoonScarStoryManager {
 		if (spForm == null) return false;
 
 		// 月髓环免费变?sp 使魔：带黑屏淡入淡出动画（原 handleDirectTransform(...,false)??
-		net.onixary.shapeShifterCurseForge.form.TransformManager.startTransform(sp, FormIdentifiers.FAMILIAR_FOX_SP);
+		if (!net.onixary.shapeShifterCurseForge.form.TransformManager.startTransform(sp, FormIdentifiers.FAMILIAR_FOX_SP)) return true;
 		state.storyRedPlayers.remove(sp.getUUID());
 		state.setDirty();
 

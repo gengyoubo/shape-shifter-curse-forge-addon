@@ -4,7 +4,7 @@ import github.com.gengyoubo.sscfa.evolution.EvolutionRegistry;
 import github.com.gengyoubo.sscfa.network.SscAddonNetworking;
 import github.com.gengyoubo.sscfa.util.FormUtils;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.resources.language.I18n;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -74,8 +74,8 @@ public class PsionicOrbItem extends Item {
     public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable Level world, List<Component> tooltip, TooltipFlag context) {
         super.appendHoverText(stack, world, tooltip, context);
         String key = "item.ssc_addon.psionic_orb.tooltip";
-        if (I18n.exists(key)) {
-            for (String line : I18n.get(key).split("\n")) {
+        if (Language.getInstance().has(key)) {
+            for (String line : Language.getInstance().getOrDefault(key).split("\n")) {
                 tooltip.add(Component.literal(line).withStyle(ChatFormatting.GRAY));
             }
         } else {

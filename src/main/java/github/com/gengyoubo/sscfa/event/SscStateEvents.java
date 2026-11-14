@@ -44,13 +44,19 @@ public final class SscStateEvents {
 
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) STATES.put(player.getUUID(), snapshot(player));
+        if (event.getEntity() instanceof ServerPlayer player) {
+            STATES.put(player.getUUID(), snapshot(player));
+            github.com.gengyoubo.sscfa.spell.FormationKnowledgeComponent.sync(player);
+        }
     }
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || event.side != LogicalSide.SERVER
                 || !(event.player instanceof ServerPlayer player)) return;
+        if (net.minecraftforge.fml.ModList.get().isLoaded("curios")) {
+            github.com.gengyoubo.sscfa.item.AddonAccessoryGuard.tick(player);
+        }
         State now = snapshot(player);
         State before = STATES.put(player.getUUID(), now);
         if (before == null) return;

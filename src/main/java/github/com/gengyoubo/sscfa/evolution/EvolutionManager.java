@@ -17,6 +17,7 @@ public final class EvolutionManager {
     }
 
     public static void register() {
+        github.com.gengyoubo.sscfa.moonmarrow.MoonMarrowRing.setEvolutionGate(EvolutionManager::canUpgradeFoxEvolve);
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
                 (net.minecraftforge.event.TickEvent.PlayerTickEvent event) -> {
                     if (event.phase == net.minecraftforge.event.TickEvent.Phase.END

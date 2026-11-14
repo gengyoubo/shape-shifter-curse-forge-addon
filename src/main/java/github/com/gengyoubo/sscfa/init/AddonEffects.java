@@ -86,6 +86,10 @@ public final class AddonEffects {
 
 
     public static void registerBrewing() {
+        BrewingRecipeRegistry.addRecipe(new BrewingRecipe(Ingredient.of(AddonItems.WITHER_POTION.get()),
+                Ingredient.of(Items.GUNPOWDER), new ItemStack(AddonItems.WITHER_POTION_SPLASH.get())));
+        BrewingRecipeRegistry.addRecipe(new BrewingRecipe(Ingredient.of(AddonItems.WITHER_POTION_SPLASH.get()),
+                Ingredient.of(Items.DRAGON_BREATH), new ItemStack(AddonItems.WITHER_POTION_LINGERING.get())));
         BrewingRecipeRegistry.addRecipe(new BrewingRecipe(Ingredient.of(AddonItems.UNIVERSAL_ENERGY_POTION.get()),
                 Ingredient.of(Items.GUNPOWDER), new ItemStack(AddonItems.UNIVERSAL_ENERGY_POTION_SPLASH.get())));
         BrewingRecipeRegistry.addRecipe(new BrewingRecipe(Ingredient.of(AddonItems.UNIVERSAL_ENERGY_POTION_SPLASH.get()),

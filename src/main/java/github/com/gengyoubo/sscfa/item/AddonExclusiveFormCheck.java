@@ -68,6 +68,7 @@ final class AddonExclusiveFormCheck {
 		if (((Object) item) instanceof github.com.gengyoubo.sscfa.item.FrostAmuletItem) return FormUtils::isSnowFoxSP;
 		if (((Object) item) instanceof github.com.gengyoubo.sscfa.item.HumusRingItem) return FormUtils::isBatParasiticFruit;
 		if (((Object) item) instanceof github.com.gengyoubo.sscfa.item.InvisibilityCloakItem) return FormUtils::isWildCatSP;
+		if (item instanceof LifesavingCatTailItem) return e -> FormUtils.isWildCatSP(e) || FormUtils.isForm(e, FormIdentifiers.WILD_CAT_NIGHTMARE);
 		if (((Object) item) instanceof NightmareRingItem) return e -> FormUtils.isForm(e, FormIdentifiers.WILD_CAT_NIGHTMARE);
 		if (((Object) item) instanceof FrostSpineCollarItem) return e -> FormUtils.isForm(e, FormIdentifiers.SNOW_FOX_FROSTSPINE);
 		if (((Object) item) instanceof github.com.gengyoubo.sscfa.item.NovaReviveNecklaceItem) return e -> FormUtils.isForm(e, FormIdentifiers.OCELOT_NOVA);
@@ -78,6 +79,7 @@ final class AddonExclusiveFormCheck {
 		if (((Object) item) instanceof github.com.gengyoubo.sscfa.item.WindSpiritStaminaNecklaceItem) return FormUtils::isOcelotSP;
 		if (((Object) item) instanceof github.com.gengyoubo.sscfa.item.WitheredSandRingItem) return FormUtils::isGoldenSandstormSP;
 		if (((Object) item) instanceof SeaCrystalPendantItem) return FormUtils::isAxolotlFluorescent;
+		if (item instanceof VenomGlandItem) return e -> FormUtils.isForm(e, FormIdentifiers.SPIDER_SALTICIDAE);
 		return null; // 其余主包饰品没有附属定义的形态限?
 	}
 }

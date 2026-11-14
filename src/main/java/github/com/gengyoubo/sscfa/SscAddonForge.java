@@ -33,6 +33,7 @@ public final class SscAddonForge {
         AddonRegistries.init(bus);
         AddonForms.init();
         AddonNetwork.init();
+        github.com.gengyoubo.sscfa.util.InstinctAnchors.init();
         github.com.gengyoubo.sscfa.ability.LunarSpiritTargetLink.init();
         github.com.gengyoubo.sscfa.event.WitchFamiliarSpawnHandler.register();
         github.com.gengyoubo.sscfa.event.AxolotlShifterSpawnHandler.register();
@@ -74,6 +75,7 @@ public final class SscAddonForge {
         github.com.gengyoubo.sscfa.tutorial.SpellTutorialManager.register();
         github.com.gengyoubo.sscfa.spell.research.FormationResearchNetworking.register();
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.spell.research.FormationResearchNetworking.STATE);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.spell.FormationKnowledgeComponent.SYNC);
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.tutorial.SpellTutorialManager.OFFER);
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.spell.DeathFinaleManager.SNAPSHOT);
 
@@ -106,6 +108,7 @@ public final class SscAddonForge {
         github.com.gengyoubo.sscfa.story.MoonScarStoryManager.register();
         github.com.gengyoubo.sscfa.story.TideSpiritStoryManager.register();
         github.com.gengyoubo.sscfa.evolution.EvolutionManager.register();
+        github.com.gengyoubo.sscfa.moonmarrow.TemporaryRedForm.register();
         SscAddonNetworking.registerServerReceivers();
         MinecraftForge.EVENT_BUS.addListener((AddReloadListenerEvent event) -> {
             event.addListener(SpellRegistry.INSTANCE);

@@ -54,12 +54,9 @@ public final class MoonMarrowRing {
 	};
 	private static volatile Predicate<ServerPlayer> evolutionGate = DEFAULT_EVOLUTION_GATE;
 
-	/**
-	 * familiar_fox_3 进化时变成临时红狐（familiar_fox_red）的概率。原版为 5%，但红狐的到期回退由
-	 * RedFormTickManager 处理，尚未迁移；在它迁移前保持 0，避免玩家卡在红狐形态。
-	 */
-	private static volatile float redVariantChance = 0.0f;
 	public static final float DEFAULT_RED_VARIANT_CHANCE = 0.05f;
+	/** 使魔三阶段使用月髓环时的临时红狐概率。 */
+	private static volatile float redVariantChance = DEFAULT_RED_VARIANT_CHANCE;
 
 	static {
 		registerUpgrade(FAMILIAR_FOX_3, FAMILIAR_FOX_SP);
@@ -89,12 +86,12 @@ public final class MoonMarrowRing {
 
 	@Nullable
 	public static synchronized ResourceLocation targetOf(@Nullable ResourceLocation from) {
-		return from == null ? null : UPGRADES.get(from);
+		return from == null ? null : UPGRADES.get(github.com.gengyoubo.sscfa.util.FormIdMigration.legacy(from));
 	}
 
 	/** 当前形态是否已经是某条月髓环路线的终点（即"已是 SP"）。 */
 	public static synchronized boolean isUpgradeTarget(@Nullable ResourceLocation formId) {
-		return formId != null && UPGRADES.containsValue(formId);
+		return formId != null && UPGRADES.containsValue(github.com.gengyoubo.sscfa.util.FormIdMigration.legacy(formId));
 	}
 
 	public static synchronized Map<ResourceLocation, ResourceLocation> upgrades() {

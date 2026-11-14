@@ -9,6 +9,11 @@ import net.minecraft.network.chat.Component;
 
 public final class FormationResearchClient {
     public static void register() {
+        AddonNetwork.registerClientReceiver(github.com.gengyoubo.sscfa.spell.FormationKnowledgeComponent.SYNC, buf -> {
+            var id = buf.readUUID();
+            CompoundTag tag = buf.readNbt();
+            if (tag != null) github.com.gengyoubo.sscfa.spell.FormationKnowledgeComponent.acceptClient(id, tag);
+        });
         AddonNetwork.registerClientReceiver(FormationResearchNetworking.STATE, buf -> {
             int syncId = buf.readVarInt();
             CompoundTag state = buf.readNbt();

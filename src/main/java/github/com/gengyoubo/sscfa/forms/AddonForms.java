@@ -20,7 +20,7 @@ import java.util.function.UnaryOperator;
  * <p>形态 ID 沿用旧路径（familiar_fox_sp 等），与现有 Origin、模型、贴图、语言键一致。
  * 尺寸与体型取自 Fabric 版的 applyScaleFunc / bodyType。</p>
  *
- * <p>目前只注册月髓环的进化目标；能力中依赖 SSCA 自有 Java 能力（主动技能、雾化等）的部分要等能力系统迁移后才生效。</p>
+ * <p>注册月髓环、进化石的目标和进化树起点；各形态的具体能力仍需对应的 Forge 能力实现。</p>
  */
 public final class AddonForms {
 	public static final String NAMESPACE = "my_addon";
@@ -44,6 +44,23 @@ public final class AddonForms {
 	// 复用原版 snow_fox_3：摔落保护
 	public static final SscRegistryObject<SscForm> SNOW_FOX_FROSTSPINE = sp("snow_fox_frostspine", FormBodyType.FERAL, 0.55f, 0.6f,
 			b -> b.fallProtectionDistance(2.5f));
+	// 进化石目标及进化树起点；使用资源文件对应的旧路径注册。
+	public static final SscRegistryObject<SscForm> WILD_CAT_SP = sp("wild_cat_sp", FormBodyType.FERAL, 0.55f, 0.6f, b -> b);
+	public static final SscRegistryObject<SscForm> SNOW_FOX_SP = sp("snow_fox_sp", FormBodyType.FERAL, 0.55f, 0.6f,
+			b -> b.fallProtectionDistance(2.5f));
+	public static final SscRegistryObject<SscForm> ALLAY_SP = sp("allay_sp", FormBodyType.NORMAL, 0.55f, 1.0f, b -> b);
+	public static final SscRegistryObject<SscForm> GOLDEN_SANDSTORM_SP = sp("golden_sandstorm_sp", FormBodyType.FERAL, 0.8f, 0.6f, b -> b);
+	public static final SscRegistryObject<SscForm> FAMILIAR_FOX_MANCIANIMA = sp("familiar_fox_mancianima", FormBodyType.FERAL, 0.55f, 0.6f, b -> b);
+	public static final SscRegistryObject<SscForm> FAMILIAR_FOX_RED = sp("familiar_fox_red", FormBodyType.FERAL, 0.65f, 0.6f, b -> b);
+	public static final SscRegistryObject<SscForm> BAT_PARASITIC_FRUIT = sp("bat_parasitic_fruit", FormBodyType.NORMAL, 0.6f, 0.7f,
+			b -> b.addFlags("slow_fall", "slow_fall_animation"));
+	public static final SscRegistryObject<SscForm> AXOLOTL_FLUORESCENT = sp("axolotl_fluorescent", FormBodyType.NORMAL, 0.75f, 0.75f, b -> b);
+	public static final SscRegistryObject<SscForm> OCELOT_NOVA = sp("ocelot_nova", FormBodyType.FERAL, 0.75f, 0.6f,
+			b -> b.jumpVelocityAddition(0.25f));
+	public static final SscRegistryObject<SscForm> SPIDER_SALTICIDAE = sp("spider_salticidae", FormBodyType.NORMAL, 0.6f, 1.0f,
+			b -> b.addFlags("night_vision", "climb", "poison_immune").fallProtectionDistance(4.0f));
+	public static final SscRegistryObject<SscForm> UPGRADE_FAMILIAR_FOX = sp("upgrade_familiar_fox", FormBodyType.FERAL, 0.55f, 0.6f, b -> b);
+	public static final SscRegistryObject<SscForm> UPGRADE_AXOLOTL = sp("upgrade_axolotl", FormBodyType.NORMAL, 1.0f, 1.0f, b -> b);
 
 	private AddonForms() {}
 
