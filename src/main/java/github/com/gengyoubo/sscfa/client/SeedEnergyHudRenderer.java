@@ -43,10 +43,4 @@ public final class SeedEnergyHudRenderer extends SimpleResourceBarRenderer {
     protected int width() {
         return TEX_WIDTH;
     }
-
-    /** 必须真正拥有?power 才渲染，避免对其他形?未变形玩家误显示?*/
-    @Override
-    protected boolean requirePower() {
-        return true;
-    }
 }

@@ -36,10 +36,6 @@ public abstract class SimpleResourceBarRenderer {
         return 5;
     }
 
-    protected boolean requirePower() {
-        return false;
-    }
-
     protected int[] manaBarPosArgs() {
         return ManaBarPos.get(8, 100, -17);
     }
@@ -72,15 +68,11 @@ public abstract class SimpleResourceBarRenderer {
         if (MC.options.hideGui || MC.player == null) return;
         Player player = MC.player;
 
-        if (requirePower() && !ClientResourceCache.has(player, resourceId())) return;
+        if (!ClientResourceCache.has(player, resourceId())) return;
 
         int[] valMax = PowerUtils.getClientResourceValueAndMax(player, resourceId());
-        int current = valMax[0];
+        int current = Math.max(0, valMax[0]);
         int max = valMax[1];
-        if (!requirePower()) {
-            if (current <= 0 && max <= 1) return;
-        }
-        if (current < 0) current = 0;
         if (max <= 0) return;
         double percent = (double) current / (double) max;
 

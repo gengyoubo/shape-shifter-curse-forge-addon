@@ -1,54 +1,238 @@
 package github.com.gengyoubo.sscfa.block;
 
+import github.com.gengyoubo.sscfa.init.AddonEffects;
+import github.com.gengyoubo.sscfa.network.SscAddonNetworking;
+import github.com.gengyoubo.sscfa.util.FormIdentifiers;
+import github.com.gengyoubo.sscfa.util.FormUtils;
+import github.com.gengyoubo.sscfa.util.WhitelistUtils;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.monster.Spider;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.MultifaceBlock;
 import net.minecraft.world.level.block.MultifaceSpreader;
+import net.minecraft.world.level.block.PipeBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import java.util.UUID;
 
 /**
- * 铔涚綉鑶滐細澶氶潰璐撮檮鐨勮杽灞傝洓缃戯紙鏈哄埗鍚屽彂鍏夊湴琛ｏ級锛屾斁缃悗 60~90 绉掗殢鏈烘秷澶便€? *
- * <p>杩佺Щ鍗犱綅锛氫繚鐣欐柟鍧楃姸鎬併€佽创闄勪笌瀹氭椂娑堟暎锛涙帴瑙﹀噺閫熴€併€岃湗缃戠紶韬€嶃€佹柦娉曡€呯櫧鍚嶅崟涓庨珮浜? * 渚濊禆褰㈡€?鐧藉悕鍗?缃戠粶绯荤粺锛屽緟鍏惰縼绉诲悗浠?Fabric 鐗?WebMembraneBlock 琛ュ洖銆?/p>
+ * 蛛网膜：多面生长的薄层蛛网方块（可贴地面 / 墙面 / 天花板等任意面，机制同发光地衣）。
+ * 非免疫生物踩上或接触时水平移动减速 30%；蜘蛛类实体、玩家及其已驯服宠物免疫。
+ * 遇水即被冲毁（不掉落，由 Settings.dropsNothing() 保证）；可燃且蔓延快（可燃在 RegAddonBlocks 注册）。
  */
-@SuppressWarnings("deprecation")
+@SuppressWarnings("deprecation") // 本类覆写多个 vanilla 标注 @Deprecated 的 Block 方法（碰撞 / 邻居更新 / 放置），统一抑制
 public class WebMembraneBlock extends MultifaceBlock {
-	public static final int LIFESPAN_MIN = 1200;
-	public static final int LIFESPAN_MAX = 1800;
-	private final MultifaceSpreader spreader = new MultifaceSpreader(this);
+	private final MultifaceSpreader grower = new MultifaceSpreader(this);
 
-	public WebMembraneBlock(Properties properties) {
-		super(properties);
+	/** 定时消失下限（tick）：60 秒。 */
+	public static final int LIFESPAN_MIN = 1200;
+	/** 定时消失上限（tick）：90 秒。技能铺的每块随机取 [1200,1800]，实现「60 秒开始、90 秒全消失」的错峰消散。 */
+	public static final int LIFESPAN_MAX = 1800;
+
+	/** 「蜘网缠身」持续时长（tick）：踩过刷新，离开后 5 秒消散。 */
+	private static final int WEB_BOUND_DURATION = 100;
+
+	/** 踩网蓝色高亮（仅施法者可见）持续时长（tick）。 */
+	private static final int WEB_HIGHLIGHT_DURATION = 60;
+
+	public WebMembraneBlock(BlockBehaviour.Properties settings) {
+		super(settings);
 	}
 
 	@Override
 	public MultifaceSpreader getSpreader() {
-		return spreader;
+		return this.grower;
+	}
+
+	// Burns and spreads like grass (Fabric registered it with FlammableBlockRegistry at 60 / 100).
+	@Override
+	public int getFlammability(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos, Direction direction) {
+		return 100;
 	}
 
 	@Override
-	public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean moved) {
-		super.onPlace(state, level, pos, oldState, moved);
-		if (!level.isClientSide) {
-			level.scheduleTick(pos, this, LIFESPAN_MIN + level.getRandom().nextInt(LIFESPAN_MAX - LIFESPAN_MIN + 1));
+	public int getFireSpreadSpeed(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos, Direction direction) {
+		return 60;
+	}
+
+	// 放置即排定随机寿命（错峰消失）；被水冲毁 / 烧掉时提前失效，scheduledTick 命中空气则无操作
+	@Override
+	public void onPlace(BlockState state, Level world, BlockPos pos, BlockState oldState, boolean notify) {
+		super.onPlace(state, world, pos, oldState, notify);
+		if (!world.isClientSide) {
+			int life = LIFESPAN_MIN + world.getRandom().nextInt(LIFESPAN_MAX - LIFESPAN_MIN + 1);
+			world.scheduleTick(pos, this, life);
 		}
 	}
 
 	@Override
-	public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-		if (!level.isClientSide && !newState.is(this)) WebMembraneOwners.remove(level, pos);
-		super.onRemove(state, level, pos, newState, moved);
+	public void onRemove(BlockState state, Level world, BlockPos pos, BlockState newState, boolean moved) {
+		if (!world.isClientSide && !newState.is(this)) WebMembraneOwners.remove(world, pos);
+		super.onRemove(state, world, pos, newState, moved);
 	}
 
 	@Override
-	public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+	public void tick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
 		if (state.is(this)) {
-			level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
-			WebMembraneOwners.remove(level, pos);
+			world.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+			WebMembraneOwners.remove(world, pos);
 		}
 	}
 
-    public static void coatArea(net.minecraft.server.level.ServerLevel world, net.minecraft.core.BlockPos pos, double radius, java.util.UUID owner) {}
+	/**
+	 * 以 center 为球心、按 TNT 爆炸式辐射把「贴着实体面的空气格」涂覆成蛛网膜（多面贴附）。
+	 * 近心区高概率填满、边缘概率衰减、基础半径外留 2 格溅射带低概率随机延伸（最远点可超基础半径，
+	 * 形成参差不齐的辐射状边缘而非规整球面）。每格按其周围可附着的实体面设置对应朝向布尔属性；
+	 * 无可附着面则跳过（多面块放不上）。由蛛丝弹命中调用，服务端执行（概率用服务端随机，多人一致）；
+	 * 每块经 onBlockAdded 各自排定 60~90s 随机寿命，并登记施法者 ownerId 供白名单判定。
+	 */
+	public static void coatArea(ServerLevel world, BlockPos center, double radius, UUID ownerId) {
+		int r = (int) Math.ceil(radius);
+		int splash = r + 2; // 溅射带：基础半径外多扫 2 格，低概率延伸出辐射枝杈
+		double core = r * 0.7; // 近心核心区：高概率填满
+		double r2 = radius * radius;
+		BlockState base = RegAddonBlocks.WEB_MEMBRANE.defaultBlockState();
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+		for (int dx = -splash; dx <= splash; dx++) {
+			for (int dy = -splash; dy <= splash; dy++) {
+				for (int dz = -splash; dz <= splash; dz++) {
+					double dist2 = (double) (dx * dx + dy * dy + dz * dz);
+					// 爆炸式保留概率：核心区≈全留 → 半径内线性衰减 → 溅射带低概率随机
+					double keep;
+					if (dist2 <= core * core) {
+						keep = 0.97;            // 近心填满（留少量空洞更像爆炸灼痕）
+					} else if (dist2 <= r2) {
+						double t = (Math.sqrt(dist2) - core) / (r - core);
+						keep = 0.97 - 0.47 * t; // 0.97 → 0.50 线性衰减
+					} else {
+						keep = 0.15;            // 溅射带：随机延伸出边缘枝杈
+					}
+					if (world.getRandom().nextDouble() > keep) continue;
+					pos.set(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
+					if (!world.getBlockState(pos).isAir()) continue; // 只填空气，不破坏既有方块
+					BlockState st = base;
+					boolean anchored = false;
+					for (Direction d : Direction.values()) {
+						BlockPos np = pos.relative(d);
+						if (world.getBlockState(np).isFaceSturdy(world, np, d.getOpposite())) {
+							st = st.setValue(PipeBlock.PROPERTY_BY_DIRECTION.get(d), true);
+							anchored = true;
+						}
+					}
+					if (anchored) {
+						BlockPos placed = pos.immutable();
+						world.setBlockAndUpdate(placed, st);
+						WebMembraneOwners.set(world, placed, ownerId);
+					}
+				}
+			}
+		}
+	}
+
+	// 接触到水就被冲毁（返回空气）；不掉落由 dropsNothing() 保证
+	@Override
+	public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
+												LevelAccessor world, BlockPos pos, BlockPos neighborPos) {
+		if (isTouchingWater(world, pos)) {
+			return Blocks.AIR.defaultBlockState();
+		}
+		return super.updateShape(state, direction, neighborState, world, pos, neighborPos);
+	}
+
+	private static boolean isTouchingWater(LevelAccessor world, BlockPos pos) {
+		if (world.getFluidState(pos).is(FluidTags.WATER)) {
+			return true;
+		}
+		for (Direction d : Direction.values()) {
+			if (world.getFluidState(pos.relative(d)).is(FluidTags.WATER)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// 减速 30% + 施加「蛛网缠身」并踩烂脚下这块网（消耗式）；蜘蛛 / 月织蛛自身 / 施法者白名单个体（队友·宠物）免疫
+	@Override
+	public void entityInside(BlockState state, Level world, BlockPos pos, Entity entity) {
+		if (isImmune(world, pos, entity)) {
+			return;
+		}
+		entity.makeStuckInBlock(state, new Vec3(0.7D, 1.0D, 0.7D));
+		if (!world.isClientSide && entity instanceof LivingEntity living) {
+			// 施加/刷新蛛网缠身（防牛奶、任何形态不免疫）；脚下蛛网粒子由效果自身逐 tick 生成
+			// 带网主（若在线）作 source，供食梦魔「入梦」debuff 拦截归因
+			UUID casterId0 = WebMembraneOwners.get(world, pos);
+			ServerPlayer webCaster = world instanceof ServerLevel sw0 && casterId0 != null
+					? sw0.getServer().getPlayerList().getPlayer(casterId0) : null;
+			living.addEffect(new MobEffectInstance(AddonEffects.SPIDER_WEB_BOUND.get(), WEB_BOUND_DURATION, 0, false, false, true), webCaster);
+			// 踩烂前先取施法者，用于「仅施法者可见」的蓝色高亮
+			UUID casterId = WebMembraneOwners.get(world, pos);
+			// 踩烂脚下这块网：非免疫生物走过即毁
+			world.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+			WebMembraneOwners.remove(world, pos);
+			if (world instanceof ServerLevel sw) {
+				// 踩网音效
+				sw.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+						SoundEvents.WET_GRASS_BREAK, SoundSource.BLOCKS, 0.5f, 1.1f);
+				// 蓝色高亮：仅通知施法者本机给受害者描蓝边
+				if (casterId != null) {
+					ServerPlayer caster = sw.getServer().getPlayerList().getPlayer(casterId);
+					if (caster != null && caster != living) {
+						SscAddonNetworking.sendWebHighlight(caster, living.getId(), WEB_HIGHLIGHT_DURATION);
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * 免疫判定：
+	 * <ul>
+	 *   <li>蜘蛛类实体 / 月织蛛形态玩家 → 始终免疫（不困住蜘蛛自己）；</li>
+	 *   <li>悦灵系形态（悦灵 / 堕落悦灵）玩家 → 始终免疫（轻盈精灵不怕蛛网）；</li>
+	 *   <li>施法者在线 → 走其白名单：队友 / 宠物 /（白名单为空时）所有玩家免疫，敌人（非白名单）被缠；</li>
+	 *   <li>施法者离线 / 记录丢失（重启）→ 安全回退为默认白名单（玩家 + 已驯服宠物免疫，怪物受影响）。</li>
+	 * </ul>
+	 */
+	private static boolean isImmune(Level world, BlockPos pos, Entity entity) {
+		if (entity instanceof Spider) {
+			return true;
+		}
+		if (!(entity instanceof LivingEntity living)) {
+			return true;
+		}
+		if (living instanceof Player player
+				&& (FormUtils.isForm(player, FormIdentifiers.SPIDER_MOON_WEAVER)
+				|| FormUtils.isForm(player, FormIdentifiers.ALLAY_SP)
+				|| FormUtils.isForm(player, FormIdentifiers.FALLEN_ALLAY_SP))) {
+			return true;
+		}
+		UUID ownerId = WebMembraneOwners.get(world, pos);
+		if (ownerId != null && world instanceof ServerLevel sw) {
+			ServerPlayer owner = sw.getServer().getPlayerList().getPlayer(ownerId);
+			if (owner != null) {
+				return WhitelistUtils.isProtected(owner, living); // 施法者白名单：队友免疫，敌人被缠
+			}
+		}
+		// 施法者未知（离线 / 重启后记录丢失）：默认白名单（玩家 + 宠物免疫，怪物受影响）
+		if (living instanceof Player) {
+			return true;
+		}
+		return living instanceof TamableAnimal tameable && tameable.getOwnerUUID() != null;
+	}
 }

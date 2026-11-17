@@ -30,6 +30,16 @@ public final class AddonServerConfig {
     private AddonServerConfig() {}
 
     public static boolean whitelistEnabled() { return WHITELIST_ENABLED.get(); }
-    public static BookLanguage bookLanguage() { return BOOK_LANGUAGE.get(); }
+    /**
+     * Story book language. Loot tables load before Forge reads SERVER configs, so until the config is
+     * loaded this answers the default instead of throwing.
+     */
+    public static BookLanguage bookLanguage() {
+        try {
+            return BOOK_LANGUAGE.get();
+        } catch (IllegalStateException notLoadedYet) {
+            return BOOK_LANGUAGE.getDefault();
+        }
+    }
     public static List<? extends String> disabledSkills() { return DISABLED_SKILLS.get(); }
 }

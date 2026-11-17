@@ -55,6 +55,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /** Forge 閻楀牞绱欐笟婵囧祦娑撳﹥鐖跺┃鎰垳闁插秴鍟撻敍澶涚窗LivingEntity 閻ㄥ嫪婵€鐎?閺佸牊鐏?閸ョ偠顢呯紒鐓庢値缂佹挾鐣婚妴?*/
 @Mixin(LivingEntity.class)
 public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess {
+    @Unique private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL_MOON_TETHER = new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.moon_tether");
+    @Unique private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL_MANCIANIMA_EXTRA = new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.mancianima_extra");
+    @Unique private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL_EFFECT_REDUCTION = new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.effect_reduction");
+    @Unique private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL_ANUBIS_WITHER_EXTRA = new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.anubis_wither_extra");
+    @Unique private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL_ALLAY_SP_EXTRA = new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.allay_sp_extra");
+    @Unique private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL_NIGHTMARE_FEAR_EXTRA = new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.nightmare_fear_extra");
+    @Unique private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL_UPGRADE_FOX_NODES = new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.upgrade_fox_nodes");
+    @Unique private static final net.minecraft.resources.ResourceKey<net.minecraft.world.damagesource.DamageType> ssca$TETHER_SACRIFICE_KEY =
+            net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,
+                    new net.minecraft.resources.ResourceLocation("my_addon", "tether_sacrifice"));
+    /** Jumping spider eating a fluid cocoon: its own poison passes the form's poison immunity. Server thread only. */
+    @Unique private static final ThreadLocal<Boolean> ssca$salticidaeCocoonBypass = ThreadLocal.withInitial(() -> Boolean.FALSE);
+    @Unique private static final net.minecraft.resources.ResourceLocation ssca$SPIDER_FLUID_COCOON =
+            new net.minecraft.resources.ResourceLocation("shape-shifter-curse", "spider_fluid_cocoon");
+
     @Unique
     private static final net.minecraft.world.entity.EquipmentSlot[] ssca$armorSlots = {
             net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST,
@@ -82,6 +97,16 @@ public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess 
     private void ssca$loadNpcCombat(CompoundTag nbt, CallbackInfo ci) {
         if (nbt.contains("SSCA.NpcCombat", Tag.TAG_COMPOUND)) ssca$getNpcCombatState().read(nbt.getCompound("SSCA.NpcCombat"));
         else ssca$npcCombatState = null;
+    }
+
+    /** Level-3 portable moisturizer: every hit its wearer (an axolotl-line player) deals is +15%. */
+    @ModifyVariable(method = "hurt", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    private float ssc_addon$moisturizerLevel3DamageBoost(float amount, DamageSource source) {
+        if (amount <= 0.0F) return amount;
+        if (!(source.getEntity() instanceof net.minecraft.world.entity.player.Player attacker)) return amount;
+        if (!github.com.gengyoubo.sscfa.util.FormUtils.isMoistureDependent(attacker)) return amount;
+        if (!github.com.gengyoubo.sscfa.item.PortableMoisturizerItem.isLevel3Equipped(attacker)) return amount;
+        return amount * 1.15F;
     }
 
     @ModifyVariable(method = "hurt", at = @At("HEAD"), argsOnly = true, ordinal = 0)
@@ -123,7 +148,158 @@ public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess 
     private void ssca$salticidaePoisonImmunity(MobEffectInstance effect, CallbackInfoReturnable<Boolean> cir) {
         if (effect.getEffect() == MobEffects.POISON
                 && (Object) this instanceof ServerPlayer sp
-                && FormUtils.isForm(sp, FormIdentifiers.SPIDER_SALTICIDAE)) {
+                && FormUtils.isForm(sp, FormIdentifiers.SPIDER_SALTICIDAE)
+                && !ssca$salticidaeCocoonBypass.get()) {
+            cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(method = "eat(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/world/item/ItemStack;",
+            at = @At("HEAD"))
+    private void ssca$salticidaeCocoonEatHead(net.minecraft.world.level.Level world, net.minecraft.world.item.ItemStack stack,
+                                              CallbackInfoReturnable<net.minecraft.world.item.ItemStack> cir) {
+        if (!world.isClientSide && (Object) this instanceof ServerPlayer sp
+                && FormUtils.isForm(sp, FormIdentifiers.SPIDER_SALTICIDAE)
+                && ssca$SPIDER_FLUID_COCOON.equals(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem()))) {
+            ssca$salticidaeCocoonBypass.set(Boolean.TRUE);
+        }
+    }
+
+    @Inject(method = "eat(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/world/item/ItemStack;",
+            at = @At("RETURN"))
+    private void ssca$salticidaeCocoonEatReturn(net.minecraft.world.level.Level world, net.minecraft.world.item.ItemStack stack,
+                                                CallbackInfoReturnable<net.minecraft.world.item.ItemStack> cir) {
+        if (ssca$salticidaeCocoonBypass.get()) ssca$salticidaeCocoonBypass.set(Boolean.FALSE);
+    }
+
+    /**
+     * Save-data snapshots read after load: power resources (restored once the login form re-attach has
+     * reset them) and the sheep spell's original-form snapshot. The health snapshot lives in
+     * LivingEntityLoginHealthMixin.
+     */
+    @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
+    private void ssca$snapshotLoginResources(CompoundTag nbt, CallbackInfo ci) {
+        if ((Object) this instanceof ServerPlayer player) {
+            github.com.gengyoubo.sscfa.event.LoginResourceRestoreHandler.recordSnapshot(player.getUUID(), nbt);
+            github.com.gengyoubo.sscfa.ability.BeepSheepFormManager.onReadNbt(player, nbt);
+        }
+    }
+
+    /** Sheep spell: the original form, cooldown snapshot and start time survive logout and restarts. */
+    @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
+    private void ssca$writeSheepFormSnapshot(CompoundTag nbt, CallbackInfo ci) {
+        if ((Object) this instanceof ServerPlayer player) {
+            github.com.gengyoubo.sscfa.ability.BeepSheepFormManager.onWriteNbt(player, nbt);
+        }
+    }
+
+    /** Axolotl SP vortex charge: a charging player takes no part in entity pushing, so pulled mobs cannot shove them. */
+    @Inject(method = "push(Lnet/minecraft/world/entity/Entity;)V", at = @At("HEAD"), cancellable = true)
+    private void ssc_addon$vortexChargingNoPush(Entity entity, CallbackInfo ci) {
+        if (ssc_addon$isVortexChargingPlayer((LivingEntity) (Object) this) || ssc_addon$isVortexChargingPlayer(entity)) ci.cancel();
+    }
+
+    @Unique
+    private static boolean ssc_addon$isVortexChargingPlayer(Entity e) {
+        if (!(e instanceof Player)) return false;
+        if (e instanceof ServerPlayer sp) return github.com.gengyoubo.sscfa.ability.VortexChargeManager.isCharging(sp);
+        // Local client player: per-tick cached flag instead of reading resources on every collision.
+        return e.level().isClientSide() && github.com.gengyoubo.sscfa.ability.VortexChargeManager.isClientLocalCharging();
+    }
+
+    /**
+     * Moon weaver tether: the owner deals +25% (players) / +15% (NPCs) to a tethered enemy and takes
+     * -25% / -40% from it; a tethered ally takes half and the owner shoulders the other half on the next
+     * server task (deferred so the transfer never re-enters this damage call).
+     */
+    @ModifyVariable(method = "hurt", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    private float ssc_addon$spiderTetherDamage(float amount, DamageSource source) {
+        if (amount <= 0.0F || source == null) return amount;
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (self.level().isClientSide()) return amount;
+        Entity attacker = source.getEntity();
+        ServerPlayer owner = github.com.gengyoubo.sscfa.ability.SpiderMoonWeaverSwingManager.getTetheringPlayer(self);
+        if (owner != null && owner != self) {
+            if (github.com.gengyoubo.sscfa.util.WhitelistUtils.isProtected(owner, self)) {
+                float transfer = amount * (float) BAL_MOON_TETHER.d("ally_transfer_share", 0.5);
+                if (transfer > 0.0F) {
+                    final Entity killer = attacker;
+                    owner.getServer().execute(() -> {
+                        if (!owner.isAlive()) return;
+                        var registry = owner.level().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE);
+                        owner.hurt(new DamageSource(registry.getHolderOrThrow(ssca$TETHER_SACRIFICE_KEY), killer, killer), transfer);
+                    });
+                }
+                return amount * (float) BAL_MOON_TETHER.d("ally_taken_share", 0.5);
+            } else if (attacker == owner) {
+                return amount * (self instanceof Player ? (float) BAL_MOON_TETHER.d("owner_vs_enemy_mul", 1.25)
+                        : (float) NpcCombatEnhancements.value("moon_tether_dealt", 1.15));
+            }
+        }
+        if (self instanceof ServerPlayer vp && attacker instanceof LivingEntity la
+                && github.com.gengyoubo.sscfa.ability.SpiderMoonWeaverSwingManager.isTethering(vp, la)
+                && !github.com.gengyoubo.sscfa.util.WhitelistUtils.isProtected(vp, la)) {
+            return amount * (la instanceof Player ? (float) BAL_MOON_TETHER.d("enemy_vs_owner_mul", 0.75)
+                    : (float) NpcCombatEnhancements.value("moon_tether_taken", 0.6));
+        }
+        return amount;
+    }
+
+    /**
+     * Wither applied without a source (wolf bites and the like): attribute it to the single nearest
+     * Netherjudge player in range, for soul energy.
+     */
+    @Inject(method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;)Z", at = @At("RETURN"))
+    private void ssc_addon$registerAnubisWitherSourceNoSource(MobEffectInstance effect, CallbackInfoReturnable<Boolean> cir) {
+        if (!Boolean.TRUE.equals(cir.getReturnValue()) || effect.getEffect() != MobEffects.WITHER) return;
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (self.level().isClientSide()) return;
+        ServerPlayer best = null;
+        double radius = BAL_ANUBIS_WITHER_EXTRA.d("attrib_radius", 24.0);
+        double bestDist = radius * radius;
+        for (Player p : self.level().players()) {
+            if (!(p instanceof ServerPlayer sp) || !FormUtils.isForm(sp, FormIdentifiers.ANUBIS_WOLF_SP)) continue;
+            double d = p.distanceToSqr(self);
+            if (d < bestDist) {
+                bestDist = d;
+                best = sp;
+            }
+        }
+        if (best != null) github.com.gengyoubo.sscfa.ability.AnubisWolfSpSoulEnergy.registerWitherSource(self, best, effect.getDuration());
+    }
+
+    /**
+     * Mancianima resistance charges and i-frames: while i-frames run, hits from living attackers are
+     * cancelled; otherwise a resistance charge cancels the hit (and its knockback) and starts 4 ticks of
+     * i-frames. Any damage resets the 15 s recharge timer. Also the evolved familiar fox's combat marker.
+     */
+    @Inject(method = "hurt", at = @At("HEAD"), cancellable = true)
+    private void ssc_addon$mancianimaResistance(DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (self.level().isClientSide()) return;
+        if (source.getEntity() instanceof ServerPlayer atkFox && FormUtils.isForm(atkFox, FormIdentifiers.UPGRADE_FAMILIAR_FOX)) {
+            MancianimaMarkManager.markCombat(atkFox.getUUID(), atkFox.serverLevel().getGameTime());
+        }
+        if (self instanceof ServerPlayer defFox && source.getEntity() != null && source.getEntity() != defFox
+                && FormUtils.isForm(defFox, FormIdentifiers.UPGRADE_FAMILIAR_FOX)) {
+            MancianimaMarkManager.markCombat(defFox.getUUID(), defFox.serverLevel().getGameTime());
+        }
+        if (!(self instanceof ServerPlayer sp) || !FormUtils.isForm(sp, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) return;
+        if (source.is(DamageTypes.FELL_OUT_OF_WORLD) || source.is(DamageTypes.GENERIC_KILL)) return;
+        MancianimaMarkManager.markCombat(sp.getUUID(), sp.serverLevel().getGameTime());
+        // Only damage from another living entity; environmental damage is not blocked.
+        Entity attacker = source.getEntity();
+        if (!(attacker instanceof LivingEntity) || attacker == sp) return;
+        if (PowerUtils.getResourceValue(sp, FormIdentifiers.MANCIANIMA_IFRAMES) > 0) {
+            cir.setReturnValue(false);
+            return;
+        }
+        int resist = PowerUtils.getResourceValue(sp, FormIdentifiers.MANCIANIMA_RESISTANCE);
+        if (resist > 0) {
+            PowerUtils.setResourceValueAndSync(sp, FormIdentifiers.MANCIANIMA_RESISTANCE, resist - BAL_MANCIANIMA_EXTRA.i("resist_cost", 1));
+            PowerUtils.setResourceValueAndSync(sp, FormIdentifiers.MANCIANIMA_IFRAMES, BAL_MANCIANIMA_EXTRA.i("iframes_ticks", 4));
+            sp.serverLevel().playSound(null, sp.getX(), sp.getY(), sp.getZ(), net.minecraft.sounds.SoundEvents.ANVIL_LAND,
+                    net.minecraft.sounds.SoundSource.PLAYERS, 0.6f, 1.6f);
             cir.setReturnValue(false);
         }
     }
@@ -325,6 +501,26 @@ public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess 
                 && NightmareDreamManager.isNightmare(nightmareAttacker)) {
             NightmareDreamManager.onNightmareDealtDamage(nightmareAttacker, self, amount);
         }
+        if (self.level().isClientSide) return;
+        // Frostspine counter-thorns: a melee hit on the frostspine stacks thorns on the attacker.
+        if (self instanceof ServerPlayer frostspine && FormUtils.isForm(frostspine, FormIdentifiers.SNOW_FOX_FROSTSPINE)) {
+            github.com.gengyoubo.sscfa.ability.FrostArmorManager.onFrostspineMeleeHit(frostspine, source);
+        }
+        // Netherjudge wither infection: the player's (or their wolf's) hit hands wither time to the target.
+        ServerPlayer witherOwner = ssc_addon$anubisAttacker(self, source);
+        if (witherOwner != null) WitherFrenzyManager.tryWitherInfect(witherOwner, self);
+    }
+
+    /** The Netherjudge player behind this hit: the player themself, or the owner of the wolf that bit. */
+    @Unique
+    private static ServerPlayer ssc_addon$anubisAttacker(LivingEntity self, DamageSource source) {
+        Entity attacker = source.getEntity();
+        if (attacker instanceof ServerPlayer sp) return FormUtils.isForm(sp, FormIdentifiers.ANUBIS_WOLF_SP) ? sp : null;
+        if (attacker instanceof net.onixary.shapeShifterCurseForge.entity.AnubisWolfMinionEntity wolf
+                && wolf.getOwnerUUID() != null && self.level() instanceof ServerLevel level
+                && level.getPlayerByUUID(wolf.getOwnerUUID()) instanceof ServerPlayer owner
+                && FormUtils.isForm(owner, FormIdentifiers.ANUBIS_WOLF_SP)) return owner;
+        return null;
     }
 
     /**
@@ -336,23 +532,62 @@ public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess 
     private float ssc_addon$modifyIncomingDamage(DamageSource source, float amount) {
         LivingEntity self = (LivingEntity) (Object) this;
         if (self.level().isClientSide) return amount;
-
-        if (FormUtils.isAllaySP(self) && !"outOfWorld".equals(source.getMsgId()) && !"genericKill".equals(source.getMsgId())) {
-            amount = Math.min(amount, self.getMaxHealth() * 0.25f);
-        }
-
         Entity attacker = source.getEntity();
+
+        // Allay SP: no single hit takes more than a quarter of max health.
+        if (FormUtils.isAllaySP(self) && !source.is(DamageTypes.FELL_OUT_OF_WORLD) && !source.is(DamageTypes.GENERIC_KILL)) {
+            amount = Math.min(amount, self.getMaxHealth() * (float) BAL_ALLAY_SP_EXTRA.d("damage_cap_ratio", 0.25));
+        }
+        // Frostspine thorn armour: melee damage reduced 4% per orbiting spike.
+        if (self instanceof ServerPlayer frost && FormUtils.isForm(frost, FormIdentifiers.SNOW_FOX_FROSTSPINE)) {
+            amount = github.com.gengyoubo.sscfa.ability.FrostArmorManager.applyArmor(frost, source, amount);
+        }
+        // Infection spores: an infected attacker deals 15% less.
         if (attacker instanceof LivingEntity living && InfectionSporeManager.isInfected(living.getUUID())) {
             amount = InfectionSporeManager.reduceDamageIfInfected(living, amount);
         }
-
-        if (attacker instanceof ServerPlayer sp && FormUtils.isForm(sp, FormIdentifiers.ANUBIS_WOLF_SP)) {
-            amount *= WitherFrenzyManager.getDamageMultiplier(sp);
-        }
-
+        // Netherjudge wither frenzy: the player and their wolves hit harder the longer the player is withered.
+        ServerPlayer frenzy = ssc_addon$anubisAttacker(self, source);
+        if (frenzy != null) amount *= WitherFrenzyManager.getDamageMultiplier(frenzy);
+        // Netherjudge wither resistance: wither ticks are weaker and some are skipped.
         if (self instanceof ServerPlayer sp && FormUtils.isForm(sp, FormIdentifiers.ANUBIS_WOLF_SP) && source.is(DamageTypes.WITHER)) {
             float scale = WitherFrenzyManager.getWitherDamageScale(sp);
             amount = scale <= 0f ? 0.0f : amount * scale;
+        }
+        // Nightmare fear: the first hit from a nightmare (or a whitelisted ally) on a feared target is doubled,
+        // and every such hit reveals the nightmare to that target.
+        if (attacker instanceof ServerPlayer nightmare && self.level() instanceof ServerLevel level
+                && NightmareFearManager.isFeared(self.getUUID(), level.getGameTime())
+                && NightmareFearManager.isDoubleDamageBeneficiary(nightmare, level)) {
+            if (NightmareFearManager.tryConsumeDoubleDamage(self.getUUID(), level.getGameTime())) {
+                amount *= (float) BAL_NIGHTMARE_FEAR_EXTRA.d("first_hit_mul", 2.0);
+            }
+            if (self instanceof ServerPlayer fearedPlayer) NightmareFearManager.onNightmareAttackFeared(fearedPlayer, nightmare);
+        }
+        // Mancianima red mark: the marker deals +25% to their red-marked victim, who deals -25% back.
+        if (attacker instanceof ServerPlayer ap && MancianimaMarkManager.isRedMarkedBy(ap.getUUID(), self.getUUID())) {
+            amount *= (float) BAL_MANCIANIMA_EXTRA.d("redmark_attacker_mul", 1.25);
+        } else if (self instanceof ServerPlayer marker && attacker != null) {
+            java.util.UUID markerOf = MancianimaMarkManager.getMarkerOf(attacker.getUUID());
+            if (marker.getUUID().equals(markerOf)) {
+                MancianimaMarkManager.Mark mark = MancianimaMarkManager.getMark(marker.getUUID());
+                if (mark != null && mark.color == MancianimaMarkManager.MarkColor.RED) {
+                    amount *= (float) BAL_MANCIANIMA_EXTRA.d("redmark_victim_mul", 0.75);
+                }
+            }
+        }
+        // (Vampire bat blood-thirst scaling runs from BatDesmodusEvents on LivingHurtEvent.)
+        // Evolved familiar fox: magic and potion damage -25% per unlocked node (buff immunity, alchemy), added.
+        if (self instanceof ServerPlayer fox && FormUtils.isForm(fox, FormIdentifiers.UPGRADE_FAMILIAR_FOX)
+                && (source.is(DamageTypes.MAGIC) || source.is(DamageTypes.INDIRECT_MAGIC))) {
+            var evolution = github.com.gengyoubo.sscfa.evolution.RegEvolutionComponent.EVOLUTION.get(fox);
+            if (evolution.isOnSscaRoute() && evolution.hasStarted()) {
+                float reduction = 0f;
+                double perNode = BAL_UPGRADE_FOX_NODES.d("potion_node_reduction", 0.25);
+                if (evolution.isUnlocked(github.com.gengyoubo.sscfa.evolution.FamiliarFoxTree.NODE_BUFF_IMMUNITY)) reduction += (float) perNode;
+                if (evolution.isUnlocked(github.com.gengyoubo.sscfa.evolution.FamiliarFoxTree.NODE_ALCHEMY)) reduction += (float) perNode;
+                if (reduction > 0f) amount *= 1f - reduction;
+            }
         }
         return amount;
     }
@@ -360,12 +595,16 @@ public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess 
     @ModifyVariable(method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)Z", at = @At("HEAD"), argsOnly = true)
     private MobEffectInstance modifyStatusEffect(MobEffectInstance effect) {
         if (!effect.getEffect().isInstantenous()
+                && github.com.gengyoubo.sscfa.compat.FamiliarFoxSpPerks.preservesEffectDuration((LivingEntity) (Object) this, effect.getEffect())) {
+            return github.com.gengyoubo.sscfa.compat.FamiliarFoxSpPerks.levelOneWithOriginalDuration(effect);
+        }
+        if (!effect.getEffect().isInstantenous()
                 && EffectEfficiencyReductionPower.isActive((LivingEntity) (Object) this)) {
             int originalAmp = effect.getAmplifier();
             int newDuration;
-            if (originalAmp == 0) newDuration = (int) (effect.getDuration() * 0.4);
-            else if (originalAmp == 1) newDuration = (int) (effect.getDuration() * 0.6);
-            else if (originalAmp == 2) newDuration = (int) (effect.getDuration() * 0.8);
+            if (originalAmp == 0) newDuration = (int) (effect.getDuration() * BAL_EFFECT_REDUCTION.d("dur_l1", 0.4));
+            else if (originalAmp == 1) newDuration = (int) (effect.getDuration() * BAL_EFFECT_REDUCTION.d("dur_l2", 0.6));
+            else if (originalAmp == 2) newDuration = (int) (effect.getDuration() * BAL_EFFECT_REDUCTION.d("dur_l3", 0.8));
             else newDuration = effect.getDuration();
             return new MobEffectInstance(effect.getEffect(), newDuration, 0, effect.isAmbient(), effect.isVisible(), effect.showIcon());
         }

@@ -16,6 +16,7 @@ public final class AddonRegistries {
         NeoMagic.init(modBus);
         AddonEffects.POTIONS.register(modBus);
         AddonRecipes.SERIALIZERS.register(modBus);
+        github.com.gengyoubo.sscfa.loot.RandomRuneLootFunction.FUNCTIONS.register(modBus);
         AddonEntities.ENTITIES.register(modBus);
         AddonSounds.SOUNDS.register(modBus);
         AddonParticles.PARTICLES.register(modBus);
@@ -29,6 +30,7 @@ public final class AddonRegistries {
     private static void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             AddonEffects.registerBrewing();
+            AddonServerSystems.init();
             AddonCriteria.init();
             github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.init();
         });

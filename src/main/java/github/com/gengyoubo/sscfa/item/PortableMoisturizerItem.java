@@ -1,12 +1,16 @@
 package github.com.gengyoubo.sscfa.item;
 
+import net.onixary.shapeShifterCurseForge.items.accessory.AccessoryItem;
+import github.com.gengyoubo.sscfa.SscAddon;
+import github.com.gengyoubo.sscfa.util.FormUtils;
+import github.com.gengyoubo.sscfa.util.TrinketUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
@@ -15,17 +19,19 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * 便携加湿器（1/2/3 级）：等级与使用时间存于 NBT {@code Level}/{@code Charge}，供充能/升级配方读写。
- * 佩戴回复湿润度、淋雨回充、三级 +15% 伤害依赖饰品与形态系统，迁移后补回 accessoryTick 与佩戴限制。
+ * 便携加湿器 —— 美西螈系专属腰带饰品（可升级 1/2/3 级）。
+ * 佩戴 + 湿润度(air)未满时自动回复；淋雨露天时暂停回复/消耗、每 2 秒回充 1 秒使用时间；
+ * 三级佩戴额外提供全伤害 +15%（伤害侧由 SscAddonLivingEntityMixin 判定）。
  */
-public class PortableMoisturizerItem extends Item {
+public class PortableMoisturizerItem extends AccessoryItem {
+
 	public static final int MAX_LEVEL = 3;
 
 	public PortableMoisturizerItem(Properties settings) {
 		super(settings);
 	}
 
-	/** 各级使用时间上限（1 charge = 1 秒）：一级 5400、二级 8100、三级 10800。 */
+	/** 各级使用时间上限（charge，1 charge = 1 秒）：一级 5400、二级 8100(+50%)、三级 10800(+100%)。 */
 	public static int getMaxCharge(int level) {
 		return switch (level) {
 			case 2 -> 8100;
@@ -34,6 +40,16 @@ public class PortableMoisturizerItem extends Item {
 		};
 	}
 
+	/** 各级每秒湿润度(air)回复占最大值比例：一级 2%、二级 3%(+50%)、三级 4%(+100%)。 */
+	private static double getRecoveryRate(int level) {
+		return switch (level) {
+			case 2 -> 0.03;
+			case 3 -> 0.04;
+			default -> 0.02;
+		};
+	}
+
+	// ===== NBT =====
 	public static int getLevel(ItemStack stack) {
 		CompoundTag nbt = stack.getTag();
 		if (nbt == null || !nbt.contains("Level")) return 1;
@@ -59,6 +75,13 @@ public class PortableMoisturizerItem extends Item {
 		stack.getOrCreateTag().putInt("Charge", getMaxCharge(getLevel(stack)));
 	}
 
+	// ===== 装备限制：仅美西螈系可佩戴 =====
+	@Override
+	public boolean canEquip(ItemStack stack, LivingEntity entity, AccessoryItem.SlotData slotData) {
+		return github.com.gengyoubo.sscfa.item.AddonAccessoryGuard.canEquip(entity, FormUtils::isMoistureDependent);
+	}
+
+	// ===== 右键：显示当前状态（饰品自动生效，无需开关） =====
 	@Override
 	public InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand) {
 		ItemStack stack = player.getItemInHand(hand);
@@ -70,6 +93,44 @@ public class PortableMoisturizerItem extends Item {
 		return InteractionResultHolder.success(stack);
 	}
 
+	// ===== 佩戴时每 tick 逻辑（服务端） =====
+	@Override
+	public void accessoryTick(ItemStack stack, LivingEntity entity, AccessoryItem.SlotData slotData) {
+		if (entity.level().isClientSide || !(entity instanceof Player player)) return;
+		if (!FormUtils.isMoistureDependent(player)) return;
+
+		int level = getLevel(stack);
+
+		// 淋雨露天：湿润度由 rain_wetness 回复 → 暂停加湿器回复与消耗；每 2 秒回充 1 秒使用时间
+		if (player.level().isRainingAt(player.blockPosition())) {
+			if (player.tickCount % 40 == 0) {
+				int charge = getCharge(stack);
+				if (charge < getMaxCharge(level)) setCharge(stack, charge + 1);
+			}
+			return;
+		}
+
+		// 非淋雨：湿润度未满且有充能时，每秒回复并消耗 1 充能
+		if (player.tickCount % 20 == 0) {
+			int charge = getCharge(stack);
+			int maxAir = player.getMaxAirSupply();
+			int air = player.getAirSupply();
+			if (charge > 0 && air < maxAir) {
+				int recovery = (int) Math.ceil(maxAir * getRecoveryRate(level));
+				player.setAirSupply(Math.min(air + recovery, maxAir));
+				setCharge(stack, charge - 1);
+			}
+		}
+	}
+
+	/** 攻击者是否佩戴了三级加湿器（供伤害 mixin 判定全伤害 +15%，服务端调用；框架无关）。 */
+	public static boolean isLevel3Equipped(LivingEntity entity) {
+		if (entity == null) return false;
+		return TrinketUtils.isWearing(entity, stack ->
+				stack.getItem() == SscAddon.PORTABLE_MOISTURIZER && getLevel(stack) >= 3);
+	}
+
+	// ===== 物品充能条 =====
 	@Override
 	public boolean isBarVisible(ItemStack stack) {
 		return true;
@@ -82,7 +143,7 @@ public class PortableMoisturizerItem extends Item {
 
 	@Override
 	public int getBarColor(ItemStack stack) {
-		return 0x31C8CC;
+		return 0x31C8CC; // 青蓝色（水/湿润）
 	}
 
 	@Override

@@ -125,12 +125,24 @@ public final class SpellChannelManager {
 	public static boolean start(ServerPlayer player, Spell spell, ItemStack scroll, int level,
 			boolean solo, int token, int mana, int cooldown, BooleanSupplier sourceValid,
 			Consumer<Vec3> effect, IntConsumer settleCooldown, Runnable consumeUse, RuneModifiers modifiers) {
-		return startInternal(player, spell, scroll, level, solo, token, mana, cooldown, sourceValid, effect, settleCooldown, consumeUse, modifiers);
+		return startInternal(player, spell, scroll, level, solo, token, mana, cooldown, sourceValid, effect, settleCooldown, consumeUse, modifiers, null);
+	}
+
+	/**
+	 * Native jump-hit proc (jumping spider): shares payment, failure, effect, experience and cooldown
+	 * settlement with normal casts, skips the cast-interval gate and the charge visuals of instant casts,
+	 * and aims the effect at the victim.
+	 */
+	public static boolean startTriggered(ServerPlayer player, Spell spell, ItemStack scroll, int level, boolean solo,
+			int mana, int cooldown, BooleanSupplier sourceValid, Consumer<Vec3> effect, IntConsumer settleCooldown,
+			RuneModifiers modifiers, SpiderSpellLink.Trigger trigger) {
+		return startInternal(player, spell, scroll, level, solo, -1, mana, trigger.cooldown(cooldown), sourceValid,
+				target -> trigger.effect(player, () -> effect.accept(target)), settleCooldown, () -> {}, modifiers, trigger);
 	}
 
 	private static boolean startInternal(ServerPlayer player, Spell spell, ItemStack scroll, int level,
 			boolean solo, int token, int mana, int cooldown, BooleanSupplier sourceValid, Consumer<Vec3> effect,
-			IntConsumer settleCooldown, Runnable consumeUse, RuneModifiers modifiers) {
+			IntConsumer settleCooldown, Runnable consumeUse, RuneModifiers modifiers, SpiderSpellLink.Trigger trigger) {
 		if (github.com.gengyoubo.sscfa.anomaly.AnomalyTeleportGuard.isTeleportSpell(spell)
 				&& github.com.gengyoubo.sscfa.anomaly.AnomalyTeleportGuard.reject(player)) return false;
 		if (!github.com.gengyoubo.sscfa.spell.research.RuneScheme.validScroll(player, scroll, spell)) return false;
@@ -157,7 +169,7 @@ public final class SpellChannelManager {
 			return false;
 		}
 		long gate = NEXT_CAST_OK.getOrDefault(player.getUUID(), 0L);
-		if (player.level().getGameTime() < gate) {
+		if (trigger == null && player.level().getGameTime() < gate) {
 			playNoManaSound(player);
 			player.displayClientMessage(Component.translatable("message.ssc_addon.spellbook.cast_interval",
 					SpellCastFeedback.seconds(gate - player.level().getGameTime())), true);
@@ -174,8 +186,9 @@ public final class SpellChannelManager {
 			}
 		}
 		var baseProfile = spell.getCastingProfile(player, level, solo);
-		var style = RuneCastContext.with(modifiers, formationRange,
-				() -> FormSpellStyle.plan(player, spell, level, baseProfile.ticks(), modifiers.time(baseProfile.ticks())));
+		var style = RuneCastContext.with(modifiers, formationRange, () -> trigger == null
+				? FormSpellStyle.plan(player, spell, level, baseProfile.ticks(), modifiers.time(baseProfile.ticks()))
+				: FormSpellStyle.planTriggered(player, spell, level, baseProfile.ticks(), modifiers.time(baseProfile.ticks())));
 		double lockRange = RuneCastContext.with(modifiers, formationRange, () -> spell.getCastingLockRange(player, level));
 		if (!style.pay()) return false;
 		Channel channel = new Channel(player, spell, scroll, level, solo, token, mana, cooldown,
@@ -184,10 +197,15 @@ public final class SpellChannelManager {
 		ACTIVE.put(player.getUUID(), channel);
 		RuneCastContext.run(channel.modifiers, channel.formationRange, () -> spell.onChannelStarted(player, channel.progress.target()));
 		channel.bindLock(initialTarget);
+		// Nova quick cast: advance the effect manager's logical clock too (instant DeathFinale still needs its state).
+		if (style.novaQuickCast) RuneCastContext.run(channel.modifiers, channel.formationRange,
+				() -> spell.tickChannel(player, level, scroll, style.timing.logical(0)));
 		applyMovement(player, channel.profile.speedMultiplier());
-		syncFull(channel);
-		broadcastVisual(channel, true);
-		playChargeSound(channel);
+		if (trigger == null || style.timing.duration() > 0) {
+			syncFull(channel);
+			broadcastVisual(channel, true);
+			playChargeSound(channel);
+		}
 		advance(channel);
 		if (solo) SpellbookStatusSync.sync(player);
 		return true;
@@ -307,6 +325,8 @@ public final class SpellChannelManager {
 	private static void stop(ServerPlayer player, boolean interrupted, Component reason, boolean fullCooldown) {
 		Channel channel = ACTIVE.remove(player.getUUID());
 		if (channel == null) return;
+		// The cast's true-invisibility cover ends with the cast, including a cancelled one.
+		channel.style.endCloak();
 		clearSlow(player);
 		broadcastVisual(channel, false);
 		channel.spell.onChannelEnded(player, interrupted);

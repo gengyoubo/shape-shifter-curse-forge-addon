@@ -1,5 +1,7 @@
 package github.com.gengyoubo.sscfa.neomagic;
 
+import github.com.gengyoubo.sscfa.spell.SpellChannelManager;
+
 import github.com.gengyoubo.sscfa.ability.BeepSheepFormManager;
 import github.com.gengyoubo.sscfa.spell.FormAffinity;
 import github.com.gengyoubo.sscfa.spell.FormCastingStyle;
@@ -157,6 +159,22 @@ public final class NeoLegacyCasting {
     }
 
     public static LegacyActive active(ServerPlayer player) { return null; }
+
+    /** Any cast in progress: an old-style spell channel or a blueprint cast. */
+    public static boolean isCasting(ServerPlayer player) {
+        return SpellChannelManager.isCasting(player) || active(player) != null
+                || NeoRuntime.ACTIVE.containsKey(player.getUUID());
+    }
+
+    /**
+     * Form refunds ("restore mana") lower the caster's collapse burden; returns the burden actually
+     * removed, rounded up.
+     */
+    public static int restore(ServerPlayer player, double amount) {
+        double before = NeoRuntime.data(player).burden;
+        if (amount > 0 && before > 0) NeoRuntime.relieve(player, amount);
+        return (int) Math.ceil(before - NeoRuntime.data(player).burden);
+    }
 
     public static void beginBlueprintEffect(ServerPlayer player, NeoRuntime.Active active) {
         if (active.record.spell == null || active.record.spell.isEmpty()) active.record.spell = "blueprint";

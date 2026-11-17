@@ -2,6 +2,8 @@ package github.com.gengyoubo.sscfa.gametest;
 
 import com.mojang.authlib.GameProfile;
 import github.com.gengyoubo.sscfa.SscAddonForge;
+import github.com.gengyoubo.sscfa.evolution.EvolutionManager;
+import github.com.gengyoubo.sscfa.evolution.EvolutionRegistry;
 import github.com.gengyoubo.sscfa.init.AddonItems;
 import github.com.gengyoubo.sscfa.item.EvolutionStoneItem;
 import github.com.gengyoubo.sscfa.util.FormIdentifiers;
@@ -41,6 +43,26 @@ public final class EvolutionStoneGameTests {
         helper.assertTrue(TransformManager.isTransforming(player), "stone must start transformation");
         helper.assertTrue(stack.isEmpty(), "stone must be consumed after transformation starts");
         TransformManager.cancel(player);
+        helper.succeed();
+    }
+
+    @GameTest(template = "gametest_floor")
+    public static void startBookRouteUnlocksTheInitialForm(GameTestHelper helper) {
+        var player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "ssca_start_test"));
+        var route = EvolutionRegistry.INSTANCE.getRoute("familiar_fox");
+        helper.assertTrue(route != null && route.enabled, "the Familiar start route must be available");
+        helper.assertTrue(FormRegistry.ORIGINAL_BEFORE_ENABLE.equals(FormManager.current(player).id()),
+                "the start-book route must be exercised before enabling SSC");
+
+        EvolutionManager.startSscaRoute(player, route.startForm.toString());
+        try {
+            var progress = EvolutionManager.get(player);
+            helper.assertTrue(route.routeId.equals(progress.getRoute()) && progress.isUnlocked(route.getBaseNodeId()),
+                    "choosing a start route must unlock its initial node");
+            helper.assertTrue(TransformManager.isTransforming(player), "choosing a start form must begin transformation");
+        } finally {
+            TransformManager.cancel(player);
+        }
         helper.succeed();
     }
 

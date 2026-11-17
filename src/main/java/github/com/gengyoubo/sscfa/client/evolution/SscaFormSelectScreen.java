@@ -1,236 +1,192 @@
 package github.com.gengyoubo.sscfa.client.evolution;
 
-import github.com.gengyoubo.sscfa.evolution.EvolutionNode;
 import github.com.gengyoubo.sscfa.evolution.EvolutionRegistry;
 import github.com.gengyoubo.sscfa.evolution.EvolutionRoute;
+import github.com.gengyoubo.sscfa.network.AddonNetwork;
 import github.com.gengyoubo.sscfa.network.SscAddonNetworking;
-import net.minecraft.ChatFormatting;
+import github.com.gengyoubo.sscfa.util.FormIdMigration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.MultiLineLabel;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import java.util.ArrayList;
+import net.minecraft.util.FormattedCharSequence;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Comparator;
 import java.util.List;
 
-/**
- * SSCA 进化路线 - 开局形态选择界面（类似书籍的可翻页界面）?
- *
- * <p>玩家?{@link net.onixary.shapeShifterCurseFabric.custom_ui.StartBookScreenV2 翻开幻形者之书界面} 选择
- * 「SSCA 进化路线」并确认后进入本界面。每一页展示一个可选的 SSCA 进化形态（图标 + 名称 + 描述），
- * 点击「选择此形态」即发包让服务端?SSCA 进化路线并播放进化动画?/p>
- *
- * <p><b>当前阶段</b>：SSCA 进化形态只有「进化使魔」一个，故只?1 页；界面已做成可翻页框架?
- * 以后?{@link #FORMS} 列表追加形态即可自动支持翻页?/p>
- */
 public class SscaFormSelectScreen extends Screen {
+    private static final int PANEL_WIDTH = 280;
+    private static final int PANEL_HEIGHT = 210;
+    private static final int PORTRAIT_SIZE = 48;
 
-    /** 一个可在开局选择?SSCA 进化形态条目?*/
-    private static final class StartForm {
-        final ResourceLocation formId;
-        final Item icon;
-        final String nameKey;
-        final String descKey;
-
-        StartForm(ResourceLocation formId, Item icon, String nameKey, String descKey) {
-            this.formId = formId;
-            this.icon = icon;
-            this.nameKey = nameKey;
-            this.descKey = descKey;
+    private record StartForm(ResourceLocation id, ResourceLocation portrait, @Nullable ResourceLocation decorations,
+                             boolean axolotl, Component name, Component description) {
+        private static StartForm fromRoute(EvolutionRoute route) {
+            ResourceLocation legacyId = FormIdMigration.legacy(route.startForm);
+            String namespace = legacyId.getNamespace();
+            String path = legacyId.getPath();
+            return new StartForm(route.startForm, EvolutionSelectionArtwork.portrait(route.routeId, route.getBaseNodeId()),
+                    EvolutionSelectionArtwork.decorations(route.routeId), "axolotl".equals(route.routeId),
+                    Component.translatable("origin." + namespace + ".form_" + path + ".name"),
+                    Component.translatable("evolution." + namespace + ".start.form." + path + ".desc"));
         }
     }
-
-    /**
-     * 开局可选的 SSCA 进化形态列表（数据驱动：来自所有「已开放且有起点形态」的进化路线）?
-     * <p>加新形态只需新增 route JSON，界面自动出现并支持翻页?/p>
-     */
-    private final List<StartForm> forms = new ArrayList<>();
-
-    /**
-     * 开局可选形态的显示顺序（route id 升序）。不在此表中?route 排在最后、按 route id 字母序?
-     * <p>调整翻页顺序只需调整此数组?/p>
-     */
-    private static final List<String> DISPLAY_ORDER = List.of(
-            "familiar_fox",  // 进化使魔（第一页）
-            "axolotl"        // 进化美西螈（第二页）
-    );
-
-    /** 从已加载的进化路线动态构建可选形态列表（?{@link #DISPLAY_ORDER} 排序）?*/
-    private void buildForms() {
-        forms.clear();
-        // 先按 DISPLAY_ORDER 收集，保证指定顺序；未列出的 route 追加在末尾（字母序兜底）
-        List<EvolutionRoute> ordered = new ArrayList<>();
-        // ?TreeMap 保证未指?route 的稳定字母序
-        java.util.Map<String, EvolutionRoute> remain = new java.util.TreeMap<>();
-        for (EvolutionRoute route : EvolutionRegistry.INSTANCE.all().values()) {
-            if (!route.enabled || route.startForm == null) {
-                continue;
-            }
-            remain.put(route.routeId, route);
-        }
-        for (String rid : DISPLAY_ORDER) {
-            EvolutionRoute r = remain.remove(rid);
-            if (r != null) {
-                ordered.add(r);
-            }
-        }
-        ordered.addAll(remain.values());
-
-        for (EvolutionRoute route : ordered) {
-            ResourceLocation fid = route.startForm;
-            ResourceLocation resourceId = github.com.gengyoubo.sscfa.util.FormIdMigration.legacy(fid);
-            String ns = resourceId.getNamespace();
-            String path = resourceId.getPath();
-            // 图标取初始节点图标；名称 / 描述按形?id 推导对应 lang key
-            Item icon = Items.NETHER_STAR;
-            String baseId = route.getBaseNodeId();
-            if (baseId != null) {
-                EvolutionNode baseNode = route.getNode(baseId);
-                if (baseNode != null && baseNode.icon != null) {
-                    icon = baseNode.icon;
-                }
-            }
-            String nameKey = "origin." + ns + ".form_" + path + ".name";
-            String descKey = "evolution." + ns + ".start.form." + path + ".desc";
-            forms.add(new StartForm(fid, icon, nameKey, descKey));
-        }
-    }
-
-    private static final int PANEL_W = 280;
-    private static final int PANEL_H = 210;
-    private static final int ICON_SCALE = 3;
 
     private final Screen parent;
-    private int page = 0;
+    private List<StartForm> forms = List.of();
+    private int page;
 
     public SscaFormSelectScreen(Screen parent) {
         super(Component.translatable("evolution.my_addon.start.select.title"));
         this.parent = parent;
     }
 
-    private int panelX() {
-        return (this.width - PANEL_W) / 2;
-    }
-
-    private int panelY() {
-        return (this.height - PANEL_H) / 2;
-    }
-
     @Override
     protected void init() {
-        buildForms();
-        int px = panelX();
-        int py = panelY();
-        boolean multiPage = forms.size() > 1;
+        forms = EvolutionRegistry.INSTANCE.all().values().stream()
+                .filter(route -> route.enabled && route.startForm != null)
+                .sorted(Comparator.comparingInt((EvolutionRoute route) -> switch (route.routeId) {
+                    case "familiar_fox" -> 0;
+                    case "axolotl" -> 1;
+                    default -> 2;
+                }).thenComparing(route -> route.routeId))
+                .map(StartForm::fromRoute)
+                .toList();
+        page = Math.max(0, Math.min(page, forms.size() - 1));
 
-        // 翻页按钮（面板两侧中部）；仅有一页时禁用，体现可翻页框架
-        Button prev = Button.builder(Component.literal("<"), b -> prevPage())
-                .bounds(px + 6, py + PANEL_H / 2 - 10, 20, 20).build();
-        prev.active = multiPage;
-        this.addRenderableWidget(prev);
+        int centerX = width / 2;
+        int left = (width - PANEL_WIDTH) / 2;
+        int top = (height - PANEL_HEIGHT) / 2;
+        boolean multiplePages = forms.size() > 1;
 
-        Button next = Button.builder(Component.literal(">"), b -> nextPage())
-                .bounds(px + PANEL_W - 26, py + PANEL_H / 2 - 10, 20, 20).build();
-        next.active = multiPage;
-        this.addRenderableWidget(next);
-
-        // 选择此形?
-        this.addRenderableWidget(Button.builder(
-                Component.translatable("evolution.my_addon.start.select.choose"),
-                b -> chooseCurrentForm()
-        ).bounds(this.width / 2 - 80, py + PANEL_H - 54, 160, 20).build());
-
-        // 返回
-        this.addRenderableWidget(Button.builder(
-                Component.translatable("gui.back"),
-                b -> this.onClose()
-        ).bounds(this.width / 2 - 60, py + PANEL_H - 30, 120, 20).build());
+        addRenderableWidget(new PaperButton(left + 40, top + 95, 22, 22,
+                Component.literal("<"), button -> changePage(-1), -1)).active = multiplePages;
+        addRenderableWidget(new PaperButton(left + PANEL_WIDTH - 62, top + 95, 22, 22,
+                Component.literal(">"), button -> changePage(1), 1)).active = multiplePages;
+        addRenderableWidget(new PaperButton(centerX - 80, top + PANEL_HEIGHT - 54, 160, 20,
+                Component.translatable("evolution.my_addon.start.select.choose"), button -> chooseCurrentForm(), 0))
+                .active = !forms.isEmpty();
+        addRenderableWidget(new PaperButton(centerX - 60, top + PANEL_HEIGHT - 30, 120, 20,
+                Component.translatable("gui.back"), button -> onClose(), 0));
     }
 
-    private void prevPage() {
-        if (forms.isEmpty()) {
-            return;
-        }
-        page = (page - 1 + forms.size()) % forms.size();
-    }
-
-    private void nextPage() {
-        if (forms.isEmpty()) {
-            return;
-        }
-        page = (page + 1) % forms.size();
+    private void changePage(int direction) {
+        page = Math.floorMod(page + direction, forms.size());
     }
 
     private void chooseCurrentForm() {
-        if (page < 0 || page >= forms.size()) {
-            return;
-        }
-        StartForm form = forms.get(page);
-        FriendlyByteBuf buf = github.com.gengyoubo.sscfa.network.AddonNetwork.buffer();
-        buf.writeUtf(form.formId.toString());
-        github.com.gengyoubo.sscfa.network.AddonNetwork.sendToServer(SscAddonNetworking.PACKET_SSCA_START_ROUTE, buf);
-        // 关闭所有界面，让玩家看到进化动?
+        if (forms.isEmpty()) return;
+        var buffer = AddonNetwork.buffer();
+        buffer.writeUtf(forms.get(page).id().toString());
+        AddonNetwork.sendToServer(SscAddonNetworking.PACKET_SSCA_START_ROUTE, buffer);
         Minecraft.getInstance().setScreen(null);
     }
 
     @Override
-    public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-        this.renderBackground(ctx);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        int centerX = width / 2;
+        int left = (width - PANEL_WIDTH) / 2;
+        int top = (height - PANEL_HEIGHT) / 2;
+        var pose = graphics.pose();
+        pose.pushPose();
+        try {
+            pose.translate(0, 0, 400);
+            graphics.fill(0, 0, width, height, 0x32000000);
+            graphics.flush();
+            EvolutionSelectionArtwork.paper(graphics, left, top, PANEL_WIDTH, PANEL_HEIGHT);
+            StartForm form = forms.isEmpty() ? null : forms.get(page);
+            if (form != null && form.decorations() != null) {
+                pose.translate(0, 0, 1);
+                EvolutionSelectionArtwork.margins(graphics, form.decorations(), form.axolotl(),
+                        left, top, PANEL_WIDTH, PANEL_HEIGHT);
+            }
 
-        int px = panelX();
-        int py = panelY();
-        // 面板背景 + 边框
-        ctx.fill(px, py, px + PANEL_W, py + PANEL_H, 0xE0140C08);
-        drawBorder(ctx, px, py, PANEL_W, PANEL_H, 0xFFB8893A);
+            pose.translate(0, 0, 10);
+            drawCentered(graphics, title, centerX, top + 12, 216);
+            EvolutionSelectionArtwork.divider(graphics, centerX, top + 36);
+            if (form != null) {
+                drawCentered(graphics, Component.translatable("evolution.my_addon.start.select.page", page + 1, forms.size()),
+                        centerX, top + 25, 64);
+                int portraitX = centerX - PORTRAIT_SIZE / 2;
+                int portraitY = top + 44;
+                EvolutionSelectionArtwork.PORTRAIT_FRAME.draw(graphics, portraitX - 4, portraitY - 3, 56, 54);
+                EvolutionSelectionArtwork.icon(graphics, form.portrait(), portraitX, portraitY, PORTRAIT_SIZE);
 
-        // 标题
-        ctx.drawCenteredString(this.font, this.title, this.width / 2, py + 10, 0xFFE8C66A);
-
-        if (!forms.isEmpty()) {
-            // 椤电爜
-            Component pageInfo = Component.translatable("evolution.my_addon.start.select.page", page + 1, forms.size());
-            ctx.drawCenteredString(this.font, pageInfo, this.width / 2, py + 24, 0xFFAAAAAA);
-
-            StartForm form = forms.get(page);
-
-            // 形态图标（放大?
-            int iconCenterX = this.width / 2;
-            int iconTopY = py + 44;
-            ctx.pose().pushPose();
-            ctx.pose().translate(iconCenterX - 8 * ICON_SCALE, iconTopY, 0);
-            ctx.pose().scale(ICON_SCALE, ICON_SCALE, 1);
-            ctx.renderItem(new ItemStack(form.icon), 0, 0);
-            ctx.pose().popPose();
-
-            // 形态名?
-            Component name = Component.translatable(form.nameKey).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
-            ctx.drawCenteredString(this.font, name, this.width / 2, iconTopY + 16 * ICON_SCALE + 8, 0xFFFFFFFF);
-
-            // 形态描述（多行居中?
-            MultiLineLabel desc = MultiLineLabel.create(this.font,
-                    Component.translatable(form.descKey).withStyle(ChatFormatting.GRAY), PANEL_W - 40);
-            desc.renderCentered(ctx, this.width / 2, iconTopY + 16 * ICON_SCALE + 26);
+                int labelWidth = Math.min(176, font.width(form.name()) + 20);
+                EvolutionSelectionArtwork.NAME_FRAME.draw(graphics, centerX - labelWidth / 2, top + 97, labelWidth, 17);
+                drawCentered(graphics, form.name(), centerX, top + 102, labelWidth - 16);
+                drawDescription(graphics, form.description(), centerX, top + 119, top + PANEL_HEIGHT - 60);
+            }
+            super.render(graphics, mouseX, mouseY, delta);
+        } finally {
+            graphics.flush();
+            pose.popPose();
         }
-
-        super.render(ctx, mouseX, mouseY, delta);
     }
 
-    private void drawBorder(GuiGraphics ctx, int x, int y, int w, int h, int color) {
-        ctx.fill(x, y, x + w, y + 1, color);
-        ctx.fill(x, y + h - 1, x + w, y + h, color);
-        ctx.fill(x, y, x + 1, y + h, color);
-        ctx.fill(x + w - 1, y, x + w, y + h, color);
+    private void drawDescription(GuiGraphics graphics, Component text, int centerX, int top, int bottom) {
+        var lines = font.split(text, 180);
+        float scale = Math.min(1, (bottom - top) / (float) Math.max(1, lines.size() * 10));
+        for (int i = 0; i < lines.size(); i++) {
+            drawLine(graphics, lines.get(i), centerX, top + i * 10 * scale, scale);
+        }
+    }
+
+    private void drawCentered(GuiGraphics graphics, Component text, int centerX, int y, int maxWidth) {
+        var line = text.getVisualOrderText();
+        float scale = Math.min(1, maxWidth / (float) Math.max(1, font.width(line)));
+        drawLine(graphics, line, centerX, y, scale);
+    }
+
+    private void drawLine(GuiGraphics graphics, FormattedCharSequence line, int centerX, float y, float scale) {
+        var pose = graphics.pose();
+        pose.pushPose();
+        try {
+            pose.translate(centerX - font.width(line) * scale / 2, y, 0);
+            pose.scale(scale, scale, 1);
+            graphics.drawString(font, line, 0, 0, EvolutionSelectionArtwork.INK, false);
+        } finally {
+            pose.popPose();
+        }
+    }
+
+    private final class PaperButton extends Button {
+        private final int direction;
+
+        PaperButton(int x, int y, int width, int height, Component label, OnPress onPress, int direction) {
+            super(x, y, width, height, label, onPress, DEFAULT_NARRATION);
+            this.direction = direction;
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+            int x = getX();
+            int y = getY();
+            int width = getWidth();
+            int height = getHeight();
+            EvolutionSelectionArtwork.BUTTON_FRAME.draw(graphics, x, y, width, height);
+            if (active && (isFocused() || direction == 0 && isHovered())) {
+                EvolutionSelectionArtwork.PORTRAIT_FRAME.draw(graphics, x + 2, y + 2, width - 4, height - 4);
+            }
+            if (direction == 0) {
+                drawCentered(graphics, getMessage(), x + width / 2, y + (height - 8) / 2, width - 14);
+            } else {
+                EvolutionSelectionArtwork.arrow(graphics, x + (width - 14) / 2, y + (height - 14) / 2, direction > 0);
+            }
+            if (!active) {
+                for (int dot = x + 5; dot < x + width - 4; dot += 4) {
+                    graphics.fill(dot, y + height - 4, dot + 1, y + height - 3, EvolutionSelectionArtwork.INK);
+                }
+            }
+        }
     }
 
     @Override
     public void onClose() {
-        Minecraft.getInstance().setScreen(this.parent);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     @Override

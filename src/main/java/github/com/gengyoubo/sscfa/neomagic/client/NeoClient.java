@@ -72,4 +72,6 @@ public final class NeoClient {
                 Component.literal(Math.round(current) + "/" + Math.round(safety)),
                 x, y - 11, current > safety ? 0xFFF29D81 : 0xFFE5E9E7, false);
     }
+    /** One decimal, locale-independent (altar and HUD readouts). */
+    public static String f(double n) { return String.format(java.util.Locale.ROOT, "%.1f", n); }
 }

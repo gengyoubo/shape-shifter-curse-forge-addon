@@ -1,0 +1,459 @@
+package github.com.gengyoubo.sscfa.client.screen;
+
+import com.mojang.blaze3d.systems.RenderSystem;
+import github.com.gengyoubo.sscfa.network.AddonNetwork;
+import github.com.gengyoubo.sscfa.item.MoonDustSpellbookItem;
+import github.com.gengyoubo.sscfa.network.SscAddonNetworking;
+import github.com.gengyoubo.sscfa.screen.InfusionAltarScreenHandler;
+import github.com.gengyoubo.sscfa.spell.FormationData;
+import github.com.gengyoubo.sscfa.spell.FormationElement;
+import github.com.gengyoubo.sscfa.spell.ScrollData;
+import github.com.gengyoubo.sscfa.spell.Spell;
+import github.com.gengyoubo.sscfa.spell.SpellCastFeedback;
+import github.com.gengyoubo.sscfa.spell.SpellNumbers;
+import github.com.gengyoubo.sscfa.spell.SpellbookData;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import github.com.gengyoubo.sscfa.spell.PlayerSpellMastery;
+import github.com.gengyoubo.sscfa.spell.ScrollWorkshopManager;
+import github.com.gengyoubo.sscfa.spell.ArcaneAnalysis;
+import github.com.gengyoubo.sscfa.compat.RegCustomItem;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+/** 左侧配置法阵，右侧充能与升级；背包和详细属性不占用法阵的操作区域。 */
+public class InfusionAltarScreen extends AbstractContainerScreen<InfusionAltarScreenHandler> {
+	private static final ResourceLocation BACKGROUND = texture("gui/infusion_altar_background");
+	private static final ResourceLocation HEXAGRAM = texture("gui/infusion_altar_hexagram");
+	private static final ResourceLocation SLOT_CELL = texture("gui/spellbook_slot");
+	private static final ResourceLocation SLOT_LOCK = texture("gui/spellbook_slot_lock");
+	// 与 Curios / Trinkets 的 spellbook 槽配置直接共用原图；物品贴图是 3D 模型 UV，不能当槽图标。
+	private static final ResourceLocation BOOK_ICON = texture("slot/spellbook");
+	private static final int INK = 0x393240, MUTED = 0x615B68, ACCENT = 0x65508A;
+	private static final int GOOD = 0x306540, MISSING = 0x8E432E;
+	private Button upgradeButton;
+    private final List<Button> maintenanceButtons=new ArrayList<>();
+    private int salvageConfirmTicks;
+    private ItemStack salvageTarget=ItemStack.EMPTY;
+	private ItemStack observedBook = ItemStack.EMPTY;
+	private ItemStack nextBook = ItemStack.EMPTY;
+
+	public InfusionAltarScreen(InfusionAltarScreenHandler handler, Inventory inventory, Component title) {
+		super(handler, inventory, title);
+		this.imageWidth = InfusionAltarScreenHandler.GUI_WIDTH;
+		this.imageHeight = InfusionAltarScreenHandler.GUI_HEIGHT;
+		this.titleLabelX = 21;
+		this.titleLabelY = 8;
+		this.inventoryLabelX = InfusionAltarScreenHandler.INVENTORY_X;
+		this.inventoryLabelY = 137;
+	}
+
+	private static ResourceLocation texture(String path) {
+		return new ResourceLocation("ssc_addon", "textures/" + path + ".png");
+	}
+
+	private static Component label(String key, Object... args) {
+		if(key.equals("next_mana")||key.equals("upgrade_effect"))return Component.translatable("text.ssc_addon.book.upgrade_effect");
+        if(key.equals("mastery"))return Component.translatable("text.ssc_addon.book.player.exp_label");
+        if(key.equals("mastery_tier"))return Component.translatable("text.ssc_addon.book.player.short",args[0]);
+        if(key.equals("mastery_help"))return Component.translatable("neomagic.altar.mastery_help");
+        if(java.util.Set.of("mana","next_mana","mastery_bonus","universal_mana","universal_recovery","preview_mana","preview_recovery","preview_delay","preview_spell","element_effect","space_effect").contains(key))
+            return github.com.gengyoubo.sscfa.neomagic.NeoMagic.text("altar."+key,args);
+        return Component.translatable("gui.ssc_addon.infusion_altar." + key, args);
+	}
+
+	@Override
+	protected void init() {
+		super.init();
+		this.upgradeButton = this.addRenderableWidget(Button.builder(label("upgrade"), button -> {
+			if (canUpgradeNow()) {
+				AddonNetwork.sendToServer(SscAddonNetworking.PACKET_INFUSION_ALTAR_UPGRADE, AddonNetwork.buffer());
+			}
+		}).bounds(this.leftPos + 194, this.topPos + 180, 110, 20).build());
+        addRenderableWidget(Button.builder(label("configure"),b->switchMode(false)).bounds(leftPos+8,topPos-24,82,20).build());
+        addRenderableWidget(Button.builder(label("maintenance"),b->switchMode(true)).bounds(leftPos+94,topPos-24,90,20).build());
+        maintenanceButtons.clear();
+        String[] actions={"repair","salvage","imprint"};
+        for(int i=0;i<actions.length;i++){
+            final int action=i;
+            var button=addRenderableWidget(Button.builder(label(actions[i]),b->maintenanceAction(action))
+                    .bounds(leftPos+194,topPos+32+i*24,110,20).build());
+            maintenanceButtons.add(button);
+        }
+		refreshControls();
+	}
+    private void switchMode(boolean maintenance){
+        menu.setMaintenance(maintenance);salvageConfirmTicks=0;
+        if(minecraft.gameMode!=null)minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
+                maintenance?InfusionAltarScreenHandler.MAINTENANCE:InfusionAltarScreenHandler.CONFIGURE);
+        refreshControls();
+    }
+    private ItemStack maintenanceScroll(){return menu.getSlot(InfusionAltarScreenHandler.MAINTENANCE_SCROLL).getItem();}
+    private void maintenanceAction(int action){
+        if(!menu.isMaintenance()||!maintenanceButtons.get(action).active)return;
+        if(action==1&&(salvageConfirmTicks<=0||!ItemStack.matches(salvageTarget,maintenanceScroll()))){
+            salvageTarget=maintenanceScroll().copy();salvageConfirmTicks=60;return;
+        }
+        salvageConfirmTicks=0;
+        AddonNetwork.sendToServer(action==0?SscAddonNetworking.PACKET_SCROLL_REPAIR
+                :action==1?SscAddonNetworking.PACKET_SCROLL_SALVAGE:SscAddonNetworking.PACKET_SCROLL_IMPRINT,AddonNetwork.buffer());
+    }
+    @Override protected void containerTick(){
+        super.containerTick();
+        if(salvageConfirmTicks>0)--salvageConfirmTicks;
+        if(!ItemStack.matches(salvageTarget,maintenanceScroll()))salvageConfirmTicks=0;
+    }
+    @Override protected boolean hasClickedOutside(double mouseX,double mouseY,int left,int top,int button){
+        return !(mouseX>=leftPos+8&&mouseX<leftPos+184&&mouseY>=topPos-24&&mouseY<topPos-4)
+                &&super.hasClickedOutside(mouseX,mouseY,left,top,button);
+    }
+
+	private ItemStack book() {
+		return this.menu.getSlot(0).getItem();
+	}
+
+	private boolean hasBook() {
+		return !book().isEmpty() && book().getItem() instanceof MoonDustSpellbookItem;
+	}
+
+	private boolean hasCrystal() {
+		return this.menu.getSlot(1).getItem().is(RegCustomItem.MOONDUST_CRYSTAL_SHARD);
+	}
+
+	private boolean hasCore() {
+		return this.menu.getSlot(2).getItem().is(RegCustomItem.MORPHSCALE_CORE);
+	}
+
+	/** 此处只控制按钮；升级扣费仍由现有 C2S 接收器在服务端重验。 */
+	private boolean canUpgradeNow() {
+		return hasBook() && SpellbookData.canLevelUp(book()) && hasCrystal() && hasCore();
+	}
+
+	private void refreshControls() {
+		ItemStack book = book();
+		this.upgradeButton.visible=!menu.isMaintenance();
+        ItemStack scroll=maintenanceScroll();boolean valid=ScrollData.getSpell(scroll)!=null&&!ArcaneAnalysis.isUnanalyzed(scroll);
+        for(int i=0;i<maintenanceButtons.size();i++){
+            var button=maintenanceButtons.get(i);button.visible=menu.isMaintenance();
+            button.active=valid&&(i!=0||ScrollData.getMaxUses(scroll)>0&&ScrollData.getUses(scroll)<ScrollData.getMaxUses(scroll))
+                    &&(i!=2||menu.getSlot(InfusionAltarScreenHandler.MAINTENANCE_SCHEME).getItem().is(github.com.gengyoubo.sscfa.SscAddon.SPELL_FORMATION));
+            button.setMessage(label(i==0?"repair":i==1?(salvageConfirmTicks>0?"salvage_confirm":"salvage"):"imprint"));
+            button.setTooltip(Tooltip.create(label(i==0?"repair_help":i==1?"salvage_help":"imprint_help",
+                    ScrollWorkshopManager.repairInkCost(),ScrollWorkshopManager.repairDustCost())));
+        }
+		this.upgradeButton.active = canUpgradeNow();
+		this.upgradeButton.setMessage(!hasBook() ? label("upgrade")
+				: SpellbookData.getLevel(book) == SpellbookData.MAX_LEVEL ? label("max_level")
+				: label("upgrade_to", SpellbookData.getLevel(book) + 1));
+		if (!ItemStack.matches(this.observedBook, book)) {
+			this.observedBook = book.copy();
+			this.nextBook = ItemStack.EMPTY;
+			if (hasBook() && SpellbookData.getLevel(book) < SpellbookData.MAX_LEVEL) {
+				// 和服务端升级顺序一致，尤其是 Lv2→3 时不能把旧经验算成精通奖励。
+				this.nextBook = book.copy();
+				SpellbookData.setLevel(this.nextBook, SpellbookData.getLevel(book) + 1);
+				SpellbookData.setExpTen(this.nextBook, 0);
+			}
+		}
+	}
+
+	@Override
+	protected void renderBg(GuiGraphics ctx, float delta, int mouseX, int mouseY) {
+		// 整张背景和正六芒星都来自绘制的 PNG；六芒星等比缩放，不随槽位拉伸或连线。
+		RenderSystem.disableBlend();
+		ctx.blit(BACKGROUND, this.leftPos, this.topPos, 0, 0,
+				this.imageWidth, this.imageHeight, this.imageWidth, this.imageHeight);
+		RenderSystem.enableBlend();
+		RenderSystem.defaultBlendFunc();
+		if(!menu.isMaintenance())ctx.blit(HEXAGRAM, this.leftPos + 56, this.topPos + 31, 0, 0, 80, 80, 80, 80);
+		for (Slot slot : this.menu.slots) {
+			if(!slot.isActive())continue;
+			ctx.blit(SLOT_CELL, this.leftPos + slot.x - 1, this.topPos + slot.y - 1, 0, 0, 18, 18, 18, 18);
+		}
+		if (!menu.isMaintenance()&&!hasBook()) {
+			ctx.blit(BOOK_ICON, this.leftPos + InfusionAltarScreenHandler.BOOK_X,
+					this.topPos + InfusionAltarScreenHandler.BOOK_Y, 0, 0, 16, 16, 16, 16);
+		}
+		for (int i = 0; !menu.isMaintenance()&&i < SpellbookData.MAX_FORMATION_SLOTS; i++) {
+			if (!hasBook() || !SpellbookData.isFormationSlotUnlocked(book(), i)) {
+				Slot slot = this.menu.getSlot(3 + i);
+				ctx.blit(SLOT_LOCK, this.leftPos + slot.x - 1, this.topPos + slot.y - 1, 0, 0, 18, 18, 18, 18);
+			}
+		}
+		RenderSystem.disableBlend();
+	}
+
+	@Override
+	protected void renderLabels(GuiGraphics ctx, int mouseX, int mouseY) {
+        if(menu.isMaintenance()){
+            text(ctx,this.title,21,8,160,INK);
+            text(ctx,label("maintenance"),198,8,105,INK);
+            text(ctx,label("scheme_slot"),43,30,60,MUTED);
+            text(ctx,label("ink_slot"),115,30,55,MUTED);
+            text(ctx,label("scroll_slot"),77,85,65,MUTED);
+            text(ctx,label("dust_slot"),233,114,70,MUTED);
+            text(ctx,label("manual_help"),14,105,160,MUTED);
+            text(ctx,this.playerInventoryTitle,this.inventoryLabelX,this.inventoryLabelY,162,INK);
+            return;
+        }
+		// 标题右移 13px（一个字位+余量），避免贴住左侧面板边框
+		text(ctx, this.title, 21, 8, 160, INK);
+		// 书籍状态右移 8px，避开右面板框线
+		text(ctx, label("book_status"), 202, 8, 110, INK);
+		text(ctx, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 162, INK);
+		ItemStack book = book();
+		text(ctx, hasBook() ? label("formations", countFormations(), SpellbookData.getFormationSlotCount(book))
+				: label("insert_book"), 14, 124, 156, ACCENT);
+		text(ctx, hasBook() ? label("level", SpellbookData.getLevel(book), SpellbookData.getSlotCount(book))
+				: label("waiting_book"), 198, 29, 100, INK);
+		text(ctx, label("mana"), 198, 44, 28, MUTED);
+		rightText(ctx, hasBook() ? github.com.gengyoubo.sscfa.neomagic.client.NeoClient.f(github.com.gengyoubo.sscfa.neomagic.client.NeoClient.hud.getDouble("S")) : "— / —", 298, 44);
+        text(ctx,github.com.gengyoubo.sscfa.neomagic.NeoMagic.text("altar.recovery",hasBook()?multiplier((float)github.com.gengyoubo.sscfa.neomagic.NeoLegacyCasting.recoveryMultiplier(book)):"—"),198,56,100,MUTED);
+		boolean mastery = hasBook() && SpellbookData.getLevel(book) == SpellbookData.MAX_LEVEL;
+		text(ctx, label(mastery ? "mastery" : "experience"), 198, 68, 28, MUTED);
+		int progress = 0, total = 1;
+		String progressText = "— / —";
+		if (hasBook()) {
+			if (mastery) {
+				total = PlayerSpellMastery.thresholdTen(PlayerSpellMastery.tier(PlayerSpellMastery.clientExpTen()));
+				progress = PlayerSpellMastery.progressTen(PlayerSpellMastery.clientExpTen());
+			} else {
+				total = SpellbookData.getExpToNext(book);
+				progress = SpellbookData.getExpTen(book);
+			}
+			progressText = decimal(progress) + "/" + decimal(total);
+		}
+		rightText(ctx, progressText, 298, 68);
+		bar(ctx, 80, progress, total, 0xFF8A70A4);
+		text(ctx, label("materials"), 194, 96, 110, INK);
+		// 燃料标签位置不随槽位移动，保持原位
+		text(ctx, label("fuel_short"), 194, 132, 60, MUTED);
+		// 「核心」与上方催化槽对齐（槽 x=264，与燃料标签 194=槽192+2 同规律）
+		text(ctx, label("core_short"), 264, 132, 40, MUTED);
+		text(ctx, chargingStatus(), 194, 149, 110, canUpgradeNow() ? GOOD : MUTED);
+		if (mastery) {
+			text(ctx, label("mastery_automatic"), 194, 165, 110, MUTED);
+		} else {
+			requirement(ctx, 194, "experience", hasBook() && SpellbookData.canLevelUp(book));
+			requirement(ctx, 231, "crystal_short", hasCrystal());
+			requirement(ctx, 268, "core_short", hasCore());
+		}
+		if (!this.nextBook.isEmpty()) {
+			text(ctx, label("next_slots", SpellbookData.getSlotCount(this.nextBook),
+					SpellbookData.getFormationSlotCount(this.nextBook)), 194, 206, 110, ACCENT);
+			text(ctx, label("next_mana", (int)github.com.gengyoubo.sscfa.neomagic.NeoLegacyCasting.safetyBonus(this.nextBook)), 194, 218, 110, MUTED);
+		} else if (hasBook()) {
+			text(ctx, label("mastery_tier", PlayerSpellMastery.tier(PlayerSpellMastery.clientExpTen()),
+					SpellbookData.masteryMaxBonus() / SpellbookData.masteryManaPerTier()), 194, 206, 110, ACCENT);
+			text(ctx, label("mastery_bonus", PlayerSpellMastery.bonus(PlayerSpellMastery.clientExpTen())), 194, 218, 110, MUTED);
+		} else {
+			text(ctx, label("gain_exp"), 194, 206, 110, MUTED);
+			text(ctx, label("unlock_hint"), 194, 218, 110, MUTED);
+		}
+	}
+
+	private void text(GuiGraphics ctx, Component text, int x, int y, int width, int color) {
+		// 其他语言或自定义名称保持在各自面板内；完整解释在悬停提示中。
+		if (this.font.width(text) <= width) {
+			ctx.drawString(this.font, text, x, y, color, false);
+		} else {
+			String clipped = this.font.plainSubstrByWidth(text.getString(), width - this.font.width("…"));
+			ctx.drawString(this.font, clipped + "…", x, y, color, false);
+		}
+	}
+
+	private void rightText(GuiGraphics ctx, String value, int right, int y) {
+		text(ctx, Component.literal(value), right - Math.min(72, this.font.width(value)), y, 72, INK);
+	}
+
+	private void bar(GuiGraphics ctx, int y, int value, int max, int color) {
+		ctx.fill(198, y, 298, y + 5, 0xFFAAA4B1);
+		int filled = (int) (98L * Math.max(0, Math.min(value, max)) / Math.max(1, max));
+		ctx.fill(199, y + 1, 199 + filled, y + 4, color);
+	}
+
+	private void requirement(GuiGraphics ctx, int x, String key, boolean met) {
+		int color = met ? GOOD : MISSING;
+		if (!hasBook() || SpellbookData.getLevel(book()) == SpellbookData.MAX_LEVEL) color = MUTED;
+		ctx.renderOutline(x, 166, 6, 6, 0xFF000000 | color);
+		if (met) ctx.fill(x + 2, 168, x + 4, 170, 0xFF000000 | color);
+		text(ctx, label(key), x + 9, 165, 29, color);
+	}
+
+	private Component chargingStatus() {
+		if (!hasBook()) return label("waiting_book");
+        return github.com.gengyoubo.sscfa.neomagic.NeoMagic.text("altar.no_charge");
+	}
+
+	private int countFormations() {
+		int count = 0;
+		for (int i = 3; i < InfusionAltarScreenHandler.ALTAR_SLOT_COUNT; i++) {
+			if (!this.menu.getSlot(i).getItem().isEmpty()) count++;
+		}
+		return count;
+	}
+
+	private static String decimal(int tenths) {
+		return String.format(Locale.ROOT, "%.1f", tenths / 10.0);
+	}
+
+	private static String multiplier(float value) {
+		return String.format(Locale.ROOT, "%.2f", value);
+	}
+
+	private List<Component> formationTooltip() {
+		List<Component> lines = new ArrayList<>();
+		lines.add(label("formation_details").copy().withStyle(ChatFormatting.LIGHT_PURPLE));
+		lines.add(label("formation_help"));
+		if (!hasBook()) return lines;
+		for (FormationElement element : FormationElement.values()) {
+			float effect = element == FormationElement.SPACE ? FormationData.sumSpaceRangeMultiplier(book(), element)
+					: FormationData.sumDamageMultiplier(book(), element);
+			lines.add(label(element == FormationElement.SPACE ? "space_effect" : "element_effect",
+					Component.translatable(element.getNameKey()), multiplier(effect),
+					multiplier(FormationData.sumCooldownMultiplier(book(), element)),
+					multiplier(FormationData.sumManaCostMultiplier(book(), element))));
+		}
+		int expLevel = FormationData.getBestUniversalVariantLevel(book(), FormationData.VARIANT_EXP);
+		lines.add(label("universal_exp", multiplier(expLevel == 0 ? 1f : FormationData.universalExpMultiplier(expLevel))));
+		lines.add(label("universal_mana", (int)github.com.gengyoubo.sscfa.neomagic.NeoLegacyCasting.safetyBonus(book())));
+		lines.add(label("universal_recovery", multiplier(FormationData.universalRecoveryMultiplier(book()))));
+		return lines;
+	}
+
+	/** Before/after quotes come from the same formula as the HUD and server payment gate. */
+	private boolean drawFormationPreview(GuiGraphics ctx, int mouseX, int mouseY) {
+		if (menu.isMaintenance()||!hasBook() || this.hoveredSlot == null || this.hoveredSlot.index < 3
+				|| this.hoveredSlot.index >= InfusionAltarScreenHandler.FORMATION_END) return false;
+		ItemStack cursor = this.menu.getCarried();
+		boolean removal = cursor.isEmpty();
+		if (removal && !this.hoveredSlot.hasItem()
+				|| !removal && !this.hoveredSlot.mayPlace(cursor)) return false;
+		ItemStack before = book();
+		ItemStack after = SpellbookData.previewFormation(before, this.hoveredSlot.index - 3, cursor);
+		List<Component> lines = new ArrayList<>();
+		lines.add((removal ? this.hoveredSlot.getItem() : cursor).getHoverName());
+		lines.add(label(removal ? "preview_remove" : "preview_insert").copy().withStyle(ChatFormatting.LIGHT_PURPLE));
+		lines.add(label("preview_mana", (int)github.com.gengyoubo.sscfa.neomagic.NeoLegacyCasting.safetyBonus(before), (int)github.com.gengyoubo.sscfa.neomagic.NeoLegacyCasting.safetyBonus(after)));
+		lines.add(label("preview_recovery", multiplier((float)github.com.gengyoubo.sscfa.neomagic.NeoLegacyCasting.recoveryMultiplier(before)),
+                multiplier((float)github.com.gengyoubo.sscfa.neomagic.NeoLegacyCasting.recoveryMultiplier(after))));
+		lines.add(label("preview_delay", SpellCastFeedback.seconds(github.com.gengyoubo.sscfa.neomagic.client.NeoClient.hud.contains("RecoveryDelay")?github.com.gengyoubo.sscfa.neomagic.client.NeoClient.hud.getInt("RecoveryDelay"):60)));
+		boolean hasSpell = false;
+		for (int slot = 0; slot < SpellbookData.getSlotCount(before); slot++) {
+			ItemStack scroll = SpellbookData.getScroll(before, slot);
+			Spell spell = ScrollData.getSpell(scroll);
+			if (spell == null) continue;
+			hasSpell = true;
+			int level = ScrollData.getCastLevel(scroll);
+			int oldCost = SpellNumbers.finalManaCost(spell, before, this.minecraft.player, level, scroll);
+			int cost = SpellNumbers.finalManaCost(spell, after, this.minecraft.player, level, scroll);
+			Component name = SpellCastFeedback.spellName(spell, scroll);
+			if (oldCost < 0 || cost < 0) {
+				lines.add(label("preview_cost_unavailable", name).copy().withStyle(ChatFormatting.GRAY));
+				continue;
+			}
+			var line = label("preview_spell", name, level, oldCost, cost).copy();
+
+			lines.add(line);
+		}
+		if (!hasSpell) lines.add(label("preview_no_spells"));
+		lines.add(label("preview_current_form").copy().withStyle(ChatFormatting.GRAY));
+		drawWrappedTooltip(ctx, lines, mouseX, mouseY);
+		return true;
+	}
+
+	private void drawWrappedTooltip(GuiGraphics ctx, List<Component> lines, int mouseX, int mouseY) {
+		List<net.minecraft.util.FormattedCharSequence> wrapped = new ArrayList<>();
+		int maxWidth = Math.min(270, this.width - 24);
+		for (Component line : lines) wrapped.addAll(this.font.split(line, maxWidth));
+		ctx.renderTooltip(this.font, wrapped, mouseX, mouseY);
+	}
+
+	private List<Component> upgradeTooltip() {
+		List<Component> lines = new ArrayList<>();
+		if (!hasBook()) {
+			lines.add(label("insert_book"));
+			return lines;
+		}
+		if (SpellbookData.getLevel(book()) == SpellbookData.MAX_LEVEL) {
+			lines.add(label("mastery_help", decimal(SpellbookData.masteryExpPerTier()), SpellbookData.masteryManaPerTier()));
+			return lines;
+		}
+		lines.add(label("upgrade_to", SpellbookData.getLevel(book()) + 1));
+		lines.add(condition(label("exp_required", decimal(SpellbookData.getExpTen(book())), decimal(SpellbookData.getExpToNext(book()))), SpellbookData.canLevelUp(book())));
+		lines.add(condition(label("item_required", RegCustomItem.MOONDUST_CRYSTAL_SHARD.getDescription()), hasCrystal()));
+		lines.add(condition(label("item_required", RegCustomItem.MORPHSCALE_CORE.getDescription()), hasCore()));
+		lines.add(label("upgrade_effect"));
+		return lines;
+	}
+
+	private static Component condition(Component value, boolean met) {
+		return Component.literal(met ? "+ " : "- ").append(value).withStyle(met ? ChatFormatting.GREEN : ChatFormatting.RED);
+	}
+
+	private boolean inside(int mouseX, int mouseY, int x, int y, int width, int height) {
+		return mouseX >= this.leftPos + x && mouseX < this.leftPos + x + width
+				&& mouseY >= this.topPos + y && mouseY < this.topPos + y + height;
+	}
+
+	private void drawHelp(GuiGraphics ctx, int mouseX, int mouseY) {
+        if(menu.isMaintenance()){
+            if(hoveredSlot!=null&&!hoveredSlot.hasItem()){
+                String key=switch(hoveredSlot.index){case InfusionAltarScreenHandler.MAINTENANCE_INK->"ink_slot";
+                    case InfusionAltarScreenHandler.MAINTENANCE_SCHEME->"scheme_slot";
+                    case InfusionAltarScreenHandler.MAINTENANCE_SCROLL->"scroll_slot";case 1->"dust_slot";default->null;};
+                if(key!=null)ctx.renderTooltip(font,label(key),mouseX,mouseY);
+            }
+            return;
+        }
+		List<Component> lines = null;
+		if (inside(mouseX, mouseY, 12, 122, 160, 13)) {
+			lines = formationTooltip();
+		} else if (inside(mouseX, mouseY, 194, 163, 110, 38) || inside(mouseX, mouseY, 194, 204, 110, 24)) {
+			lines = upgradeTooltip();
+		} else if (inside(mouseX, mouseY, 194, 144, 110, 15) || inside(mouseX, mouseY, 198, 43, 100, 19)) {
+			lines = List.of(chargingStatus(), label("fuel_help"), label("fuel_consumption"), label("fuel_reservation"));
+		} else if (inside(mouseX, mouseY, 194, 130, 60, 12)) {
+			lines = List.of(label("fuel_help"), label("fuel_consumption"), label("fuel_reservation"));
+		} else if (inside(mouseX, mouseY, 264, 130, 38, 12)) {
+			lines = List.of(RegCustomItem.MORPHSCALE_CORE.getDescription(), label("core_help"));
+		} else if (inside(mouseX, mouseY, 198, 66, 100, 21)) {
+			lines = hasBook() && SpellbookData.getLevel(book()) == SpellbookData.MAX_LEVEL
+					? List.of(label("mastery_tier", PlayerSpellMastery.tier(PlayerSpellMastery.clientExpTen()), SpellbookData.masteryMaxBonus() / SpellbookData.masteryManaPerTier()),
+					label("mastery_help", decimal(SpellbookData.masteryExpPerTier()), SpellbookData.masteryManaPerTier()))
+					: List.of(label("experience_help"));
+		} else if (this.hoveredSlot != null && !this.hoveredSlot.hasItem()) {
+			int index = this.hoveredSlot.index;
+			if (index == 0) lines = List.of(label("insert_book"), label("formation_help"));
+			else if (index == 1) lines = List.of(label("fuel_help"), label("fuel_consumption"), label("fuel_reservation"));
+			else if (index == 2) lines = List.of(RegCustomItem.MORPHSCALE_CORE.getDescription(), label("core_help"));
+			else if (index >= 3 && index < InfusionAltarScreenHandler.FORMATION_END) {
+				int slot = index - 3;
+				lines = List.of(!hasBook() ? label("insert_book") : SpellbookData.isFormationSlotUnlocked(book(), slot)
+						? label("formation_insert") : label("formation_locked", slot == 0 ? 1 : slot < 3 ? 2 : 3));
+			}
+		}
+		if (lines != null && this.menu.getCarried().isEmpty()) {
+			drawWrappedTooltip(ctx, lines, mouseX, mouseY);
+		}
+	}
+
+	@Override
+	public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+		this.renderBackground(ctx);
+		refreshControls();
+		super.render(ctx, mouseX, mouseY, delta);
+		if (!drawFormationPreview(ctx, mouseX, mouseY)) this.renderTooltip(ctx, mouseX, mouseY);
+		drawHelp(ctx, mouseX, mouseY);
+	}
+}

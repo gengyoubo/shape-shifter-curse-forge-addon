@@ -1,30 +1,1332 @@
 package github.com.gengyoubo.sscfa.ability;
 
+// [forge-port] removed yarn wildcard import net.minecraft.block.*
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.block.AnvilBlock;
+import net.minecraft.world.level.block.BasePressurePlateBlock;
+import net.minecraft.world.level.block.BaseRailBlock;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.BeehiveBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.CartographyTableBlock;
+import net.minecraft.world.level.block.ChainBlock;
+import net.minecraft.world.level.block.CommandBlock;
+import net.minecraft.world.level.block.ComposterBlock;
+import net.minecraft.world.level.block.CraftingTableBlock;
+import net.minecraft.world.level.block.DiodeBlock;
+import net.minecraft.world.level.block.DirtPathBlock;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.FarmBlock;
+import net.minecraft.world.level.block.FenceBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.FletchingTableBlock;
+import net.minecraft.world.level.block.GrindstoneBlock;
+import net.minecraft.world.level.block.IronBarsBlock;
+import net.minecraft.world.level.block.JigsawBlock;
+import net.minecraft.world.level.block.LecternBlock;
+import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.LightningRodBlock;
+import net.minecraft.world.level.block.LoomBlock;
+import net.minecraft.world.level.block.NoteBlock;
+import net.minecraft.world.level.block.ObserverBlock;
+import net.minecraft.world.level.block.PoweredBlock;
+import net.minecraft.world.level.block.RedStoneWireBlock;
+import net.minecraft.world.level.block.RedstoneTorchBlock;
+import net.minecraft.world.level.block.RespawnAnchorBlock;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.SmithingTableBlock;
+import net.minecraft.world.level.block.SnowLayerBlock;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.StonecutterBlock;
+import net.minecraft.world.level.block.StructureBlock;
+import net.minecraft.world.level.block.TargetBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.TripWireBlock;
+import net.minecraft.world.level.block.TripWireHookBlock;
+import net.minecraft.world.level.block.WallBlock;
+import net.minecraft.world.level.block.piston.MovingPistonBlock;
+import net.minecraft.world.level.block.piston.PistonBaseBlock;
+import net.minecraft.world.level.block.piston.PistonHeadBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.PlayerTeam;
+import net.minecraft.world.scores.Scoreboard;
+import github.com.gengyoubo.sscfa.util.FormIdentifiers;
+import github.com.gengyoubo.sscfa.balance.BalanceReader;
+import github.com.gengyoubo.sscfa.network.visual.ParametricVisuals;
+import github.com.gengyoubo.sscfa.util.ParticleUtils;
+import github.com.gengyoubo.sscfa.util.PowerUtils;
+import github.com.gengyoubo.sscfa.util.WhitelistUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
-/** 阿努比斯死亡领域占位实现：待完整领域逻辑移植后替换。 */
-public final class AnubisWolfSpDeathDomain {
-    private AnubisWolfSpDeathDomain() {}
+/**
+ * SP阿努比斯之狼主要技能 - 死亡领域
+ * 将周围24格半径、高低差9格的圆柱范围内的方块暂时变为灵魂沙。
+ * 释放时2秒充能，充能期间减速70%。
+ * 蓄力完成后以5格/秒速度延展灵魂沙。
+ * 按白名单给予踩在灵魂沙上方3格内的生物减速I、凋零I并减少15%血量上限（离开时移除）。
+ * 领域持续15秒，CD50秒。
+ * 领域结束后从最远处开始以5格/秒速度回退并还原方块。
+ */
+public class AnubisWolfSpDeathDomain {
 
-    public static boolean hasActiveDomain(UUID owner) {
-        return false;
-    }
+	private static final Logger LOGGER = LoggerFactory.getLogger("DeathDomain");
+	/**
+	 * 领域最大半径（格）
+	 */
+	private static final int DOMAIN_RADIUS = 24;
 
-    public static boolean isInActiveDomain(UUID owner, BlockPos pos) {
-        return false;
-    }
+	// ==================== 常量 ====================
+	// 以下常量均为默认值；运行时从 balance 快照读取（scope：abilities.anubis_death_domain）
+	/**
+	 * 领域上下高度差（格）
+	 */
+	private static final int DOMAIN_HEIGHT = 9;
+	/**
+	 * 充能时间（tick）
+	 */
+	private static final int CHARGE_TICKS = 40; // 2秒
+	/**
+	 * 充能期间减速比例
+	 */
+	private static final double CHARGE_SLOW_FACTOR = 0.3; // 保留30%速度=减速70%
+	/**
+	 * 延展速度：5格/秒 = 每tick 0.25格
+	 */
+	private static final double EXPAND_SPEED = 5.0 / 20.0; // 0.25格/tick
+	/**
+	 * 领域持续时间（tick）
+	 */
+	private static final int DOMAIN_DURATION = 300; // 15秒
+	/**
+	 * 血量减少百分比
+	 */
+	private static final double HEALTH_REDUCTION = 0.15;
+	// CD（正常/惩罚）已由统一冷却服务 SkillCooldowns + power JSON 配置管理，原常量已删
+	/**
+	 * 增强领域最大半径（格）
+	 */
+	private static final int ENHANCED_DOMAIN_RADIUS = 32;
 
-    public static boolean isEnhancedDomain(UUID owner) {
-        return false;
-    }
+	// ==================== 增强模式常量 ====================
+	/**
+	 * 增强充能时间（tick）
+	 */
+	private static final int ENHANCED_CHARGE_TICKS = 20; // 1秒
+	/**
+	 * 增强领域持续时间（tick）
+	 */
+	private static final int ENHANCED_DOMAIN_DURATION = 500; // 25秒
+	/**
+	 * 增强凋零等级（Wither II）
+	 */
+	private static final int ENHANCED_WITHER_AMPLIFIER = 1;
+	/**
+	 * 增强模式自动召唤冥狼数量
+	 */
+	private static final int ENHANCED_AUTO_SUMMON_COUNT = 6;
+	/**
+	 * 血量减少修饰符UUID
+	 */
+	private static final UUID HEALTH_MODIFIER_UUID = UUID.fromString("a7b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d");
+	/**
+	 * 充能减速修饰符UUID
+	 */
+	private static final UUID CHARGE_SLOW_UUID = UUID.fromString("b8c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e");
+	// ==================== 状态追踪 ====================
+	private static final ConcurrentHashMap<UUID, DomainData> ACTIVE_DOMAINS = new ConcurrentHashMap<>();
+	/** 统一冷却服务的稳定技能 ID（= power 注册路径）。 */
+	private static final String SKILL_ID = "my_addon:form_anubis_wolf_sp_death_domain";
+	// COOLDOWN_PLAYERS 已由统一服务 SkillCastManager 接管（写入已移除；clearPlayer/clearCooldowns 仍引用此表作兜底清理，字段在用）
+	private static final ConcurrentHashMap<UUID, Long> COOLDOWN_PLAYERS = new ConcurrentHashMap<>();
 
-    public static void clearPlayer(ServerPlayer player) {
-    }
+	// 阶段 5：服务端权威快照读取（快照未初始化回退默认常量）
+	private static final BalanceReader BAL = new BalanceReader("abilities.anubis_death_domain");
 
-    public static void removeLegacyHealthReduction(LivingEntity entity) {
-    }
+	private AnubisWolfSpDeathDomain() {
+	}
+
+	/**
+	 * 玩家按下技能键触发
+	 */
+	public static boolean execute(ServerPlayer player) {
+		// 重复释放检查（CD 门禁已由 power 层 begin 统一拦截，修 P1-1：去掉内部二次 canBegin 防自锁）
+		if (ACTIVE_DOMAINS.containsKey(player.getUUID())) {
+			return false;
+		}
+		if (!github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.begin(player, SKILL_ID)) return false;
+
+		// 直接开始蓄力，不做前置检查
+		// 创建领域数据
+		BlockPos center = player.blockPosition();
+		ServerLevel serverWorld = (ServerLevel) player.level();
+		DomainData data = new DomainData(serverWorld, center, (int) player.getY());
+        data.castId = github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.currentCastId(player, SKILL_ID);
+
+// 检查灵魂能量是否满：满则进入增强模式并消耗能量
+		if (AnubisWolfSpSoulEnergy.isFullEnergy(player)) {
+			data.enhanced = true;
+			data.summonCooldownTicks = captureSummonCooldown(player);
+			AnubisWolfSpSoulEnergy.consumeEnergy(player);
+			LOGGER.info("[DeathDomain] ENHANCED mode activated for player={}", player.getName().getString());
+		}
+
+		ACTIVE_DOMAINS.put(player.getUUID(), data);
+
+		LOGGER.info("[DeathDomain] execute: player={}, center={}, world={}, ACTIVE_DOMAINS size={}",
+				player.getName().getString(), center, serverWorld.dimension().location(), ACTIVE_DOMAINS.size());
+
+		// 应用充能减速效果
+		applyChargeSlow(player);
+
+		// 充能开始音效：灵魂沙谷吸引 + 幽灵低吟
+		player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+				SoundEvents.SOUL_SAND_PLACE, SoundSource.PLAYERS, 1.5f, 0.5f);
+		player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+				SoundEvents.WITHER_AMBIENT, SoundSource.PLAYERS, 1.0f, 0.6f);
+
+		return true;
+	}
+
+	/**
+	 * 每tick更新，由SscAddon的tick处理器调用
+	 */
+	public static void tick(ServerPlayer player) {
+		DomainData data = ACTIVE_DOMAINS.get(player.getUUID());
+		if (data == null) return;
+		if (data.phase == Phase.CHARGING && (!player.isAlive()
+				|| github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.currentCastId(player, SKILL_ID) != data.castId
+				|| github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.spec(player, SKILL_ID) == null)) {
+			github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.cancelled(player, SKILL_ID, data.castId);
+			clearPlayer(player);
+			return;
+		}
+
+        if (player.level() != data.world || !player.isAlive()) {
+            github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.cancelled(player, SKILL_ID, data.castId);
+            clearPlayer(player);
+            return;
+        }
+        ServerLevel serverWorld = data.world;
+
+		data.ticksElapsed++;
+
+		switch (data.phase) {
+			case CHARGING -> tickCharging(player, serverWorld, data);
+			case EXPANDING -> tickExpanding(player, serverWorld, data);
+			case SUSTAINING -> tickSustaining(player, serverWorld, data);
+			case RETRACTING -> tickRetracting(player, serverWorld, data);
+			// CLEANUP 阶段由 tickCleanup() 在服务器线程上单独处理方块还原，此处无需操作
+			case CLEANUP -> { }
+		}
+	}
+
+	// ==================== 公开接口 ====================
+
+	/**
+	 * 玩家断线/死亡时清理，还原所有已转化方块
+	 * <p>
+	 * 玩家断线时清理玩家特有状态（CD、减速修饰符）
+	 * 不在此处做方块还原，因为DISCONNECT事件在Netty IO线程上触发，
+	 * world.setBlockState()不是线程安全的。
+	 * 方块还原由 tickCleanup()（服务器线程）或 forceRestoreAll()（SERVER_STOPPING）处理。
+	 */
+	public static void clearPlayer(ServerPlayer player) {
+		UUID uuid = player.getUUID();
+		LOGGER.info("[DeathDomain] clearPlayer called: player={}, uuid={}, ACTIVE_DOMAINS size={}, containsKey={}",
+				player.getName().getString(), uuid, ACTIVE_DOMAINS.size(), ACTIVE_DOMAINS.containsKey(uuid));
+		DomainData data = ACTIVE_DOMAINS.get(uuid);
+		if (data != null) {
+            stopDomainVisuals(data);
+            github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.cancelled(player, SKILL_ID, data.castId);
+			// 只清理玩家特有状态，不移除ACTIVE_DOMAINS中的数据
+			if (data.phase == Phase.CHARGING) {
+				removeChargeSlow(player);
+			}
+			// 标记为待清理，让tickCleanup在服务器线程上处理方块还原
+			data.phase = Phase.CLEANUP;
+			LOGGER.info("[DeathDomain] clearPlayer: marked for CLEANUP, totalBlocks={}",
+					data.changedBlocksByDistance.values().stream().mapToInt(Map::size).sum());
+		} else {
+			LOGGER.info("[DeathDomain] clearPlayer: no active domain found for player");
+		}
+		COOLDOWN_PLAYERS.remove(uuid);
+	}
+
+	/** 清空 CD 表并同步在线玩家的 SP_PRIMARY_CD 资源条为 0（2026-09-27 审计修复）：
+	 * 仅清 COOLDOWN_PLAYERS 不清 Apoli 资源，reload/停服后玩家会看到残留 CD 条却可立即重放
+	 * （表现不一致）。此处与写入处（tickCharging 设 CD）用同款资源 ID 与工具方法；
+	 * 离线玩家无法同步，资源条由 Apoli 自身过期机制自然归零，无需处理。 */
+	private static void clearCooldowns(net.minecraft.server.MinecraftServer server) {
+		// 有服务器引用才逐个同步（server==null 时无在线玩家可查，只清表）
+		if (server != null) {
+			for (UUID uuid : COOLDOWN_PLAYERS.keySet()) {
+				ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+				if (player != null) {
+					PowerUtils.setResourceValueAndSync(player, FormIdentifiers.SP_PRIMARY_CD, 0);
+				}
+			}
+		}
+		COOLDOWN_PLAYERS.clear();
+	}
+
+	/**
+	 * 清除所有领域数据和冷却状态
+	 * 用于服务器关闭时清理所有玩家状态
+	 */
+	public static void clearAll() {
+		// 先清 CD（clearCooldowns 内部已同步在线玩家资源条并清表；须在 ACTIVE_DOMAINS 清空前取 server）
+		clearCooldowns(findServer());
+		ACTIVE_DOMAINS.values().forEach(AnubisWolfSpDeathDomain::stopDomainVisuals);
+		ACTIVE_DOMAINS.clear();
+	}
+
+	/**
+	 * 在服务器线程的tick中检查并清理已断线玩家的领域（方块还原）
+	 * 由SscAddon的tick处理器调用，确保在Server thread上执行
+	 */
+	public static void tickCleanup() {
+		Iterator<Map.Entry<UUID, DomainData>> it = ACTIVE_DOMAINS.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<UUID, DomainData> entry = it.next();
+			DomainData data = entry.getValue();
+			if (data.phase == Phase.CLEANUP && data.world != null) {
+				stopDomainVisuals(data);
+				int totalBlocks = data.changedBlocksByDistance.values().stream().mapToInt(Map::size).sum();
+				LOGGER.info("[DeathDomain] tickCleanup: restoring uuid={}, totalBlocks={}, world={}",
+						entry.getKey(), totalBlocks, data.world.dimension().location());
+				restoreAllBlocks(data.world, data);
+				cleanupDebuffs(data.world, data);
+				it.remove();
+				LOGGER.info("[DeathDomain] tickCleanup: restoration completed");
+			}
+		}
+	}
+
+	/**
+	 * 检查玩家是否在充能中（用于外部减速检查等）
+	 */
+	public static boolean isCharging(ServerPlayer player) {
+		DomainData data = ACTIVE_DOMAINS.get(player.getUUID());
+		return data != null && data.phase == Phase.CHARGING;
+	}
+
+	/**
+	 * 检查玩家是否有激活的死亡领域（用于冥狼裁庭联动）
+	 * 处于EXPANDING、SUSTAINING阶段均视为激活状态
+	 */
+	public static boolean hasActiveDomain(UUID playerUuid) {
+		DomainData data = ACTIVE_DOMAINS.get(playerUuid);
+		if (data == null) return false;
+		return data.phase == Phase.EXPANDING || data.phase == Phase.SUSTAINING;
+	}
+
+	/**
+	 * 检查指定位置是否在玩家激活的死亡领域范围内
+	 */
+	public static boolean isInActiveDomain(UUID playerUuid, BlockPos pos) {
+		DomainData data = ACTIVE_DOMAINS.get(playerUuid);
+		if (data == null) return false;
+		if (data.phase != Phase.EXPANDING && data.phase != Phase.SUSTAINING) return false;
+		double dx = pos.getX() - data.center.getX();
+		double dz = pos.getZ() - data.center.getZ();
+		double radius = data.enhanced ? BAL.i("enhanced_domain_radius", ENHANCED_DOMAIN_RADIUS) : BAL.i("domain_radius", DOMAIN_RADIUS);
+		return dx * dx + dz * dz <= radius * radius;
+	}
+
+	/** PvE combat follows the existing domain's world, actual expansion/retraction radius and height. */
+	public static boolean containsForNpcCombat(ServerPlayer player, LivingEntity target) {
+		DomainData data = ACTIVE_DOMAINS.get(player.getUUID());
+		if (data == null || data.world != target.level() || data.currentRadius <= 0
+				|| data.phase == Phase.CHARGING || data.phase == Phase.CLEANUP) return false;
+		double dx = target.getX() - data.center.getX(), dz = target.getZ() - data.center.getZ();
+		return dx * dx + dz * dz <= data.currentRadius * data.currentRadius
+				&& Math.abs(target.getY() - data.centerY) <= BAL.i("domain_height", DOMAIN_HEIGHT);
+	}
+
+	/** 检查玩家的死亡领域是否为增强模式。 */
+	public static boolean isEnhancedDomain(UUID playerUuid) {
+		DomainData data = ACTIVE_DOMAINS.get(playerUuid);
+		return data != null && data.enhanced;
+	}
+
+	/**
+	 * 服务器关闭或玩家变更形态时，强制还原所有领域
+	 * 每个领域使用自身存储的世界引用，确保还原到正确的维度
+	 */
+	public static void forceRestoreAll() { forceRestoreAll(false); }
+
+    /** A data reload restores world edits but must not grant a free cooldown reset. */
+    public static void forceRestoreAll(boolean preserveCooldowns) {
+		LOGGER.info("[DeathDomain] forceRestoreAll called, ACTIVE_DOMAINS size={}", ACTIVE_DOMAINS.size());
+		for (Map.Entry<UUID, DomainData> entry : ACTIVE_DOMAINS.entrySet()) {
+			DomainData data = entry.getValue();
+			stopDomainVisuals(data);
+			int totalBlocks = 0;
+			for (Map<BlockPos, BlockState> m : data.changedBlocksByDistance.values()) {
+				totalBlocks += m.size();
+			}
+			LOGGER.info("[DeathDomain] forceRestoreAll: uuid={}, phase={}, world={}, totalBlocks={}",
+					entry.getKey(), data.phase, data.world != null ? data.world.dimension().location() : "NULL", totalBlocks);
+			if (data.world != null) {
+                var manager = github.com.gengyoubo.sscfa.cooldown.SkillCastManager.get(data.world);
+                var cast = manager.control(entry.getKey(), SKILL_ID);
+                if (cast != null && cast.castId == data.castId) {
+                    manager.interrupt(data.castId, data.world.getServer().overworld().getGameTime());
+                }
+				restoreAllBlocks(data.world, data);
+				cleanupDebuffs(data.world, data);
+				// 修复：移除在线玩家的 CHARGE_SLOW 修饰符，避免 reload 后 70% 减速永久挂着
+				if (data.phase == Phase.CHARGING) {
+					net.minecraft.world.entity.player.Player playerEntity = data.world.getServer().getPlayerList().getPlayer(entry.getKey());
+					if (playerEntity instanceof ServerPlayer sp) {
+						removeChargeSlow(sp);
+					}
+				}
+			}
+		}
+		// 先取服务器引用（ACTIVE_DOMAINS 清空后无从获取），再还原/清空
+		net.minecraft.server.MinecraftServer server = findServer();
+		ACTIVE_DOMAINS.clear();
+		// 修复：同步清理 CD 表，否则 reload 后旧 CD 仍生效；同步在线玩家 CD 资源条为 0
+		if (!preserveCooldowns) clearCooldowns(server);
+		LOGGER.info("[DeathDomain] forceRestoreAll completed");
+	}
+
+	/** 从任一活跃领域的世界取服务器引用（领域均无世界引用时返回 null，CD 只能清表）。 */
+	private static net.minecraft.server.MinecraftServer findServer() {
+		for (DomainData data : ACTIVE_DOMAINS.values()) {
+			if (data.world != null) return data.world.getServer();
+		}
+		return null;
+	}
+
+	/**
+	 * 检查玩家脚下4格范围内是否有可转化为灵魂沙的方块，或已经是灵魂沙/灵魂土
+	 */
+	private static boolean hasConvertibleBlocksBelow(ServerPlayer player) {
+		BlockPos feetPos = player.blockPosition();
+		for (int dx = -4; dx <= 4; dx++) {
+			for (int dz = -4; dz <= 4; dz++) {
+				if (dx * dx + dz * dz > 16) continue; // 圆形范围
+				for (int dy = -4; dy <= 0; dy++) {
+					BlockPos pos = feetPos.offset(dx, dy, dz);
+					BlockState state = player.level().getBlockState(pos);
+					Block block = state.getBlock();
+					if (shouldConvert(state) || block == Blocks.SOUL_SAND || block == Blocks.SOUL_SOIL) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * 充能阶段：普通2秒/增强1秒，期间减速70%
+	 */
+	private static void tickCharging(ServerPlayer player, ServerLevel world, DomainData data) {
+		int chargeTicks = data.enhanced ? BAL.i("enhanced_charge_ticks", ENHANCED_CHARGE_TICKS) : BAL.i("charge_ticks", CHARGE_TICKS);
+
+// 充能粒子效果：灵魂粒子围绕玩家旋转上升；网络优化：隔 tick 发送（count=0 单粒包，粒子寿命长靠存活衔接，包率 -50%）
+                if (data.ticksElapsed % 2 == 0) {
+                double angle = (data.ticksElapsed * 0.2) % (Math.PI * 2);
+                double radius = 1.0 + data.ticksElapsed * 0.03;
+                int particleStreams = data.enhanced ? 5 : 3;
+                for (int i = 0; i < particleStreams; i++) {
+                        double a = angle + i * (Math.PI * 2 / particleStreams);
+                        double px = player.getX() + Math.cos(a) * radius;
+                        double pz = player.getZ() + Math.sin(a) * radius;
+                        double py = player.getY() + 0.5 + data.ticksElapsed * 0.025;
+                        ParticleUtils.spawnDecorationParticles(world, player, ParticleTypes.SOUL, px, py, pz, 1, 0, 0.05, 0, 0.01);
+                        if (data.enhanced) {
+                                ParticleUtils.spawnDecorationParticles(world, player, ParticleTypes.SOUL_FIRE_FLAME, px, py, pz, 1, 0, 0.08, 0, 0.02);
+                        }
+                }
+		}
+
+		// 心跳音效（每10tick一次）
+		if (data.ticksElapsed % 10 == 0) {
+			player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+					SoundEvents.WITHER_HURT, SoundSource.PLAYERS, 0.8f, 0.5f + data.ticksElapsed * 0.01f);
+		}
+
+		if (data.ticksElapsed >= chargeTicks) {
+			// 充能完成，移除充能减速
+			removeChargeSlow(player);
+
+			// 检查脚下是否有可转化方块
+			if (!hasConvertibleBlocksBelow(player)) {
+				// 释放失败：播放失败音效，按 fail_cooldown 结算（统一服务，不再写 COOLDOWN_PLAYERS）
+				player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+					SoundEvents.SOUL_SAND_BREAK, SoundSource.PLAYERS, 1.0f, 1.5f);
+				github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.failed(player, SKILL_ID, data.castId);
+				ACTIVE_DOMAINS.remove(player.getUUID());
+				return;
+			}
+
+			github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.released(player, SKILL_ID, data.castId);
+			data.center = player.blockPosition();
+			data.centerY = (int) player.getY();
+			data.phase = Phase.EXPANDING;
+			data.ticksElapsed = 0;
+			data.currentRadius = 0;
+
+			// 释放音效：低沉爆发 + 灵魂回声
+			player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+					SoundEvents.WITHER_SHOOT, SoundSource.PLAYERS, 0.7f, 0.4f);
+			player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+					SoundEvents.WITHER_DEATH, SoundSource.PLAYERS, 0.5f, 0.5f);
+
+			// 增强模式：自动召唤冥狼（饰品增加2只），并立即让召唤技能也进入CD
+			if (data.enhanced) {
+				int summonCount = BAL.i("enhanced_auto_summon_count", ENHANCED_AUTO_SUMMON_COUNT);
+				if (AnubisWolfSpSummonWolves.hasTrinketEquipped(player)) {
+					summonCount += 2;
+				}
+				AnubisWolfSpSummonWolves.autoSummonForEnhancedDomain(player, summonCount);
+				applySummonCooldown(player, data);
+				// 增强模式额外音效
+				player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+						SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 0.8f, 0.8f);
+			}
+		}
+	}
+
+	private static Integer captureSummonCooldown(ServerPlayer player) {
+		var spec = github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.spec(player, AnubisWolfSpSummonWolves.SKILL_ID);
+		return spec == null ? null : spec.cooldown();
+	}
+
+	private static void applySummonCooldown(ServerPlayer player, DomainData data) {
+		// 使用起手配置；缺配置时保留已有 CD，显式配置 0 仍按 0 结算。
+		if (data.summonCooldownTicks != null) {
+			github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.force(player, AnubisWolfSpSummonWolves.SKILL_ID,
+					data.summonCooldownTicks);
+		}
+	}
+
+	// ==================== 阶段处理 ====================
+
+	/**
+	 * 延展阶段：以5格/秒速度从中心向外扩散灵魂沙
+	 */
+	private static void tickExpanding(ServerPlayer player, ServerLevel world, DomainData data) {
+		// 首次进入延展阶段时创建发光 team（把 SP阿努比斯加入）
+		ensureGlowTeam(world, player, data);
+		int maxRadius = data.enhanced ? BAL.i("enhanced_domain_radius", ENHANCED_DOMAIN_RADIUS) : BAL.i("domain_radius", DOMAIN_RADIUS);
+		double prevRadius = data.currentRadius;
+		data.currentRadius += EXPAND_SPEED;
+
+		if (data.currentRadius > maxRadius) {
+			data.currentRadius = maxRadius;
+		}
+
+		// 转化半径range内的方块
+		int prevR = (int) Math.floor(prevRadius);
+		int currR = (int) Math.ceil(data.currentRadius);
+		convertBlocksInRing(world, data, prevR, currR);
+
+		// 对范围内踩在灵魂沙上的生物施加debuff（每tick检查）
+		tickAreaDebuffs(player, world, data);
+
+		// 延展粒子效果：边缘灵魂粒子环
+		touchEdgeVisual(player, world, data);
+
+		// 延展音效（每5tick一次沙砾滑动声）
+		if (data.ticksElapsed % 5 == 0) {
+			player.level().playSound(null, data.center.getX() + 0.5, data.centerY, data.center.getZ() + 0.5,
+					SoundEvents.SOUL_SAND_STEP, SoundSource.BLOCKS, 0.6f, 0.7f);
+		}
+
+		if (data.currentRadius >= maxRadius) {
+			data.phase = Phase.SUSTAINING;
+			data.ticksElapsed = 0;
+
+			// 完全展开音效
+			player.level().playSound(null, data.center.getX() + 0.5, data.centerY, data.center.getZ() + 0.5,
+					SoundEvents.WITHER_AMBIENT, SoundSource.PLAYERS, 0.5f, 0.3f);
+		}
+
+		data.ticksElapsed++;
+	}
+
+	/**
+	 * 维持阶段：普通15秒/增强20秒
+	 */
+	private static void tickSustaining(ServerPlayer player, ServerLevel world, DomainData data) {
+		int duration = data.enhanced ? BAL.i("enhanced_domain_duration", ENHANCED_DOMAIN_DURATION) : BAL.i("domain_duration", DOMAIN_DURATION);
+		int maxRadius = data.enhanced ? BAL.i("enhanced_domain_radius", ENHANCED_DOMAIN_RADIUS) : BAL.i("domain_radius", DOMAIN_RADIUS);
+
+		// 持续检查范围内踩在灵魂沙上的生物，施加/移除debuff
+		if (data.ticksElapsed % 10 == 0) {
+			tickAreaDebuffs(player, world, data);
+		}
+
+		// Keep this scene alive between waves so late observers receive the current phase.
+		touchAmbientVisual(player, world, data, maxRadius, duration);
+
+		// 幽灵低语音效（每60tick / 3秒一次）
+		if (data.ticksElapsed % 60 == 0) {
+			player.level().playSound(null, data.center.getX() + 0.5, data.centerY, data.center.getZ() + 0.5,
+					SoundEvents.SOUL_SAND_BREAK, SoundSource.AMBIENT, 1.0f, 0.5f);
+		}
+
+		if (data.ticksElapsed >= duration) {
+			// 维持结束，进入回退阶段
+			data.phase = Phase.RETRACTING;
+			data.ticksElapsed = 0;
+			data.currentRadius = maxRadius;
+
+			// 回退开始音效
+			player.level().playSound(null, data.center.getX() + 0.5, data.centerY, data.center.getZ() + 0.5,
+					SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 0.4f, 0.5f);
+		}
+
+		data.ticksElapsed++;
+	}
+
+	/**
+	 * 回退阶段：从最远处开始以5格/秒速度向内还原方块
+	 */
+	private static void tickRetracting(ServerPlayer player, ServerLevel world, DomainData data) {
+		double prevRadius = data.currentRadius;
+		data.currentRadius -= EXPAND_SPEED;
+
+		if (data.currentRadius < 0) {
+			data.currentRadius = 0;
+		}
+
+		// 还原大于当前半径的方块
+		int currR = (int) Math.floor(data.currentRadius);
+		int prevR = (int) Math.ceil(prevRadius);
+		restoreBlocksInRing(world, data, currR, prevR);
+
+		// 修正施法者位置：仅在被还原方块（非灵魂沙）埋住时传送
+		// 灵魂沙的下陷是原版行为，不做干预
+		BlockPos casterFeet = player.blockPosition();
+		BlockState casterFeetState = world.getBlockState(casterFeet);
+		if (casterFeetState.isRedstoneConductor(world, casterFeet) && !casterFeetState.is(Blocks.SOUL_SAND)) {
+			player.teleportTo(player.getX(), casterFeet.getY() + 1.0, player.getZ());
+		}
+
+		// 修正其它生物位置，防止还原方块后陷入地面
+		int domainHeight = BAL.i("domain_height", DOMAIN_HEIGHT);
+		AABB ringBox = new AABB(
+				data.center.getX() - prevR - 1, data.centerY - domainHeight, data.center.getZ() - prevR - 1,
+				data.center.getX() + prevR + 2, data.centerY + domainHeight + 2, data.center.getZ() + prevR + 2
+		);
+		for (LivingEntity entity : world.getEntitiesOfClass(LivingEntity.class, ringBox, e -> e != player && e.isAlive())) {
+			BlockPos entityFeetPos = entity.blockPosition();
+			BlockState entityFeetState = world.getBlockState(entityFeetPos);
+			if (entityFeetState.isRedstoneConductor(world, entityFeetPos) && !entityFeetState.is(Blocks.SOUL_SAND)) {
+				if (entity instanceof ServerPlayer sp) {
+					sp.teleportTo(sp.getX(), entityFeetPos.getY() + 1.0, sp.getZ());
+				} else {
+					entity.setPos(entity.getX(), entityFeetPos.getY() + 1.0, entity.getZ());
+				}
+			}
+		}
+
+		// 回退粒子效果
+		touchEdgeVisual(player, world, data);
+
+		// 回退音效
+		if (data.ticksElapsed % 5 == 0) {
+			player.level().playSound(null, data.center.getX() + 0.5, data.centerY, data.center.getZ() + 0.5,
+					SoundEvents.SOUL_SAND_BREAK, SoundSource.BLOCKS, 0.4f, 0.9f);
+		}
+
+		// 回退阶段也要更新发光：随着领域缩小，移除离开领域的生物的发光
+		tickGlowUpdate(player, world, data);
+
+		if (data.currentRadius <= 0) {
+			stopDomainVisuals(data);
+			// 回退完成，还原所有剩余方块（包括距离0的中心点）
+			restoreAllBlocks(world, data);
+			// 还原完成后修正施法者位置，防止被埋在还原的方块内
+			BlockPos finalFeet = player.blockPosition();
+			if (world.getBlockState(finalFeet).isRedstoneConductor(world, finalFeet)) {
+				player.teleportTo(player.getX(), finalFeet.getY() + 1.0, player.getZ());
+			}
+			cleanupDebuffs(world, data);
+			ACTIVE_DOMAINS.remove(player.getUUID());
+
+			github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.ended(player, SKILL_ID, data.castId);
+
+			// 结束音效
+			player.level().playSound(null, data.center.getX() + 0.5, data.centerY, data.center.getZ() + 0.5,
+					SoundEvents.WITHER_BREAK_BLOCK, SoundSource.PLAYERS, 0.6f, 1.2f);
+		}
+
+		data.ticksElapsed++;
+	}
+
+	/**
+	 * 将指定环形区域内的方块转为灵魂沙
+	 */
+	private static void convertBlocksInRing(ServerLevel world, DomainData data, int innerR, int outerR) {
+		BlockPos center = data.center;
+		int halfHeight = BAL.i("domain_height", DOMAIN_HEIGHT);
+		int domainRadius = data.enhanced ? BAL.i("enhanced_domain_radius", ENHANCED_DOMAIN_RADIUS) : BAL.i("domain_radius", DOMAIN_RADIUS);
+		Map<BlockPos, DeathDomainRecovery.Change> changes = new LinkedHashMap<>();
+		for (int dx = -outerR; dx <= outerR; dx++) {
+			for (int dz = -outerR; dz <= outerR; dz++) {
+				int dist = (int) Math.ceil(Math.sqrt(dx * dx + dz * dz));
+				if (dist < innerR || dist > outerR || dist > domainRadius) continue;
+				for (int dy = -halfHeight; dy <= halfHeight; dy++) {
+					BlockPos pos = center.offset(dx, dy, dz);
+					BlockState original = world.getBlockState(pos);
+					BlockState replacement = shouldConvert(original) ? Blocks.SOUL_SAND.defaultBlockState()
+							: shouldRemoveTemporarily(original) ? Blocks.AIR.defaultBlockState() : null;
+					if (replacement != null) changes.put(pos, new DeathDomainRecovery.Change(original, replacement));
+				}
+			}
+		}
+		// Commit the write-ahead ring before applying any changes, including neighbour updates.
+		if (!DeathDomainRecovery.record(world, data.visualId, changes)) return;
+		for (var entry : changes.entrySet()) {
+			BlockPos pos = entry.getKey();
+			var change = entry.getValue();
+			if (!world.getBlockState(pos).equals(change.original())) continue;
+			int dx = pos.getX() - center.getX(), dz = pos.getZ() - center.getZ();
+			int dist = (int) Math.ceil(Math.sqrt(dx * dx + dz * dz));
+			data.changedBlocksByDistance.computeIfAbsent(dist, ignored -> new LinkedHashMap<>())
+					.putIfAbsent(pos, change.original());
+			world.setBlock(pos, change.expected(), Block.UPDATE_ALL);
+		}
+	}
+
+	// ==================== 方块转化逻辑 ====================
+
+	/**
+	 * 还原指定环形区域内的方块
+	 */
+	private static void restoreBlocksInRing(ServerLevel world, DomainData data, int innerR, int outerR) {
+		// 从最外层到最内层还原
+		for (int dist = outerR; dist > innerR; dist--) {
+			Map<BlockPos, BlockState> blocks = data.changedBlocksByDistance.get(dist);
+			if (blocks == null) continue;
+
+			for (Map.Entry<BlockPos, BlockState> entry : blocks.entrySet()) {
+				// 如果方块已被挖掉（不再是灵魂沙/空气），跳过还原
+				if (isStillConverted(world, entry.getKey(), entry.getValue())) {
+					world.setBlock(entry.getKey(), entry.getValue(), Block.UPDATE_ALL);
+				}
+			}
+			DeathDomainRecovery.resolved(world, data.visualId, blocks.keySet());
+			data.changedBlocksByDistance.remove(dist);
+		}
+	}
+
+	/**
+	 * 强制还原所有方块
+	 */
+	private static void restoreAllBlocks(ServerLevel world, DomainData data) {
+		int restored = 0;
+		int skipped = 0;
+		for (Map<BlockPos, BlockState> blocks : data.changedBlocksByDistance.values()) {
+			for (Map.Entry<BlockPos, BlockState> entry : blocks.entrySet()) {
+				if (isStillConverted(world, entry.getKey(), entry.getValue())) {
+					world.setBlock(entry.getKey(), entry.getValue(), Block.UPDATE_ALL);
+					restored++;
+				} else {
+					skipped++;
+				}
+			}
+			DeathDomainRecovery.resolved(world, data.visualId, blocks.keySet());
+		}
+		LOGGER.info("[DeathDomain] restoreAllBlocks: restored={}, skipped={}, world={}",
+				restored, skipped, world.dimension().location());
+		data.changedBlocksByDistance.clear();
+		DeathDomainRecovery.finished(world, data.visualId);
+	}
+
+	/**
+	 * 检查该位置的方块是否仍为领域转化后的状态。
+	 * 转化为灵魂沙的方块→当前应该是灵魂沙；暂时消除的方块→当前应该是空气。
+	 * 如果被玩家挖掉或其他方式改变了，则返回false，不再还原。
+	 */
+	private static boolean isStillConverted(ServerLevel world, BlockPos pos, BlockState originalState) {
+		Block currentBlock = world.getBlockState(pos).getBlock();
+		if (isFullBlock(originalState)) {
+			// 原本是完整方块→被转化为灵魂沙，现在应当仍是灵魂沙
+			return currentBlock == Blocks.SOUL_SAND;
+		} else {
+			// 原本是非完整方块→被暂时消除为空气，现在应当仍是空气
+			return world.getBlockState(pos).isAir();
+		}
+	}
+
+	/**
+	 * 判断方块是否应转化为灵魂沙（完整方块，非功能方块）
+	 */
+	private static boolean shouldConvert(BlockState state) {
+		Block block = state.getBlock();
+
+		// 空气/液体不转化
+		if (state.isAir() || !state.getFluidState().isEmpty()) return false;
+
+		// 基岩、刷怪笼等不可破坏方块不转化
+		if (state.getDestroySpeed(null, null) < 0) return false;
+
+		// 灵魂沙本身不转化
+		if (block == Blocks.SOUL_SAND || block == Blocks.SOUL_SOIL) return false;
+
+		// 有功能的方块不转化（存储/交互类）
+		if (isFunctionalBlock(block)) return false;
+
+		// 红石相关方块不转化
+		if (isRedstoneComponent(block)) return false;
+
+		// 有方向性/连接材质的方块不转化
+		if (isDirectionalOrConnectedBlock(block)) return false;
+
+		// 非完整方块走shouldRemoveTemporarily逻辑
+		if (isNonFullButSolidBlock(state)) return false; // 类似农田的视作完整
+		return isFullBlock(state);
+	}
+
+	/**
+	 * 判断方块是否需要暂时消除（非完整方块，但不是功能方块，也不是"类完整"方块）
+	 */
+	private static boolean shouldRemoveTemporarily(BlockState state) {
+		Block block = state.getBlock();
+
+		if (state.isAir() || !state.getFluidState().isEmpty()) return false;
+		if (state.getDestroySpeed(null, null) < 0) return false;
+		if (block == Blocks.SOUL_SAND || block == Blocks.SOUL_SOIL) return false;
+		if (isFunctionalBlock(block)) return false;
+
+		// 红石相关方块不消除
+		if (isRedstoneComponent(block)) return false;
+
+		// 有方向性/连接材质的方块不消除
+		if (isDirectionalOrConnectedBlock(block)) return false;
+
+		// 类完整方块（农田、草径之类）不消除，走转化逻辑的shouldConvert已处理了类完整
+		if (isNonFullButSolidBlock(state)) return false;
+
+		// 非完整方块（花、灯笼等）暂时消除
+		return !isFullBlock(state);
+	}
+
+	/**
+	 * 判断是否为有功能的方块（有容器、交互功能）
+	 */
+	private static boolean isFunctionalBlock(Block block) {
+		return block instanceof EntityBlock ||  // 箱子、漏斗、熔炉、酿造台等所有有方块实体的
+				block instanceof CraftingTableBlock ||   // 工作台
+				block instanceof AnvilBlock ||           // 铁砧
+				block instanceof GrindstoneBlock ||      // 砂轮
+				block instanceof StonecutterBlock ||     // 切石机
+				block instanceof CartographyTableBlock ||// 制图台
+				block instanceof LoomBlock ||            // 织布机
+				block instanceof SmithingTableBlock ||   // 锻造台
+				block instanceof FletchingTableBlock ||  // 制箭台
+				block instanceof BedBlock ||             // 床
+				block instanceof DoorBlock ||            // 门
+				block instanceof TrapDoorBlock ||        // 活板门
+				block instanceof FenceGateBlock ||       // 栅栏门
+				block instanceof LecternBlock ||         // 讲台
+				block instanceof ComposterBlock ||       // 堆肥桶
+				block instanceof BeehiveBlock ||         // 蜂巢
+				block instanceof RespawnAnchorBlock ||   // 重生锚
+				block instanceof CommandBlock ||         // 命令方块
+				block instanceof StructureBlock ||       // 结构方块
+				block instanceof JigsawBlock;            // 拼图方块
+	}
+
+	/**
+	 * 判断是否为红石相关方块（不应转化或消除）
+	 */
+	private static boolean isRedstoneComponent(Block block) {
+		return block instanceof PistonBaseBlock ||              // 活塞/粘性活塞
+				block instanceof PistonHeadBlock ||          // 活塞头
+				block instanceof MovingPistonBlock ||     // 移动中的活塞
+				block instanceof PoweredBlock ||            // 红石块
+				block instanceof RedStoneWireBlock ||        // 红石粉
+				block instanceof RedstoneTorchBlock ||       // 红石火把（站立+墙上）
+				block instanceof DiodeBlock ||// 中继器/比较器
+				block instanceof ObserverBlock ||            // 侦测器
+				block instanceof LeverBlock ||               // 拉杆
+				block instanceof ButtonBlock ||              // 按钮
+				block instanceof BasePressurePlateBlock ||// 压力板
+				block instanceof TripWireBlock ||            // 绊线
+				block instanceof TripWireHookBlock ||        // 绊线钩
+				block instanceof TargetBlock ||              // 标靶
+				block instanceof LightningRodBlock ||        // 避雷针
+				block instanceof NoteBlock;                  // 音符盒
+	}
+
+	/**
+	 * 判断是否为有方向性或特殊连接材质的方块（不应转化或消除）
+	 */
+	private static boolean isDirectionalOrConnectedBlock(Block block) {
+		return block instanceof SlabBlock ||            // 半砖
+				block instanceof StairBlock ||          // 楼梯
+				block instanceof FenceBlock ||           // 栅栏
+				block instanceof WallBlock ||            // 墙
+				block instanceof ChainBlock ||           // 锁链
+				block instanceof IronBarsBlock ||            // 玻璃板、铁栏杆
+				block instanceof BaseRailBlock;       // 铁轨
+	}
+
+	/**
+	 * 判断是否为完整方块（碰撞箱填满整格）
+	 */
+	private static boolean isFullBlock(BlockState state) {
+		try {
+			return state.isCollisionShapeFullBlock(null, BlockPos.ZERO);
+		} catch (Exception e) {
+			// 某些方块在null world下可能报错，用形状检查兜底
+			return state.canOcclude();
+		}
+	}
+
+	/**
+	 * 判断是否为"非完整但应视作完整"的方块（农田、草径等）
+	 * 这些方块碰撞箱稍小于1格但应被转化为灵魂沙而非消除
+	 */
+	private static boolean isNonFullButSolidBlock(BlockState state) {
+		Block block = state.getBlock();
+		return block instanceof FarmBlock ||     // 农田 (15/16高)
+				block instanceof DirtPathBlock ||    // 草径 (15/16高)
+				block instanceof SlabBlock && state.getValue(BlockStateProperties.SLAB_TYPE) == net.minecraft.world.level.block.state.properties.SlabType.DOUBLE || // 双台阶
+				block instanceof SnowLayerBlock && state.getValue(BlockStateProperties.LAYERS) == 8; // 8层雪
+	}
+
+	/**
+	 * 对领域范围内踩在灵魂沙上方3格内的生物施加debuff，离开时自动移除。
+	 * 同时对领域范围内所有非白名单生物施加仅SP阿努比斯可见的发光高亮。
+	 */
+	private static void tickAreaDebuffs(ServerPlayer player, ServerLevel world, DomainData data) {
+		int domainHeight = BAL.i("domain_height", DOMAIN_HEIGHT);
+		AABB box = new AABB(
+				data.center.getX() - data.currentRadius, data.centerY - domainHeight, data.center.getZ() - data.currentRadius,
+				data.center.getX() + data.currentRadius + 1, data.centerY + domainHeight + 1, data.center.getZ() + data.currentRadius + 1
+		);
+
+		List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive());
+
+		Set<UUID> currentlyAffected = new HashSet<>();
+		Set<UUID> currentlyGlown = new HashSet<>();
+
+		for (LivingEntity entity : entities) {
+			// 检查是否在圆柱范围内
+			double dx = entity.getX() - data.center.getX() - 0.5;
+			double dz = entity.getZ() - data.center.getZ() - 0.5;
+			if (dx * dx + dz * dz > data.currentRadius * data.currentRadius) continue;
+
+			// 白名单检查
+			if (WhitelistUtils.isProtected(player, entity)) continue;
+
+			// === 发光高亮（领域内所有非白名单生物） ===
+			currentlyGlown.add(entity.getUUID());
+			if (!data.glownEntities.contains(entity.getUUID())) {
+				data.glownEntities.add(entity.getUUID());
+				applyGlowing(world, entity, data, player);
+			}
+
+			// === Debuff（仅踩在灵魂沙上方3格内的生物） ===
+			// 检查是否踩在灵魂沙上方3格以内
+			if (!isAboveSoulSand(world, entity, 3)) continue;
+
+			currentlyAffected.add(entity.getUUID());
+
+			// 对受debuff个体施加鬼魂粒子效果
+			ParticleUtils.spawnParticles(world, ParticleTypes.SOUL,
+					entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ(),
+					2, 0.2, 0.3, 0.2, 0.02);
+
+			// 施加/刷新短时debuff（带领域主 source，供食梦魔「入梦」debuff 拦截归因）
+			entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0, false, true, true), player);
+			// 凋零仅在实体没有该效果且未达到伤害上限时施加；每次42tick周期造成1HP，上限10HP
+			// 增强模式使用凋零II（amplifier=1）
+			int witherAmplifier = data.enhanced ? BAL.i("enhanced_wither_amplifier", ENHANCED_WITHER_AMPLIFIER) : 0;
+			int witherCount = data.witherHitCount.getOrDefault(entity.getUUID(), 0);
+			if (witherCount < 10 && !entity.hasEffect(MobEffects.WITHER)) {
+				entity.addEffect(new MobEffectInstance(MobEffects.WITHER, 42, witherAmplifier, false, true, true), player);
+				data.witherHitCount.put(entity.getUUID(), witherCount + 1);
+			}
+
+			// 首次进入领域灵魂沙区域时施加血量削减
+            var health = entity.getAttribute(Attributes.MAX_HEALTH);
+            if (!data.debuffedEntities.contains(entity.getUUID())
+                    || (health != null && health.getModifier(HEALTH_MODIFIER_UUID) == null)) {
+				data.debuffedEntities.add(entity.getUUID());
+				applyHealthReduction(entity);
+			}
+		}
+
+		// 对离开领域的生物移除发光
+		Iterator<UUID> glowIt = data.glownEntities.iterator();
+		while (glowIt.hasNext()) {
+			UUID uuid = glowIt.next();
+			if (!currentlyGlown.contains(uuid)) {
+				for (LivingEntity entity : world.getEntitiesOfClass(LivingEntity.class,
+						box.inflate(32), e -> e.getUUID().equals(uuid))) {
+					removeGlowing(world, entity, data);
+				}
+				glowIt.remove();
+			}
+		}
+
+		// 对离开灵魂沙区域的生物移除血量削减
+		Iterator<UUID> it = data.debuffedEntities.iterator();
+		while (it.hasNext()) {
+			UUID uuid = it.next();
+			if (!currentlyAffected.contains(uuid)) {
+                for (ServerLevel loadedWorld : world.getServer().getAllLevels()) {
+                    if (loadedWorld.getEntity(uuid) instanceof LivingEntity entity) removeHealthReduction(entity);
+                }
+				it.remove();
+			}
+		}
+	}
+
+	// ==================== 发光高亮逻辑 ====================
+
+	/**
+	 * 确保 SP阿努比斯和发光生物在同一个 scoreboard team 中，
+	 * team 的 nametagVisibility=NEVER/collisionRule=NEVER，
+	 * 这样发光轮廓仅对 team 成员（即 SP阿努比斯）可见。
+	 */
+	private static void ensureGlowTeam(ServerLevel world, ServerPlayer player, DomainData data) {
+		if (data.teamName != null) return;
+		Scoreboard sb = world.getScoreboard();
+		String name = "ssc_dd_" + player.getUUID().toString().substring(0, 8);
+		// 避免名称超长（team名称上限16字符）
+		if (name.length() > 16) name = name.substring(0, 16);
+		data.teamName = name;
+		PlayerTeam team = sb.getPlayerTeam(name);
+		if (team == null) {
+			team = sb.addPlayerTeam(name);
+			team.setColor(net.minecraft.ChatFormatting.DARK_PURPLE);
+		}
+		// 把 SP阿努比斯加入 team
+		sb.addPlayerToTeam(player.getScoreboardName(), team);
+	}
+
+	/**
+	 * 给实体施加发光：加入 team 并设置 setGlowing(true)。
+	 * 同 team 的 SP阿努比斯能看到发光轮廓。
+	 */
+	/** 带 owner 的施加发光：owner（领域主）被该实体入梦 → 不施加发光（入梦者看不到食梦魔高光）。 */
+	private static void applyGlowing(ServerLevel world, LivingEntity entity, DomainData data,
+	                                 net.minecraft.server.level.ServerPlayer owner) {
+		if (owner != null
+				&& github.com.gengyoubo.sscfa.ability.NightmareDreamManager.isBlocked(owner, entity)) {
+			return;
+		}
+		// 确保 team 已创建（延迟创建，第一次施加发光时触发）
+		if (data.teamName == null) {
+			// team 需要在有玩家上下文时创建，这里跳过——team 应在 tickExpanding 首次调用前创建
+			return;
+		}
+		Scoreboard sb = world.getScoreboard();
+		PlayerTeam team = sb.getPlayerTeam(data.teamName);
+		PlayerTeam currentTeam = sb.getPlayerTeam(entity.getScoreboardName());
+		if (team != null && (currentTeam == null || !currentTeam.equals(team))) {
+			sb.addPlayerToTeam(entity.getScoreboardName(), team);
+		}
+		entity.setGlowingTag(true);
+	}
+
+	/**
+	 * 移除实体发光：从 team 移除并设置 setGlowing(false)。
+	 */
+	private static void removeGlowing(ServerLevel world, LivingEntity entity, DomainData data) {
+		if (data.teamName == null) return;
+		Scoreboard sb = world.getScoreboard();
+		PlayerTeam team = sb.getPlayerTeam(data.teamName);
+		PlayerTeam currentTeam = sb.getPlayerTeam(entity.getScoreboardName());
+		if (team != null && currentTeam != null && currentTeam.equals(team)) {
+			sb.removePlayerFromTeam(entity.getScoreboardName(), team);
+		}
+		entity.setGlowingTag(false);
+	}
+
+	/**
+	 * 回退阶段更新发光：移除离开当前领域范围的生物的发光。
+	 * 与 tickAreaDebuffs 中的发光逻辑对称，但不施加新的发光。
+	 */
+	private static void tickGlowUpdate(ServerPlayer player, ServerLevel world, DomainData data) {
+		int domainHeight = BAL.i("domain_height", DOMAIN_HEIGHT);
+		AABB box = new AABB(
+				data.center.getX() - data.currentRadius, data.centerY - domainHeight, data.center.getZ() - data.currentRadius,
+				data.center.getX() + data.currentRadius + 1, data.centerY + domainHeight + 1, data.center.getZ() + data.currentRadius + 1
+		);
+		// 收集当前仍在领域范围内的实体UUID
+		Set<UUID> stillInDomain = new HashSet<>();
+		for (LivingEntity entity : world.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive())) {
+			double dx = entity.getX() - data.center.getX() - 0.5;
+			double dz = entity.getZ() - data.center.getZ() - 0.5;
+			if (dx * dx + dz * dz > data.currentRadius * data.currentRadius) continue;
+			if (WhitelistUtils.isProtected(player, entity)) continue;
+			stillInDomain.add(entity.getUUID());
+		}
+		// 对离开领域的生物移除发光
+		Iterator<UUID> glowIt = data.glownEntities.iterator();
+		while (glowIt.hasNext()) {
+			UUID uuid = glowIt.next();
+			if (!stillInDomain.contains(uuid)) {
+				for (LivingEntity entity : world.getEntitiesOfClass(LivingEntity.class,
+						box.inflate(32), e -> e.getUUID().equals(uuid))) {
+					removeGlowing(world, entity, data);
+				}
+				glowIt.remove();
+			}
+		}
+	}
+
+	/**
+	 * 清理所有发光状态（领域结束时）。
+	 * 用 glownEntities 中的UUID查找实体并清除发光，确保不遗漏。
+	 */
+	private static void cleanupGlowing(ServerLevel world, DomainData data) {
+		// 用 glownEntities 中的UUID直接查找实体并清除发光
+		for (UUID uuid : data.glownEntities) {
+			net.minecraft.world.entity.Entity e = world.getEntity(uuid);
+			if (e instanceof LivingEntity le) {
+				le.setGlowingTag(false);
+			}
+		}
+		data.glownEntities.clear();
+		// 删除 team：遍历 team 成员列表移除，然后删除 team
+		if (data.teamName != null) {
+			Scoreboard sb = world.getScoreboard();
+			PlayerTeam team = sb.getPlayerTeam(data.teamName);
+			if (team != null) {
+				for (String memberName : new HashSet<>(team.getPlayers())) {
+					sb.removePlayerFromTeam(memberName, team);
+				}
+				sb.removePlayerTeam(team);
+			}
+			data.teamName = null;
+		}
+	}
+
+	/**
+	 * 检查实体是否站在灵魂沙上方指定格数以内
+	 */
+	private static boolean isAboveSoulSand(ServerLevel world, LivingEntity entity, int maxDistance) {
+		// 使用实体实际坐标计算脚下方块，兼容非整数Y坐标
+		BlockPos feetPos = entity.blockPosition();
+		// 额外检查实体脚下一格（灵魂沙碰撞箱为14/16高，实体可能站在其上方同一格内）
+		BlockPos belowFeet = BlockPos.containing(entity.getX(), entity.getY() - 0.01, entity.getZ());
+		for (int dy = 0; dy <= maxDistance; dy++) {
+			// 同时从feetPos和belowFeet向下检查
+			for (BlockPos base : new BlockPos[]{feetPos, belowFeet}) {
+				BlockPos checkPos = base.below(dy);
+				BlockState state = world.getBlockState(checkPos);
+				if (state.is(Blocks.SOUL_SAND) || state.is(Blocks.SOUL_SOIL)) {
+					return true;
+				}
+			}
+			// 脚下有非灵魂沙实心方块则停止向下检查
+			if (dy > 0) {
+				BlockState belowState = world.getBlockState(feetPos.below(dy));
+				if (!belowState.isAir() && belowState.isRedstoneConductor(world, feetPos.below(dy))
+						&& !belowState.is(Blocks.SOUL_SAND) && !belowState.is(Blocks.SOUL_SOIL)) {
+					return false;
+				}
+			}
+		}
+		return false;
+	}
+
+	// ==================== Debuff逻辑 ====================
+
+	/**
+	 * 对生物施加15%血量上限削减
+	 */
+	private static void applyHealthReduction(LivingEntity entity) {
+		AttributeInstance healthAttr = entity.getAttribute(Attributes.MAX_HEALTH);
+		if (healthAttr == null) return;
+
+		// 移除旧的修饰符（防止叠加）
+		healthAttr.removeModifier(HEALTH_MODIFIER_UUID);
+
+		double maxHealth = healthAttr.getBaseValue();
+		double reduction = -maxHealth * BAL.d("health_reduction", HEALTH_REDUCTION);
+
+		AttributeModifier modifier = new AttributeModifier(
+				HEALTH_MODIFIER_UUID,
+				"Death Domain Health Reduction",
+				reduction,
+				AttributeModifier.Operation.ADDITION
+		);
+		healthAttr.addTransientModifier(modifier);
+
+		// 如果当前血量超过新的上限，降至上限
+		double newMax = entity.getMaxHealth();
+		if (entity.getHealth() > newMax) {
+			entity.setHealth((float) newMax);
+		}
+	}
+
+	/**
+	 * 移除生物的血量上限削减
+	 */
+	private static void removeHealthReduction(LivingEntity entity) {
+		AttributeInstance healthAttr = entity.getAttribute(Attributes.MAX_HEALTH);
+		if (healthAttr != null) {
+			healthAttr.removeModifier(HEALTH_MODIFIER_UUID);
+		}
+	}
+
+	/**
+	 * 清理所有debuff（领域结束后）
+	 */
+	private static void cleanupDebuffs(ServerLevel world, DomainData data) {
+		// 清理发光状态
+		cleanupGlowing(world, data);
+        for (UUID entityUuid : data.debuffedEntities) {
+            for (ServerLevel loadedWorld : world.getServer().getAllLevels()) {
+                if (loadedWorld.getEntity(entityUuid) instanceof LivingEntity entity) removeHealthReduction(entity);
+            }
+        }
+		data.debuffedEntities.clear();
+	}
+
+	private static void applyChargeSlow(ServerPlayer player) {
+		AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (speedAttr == null) return;
+		speedAttr.removeModifier(CHARGE_SLOW_UUID);
+		AttributeModifier modifier = new AttributeModifier(
+				CHARGE_SLOW_UUID,
+				"Death Domain Charge Slow",
+				BAL.d("charge_slow_factor", CHARGE_SLOW_FACTOR) - 1.0, // -0.7 = 减速70%
+				AttributeModifier.Operation.MULTIPLY_TOTAL
+		);
+		speedAttr.addTransientModifier(modifier);
+	}
+
+	private static void removeChargeSlow(ServerPlayer player) {
+		AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (speedAttr != null) {
+			speedAttr.removeModifier(CHARGE_SLOW_UUID);
+		}
+	}
+
+	// ==================== 充能减速 ====================
+
+	/** Expansion/retraction are linear, so only their first radius and signed speed need syncing. */
+	private static void touchEdgeVisual(ServerPlayer player, ServerLevel world, DomainData data) {
+		double maxRadius = data.enhanced ? BAL.i("enhanced_domain_radius", ENHANCED_DOMAIN_RADIUS) : BAL.i("domain_radius", DOMAIN_RADIUS);
+		prepareDomainVisual(world, data, maxRadius, 0);
+		ParametricVisuals.touch(player, data.visualId, ParametricVisuals.Kind.DOMAIN_EDGE, null,
+				data.visualOrigin, false, data.visualEpoch, data.visualDuration, data.visualExtent, data.visualParams);
+	}
+
+	private static void touchAmbientVisual(ServerPlayer player, ServerLevel world, DomainData data,
+	                                      double maxRadius, int phaseLimit) {
+		prepareDomainVisual(world, data, maxRadius, phaseLimit);
+		ParametricVisuals.touch(player, data.visualId, ParametricVisuals.Kind.DOMAIN_AMBIENT, player.getUUID(),
+				data.visualOrigin, false, data.visualEpoch, data.visualDuration, data.visualExtent, data.visualParams);
+	}
+
+	private static void prepareDomainVisual(ServerLevel world, DomainData data, double maxRadius, int phaseLimit) {
+		if (data.visualPhase == data.phase && data.visualMaxRadius == maxRadius && data.visualPhaseLimit == phaseLimit) return;
+		stopDomainVisuals(data);
+		data.visualPhase = data.phase;
+		data.visualEpoch = world.getGameTime();
+		data.visualMaxRadius = maxRadius;
+		data.visualPhaseLimit = phaseLimit;
+		data.visualOrigin = new Vec3(data.center.getX() + 0.5, data.centerY, data.center.getZ() + 0.5);
+		if (data.phase == Phase.SUSTAINING) {
+			// Preserve the existing counter's two increments per world tick, including odd limit overshoot.
+			data.visualDuration = Math.max(1, (int) Math.ceil((phaseLimit - data.ticksElapsed) / 2.0) + 1);
+			data.visualExtent = Math.hypot(maxRadius, 3);
+			data.visualParams = new double[]{maxRadius, data.ticksElapsed, 2,
+					data.ticksElapsed + 2.0 * (data.visualDuration - 1)};
+		} else {
+			double step = data.phase == Phase.EXPANDING ? EXPAND_SPEED : -EXPAND_SPEED;
+			data.visualDuration = Math.max(1, (int) Math.ceil((step > 0 ? maxRadius - data.currentRadius : data.currentRadius) / EXPAND_SPEED) + 1);
+			data.visualExtent = Math.hypot(maxRadius, 1);
+			data.visualParams = new double[]{data.currentRadius, step, maxRadius};
+		}
+	}
+
+	private static void stopDomainVisuals(DomainData data) {
+		ParametricVisuals.stop(data.visualId, ParametricVisuals.Kind.DOMAIN_EDGE);
+		ParametricVisuals.stop(data.visualId, ParametricVisuals.Kind.DOMAIN_AMBIENT);
+	}
+
+	// ==================== 粒子效果 ====================
+
+	// ==================== 阶段枚举 ====================
+	private enum Phase {
+		CHARGING,    // 充能中（2秒）
+		EXPANDING,   // 延展中（灵魂沙从中心向外扩散）
+		SUSTAINING,  // 领域维持中（15秒）
+		RETRACTING,  // 回退中（从外向内还原）
+		CLEANUP      // 等待服务器线程清理（玩家断线后）
+	}
+
+	// ==================== 数据类 ====================
+	private static class DomainData {
+        long castId = -1;
+		final UUID visualId = UUID.randomUUID();
+		Phase visualPhase;
+		long visualEpoch;
+		double visualMaxRadius;
+		int visualPhaseLimit;
+		Vec3 visualOrigin;
+		int visualDuration;
+		double visualExtent;
+		double[] visualParams;
+		Phase phase;
+		int ticksElapsed;
+		double currentRadius;       // 当前延展/回退的半径
+		BlockPos center;            // 领域中心
+		int centerY;                // 施法者Y坐标
+		ServerLevel world;          // 领域所在世界（用于断线/关服还原）
+		// 按距离分层存储被改变的方块: 距离 -> (位置 -> 原始方块状态)
+		TreeMap<Integer, Map<BlockPos, BlockState>> changedBlocksByDistance = new TreeMap<>();
+		// 被削减血量的生物UUID集合
+		Set<UUID> debuffedEntities = new HashSet<>();
+		// 每个实体受到的凋零伤害次数追踪（每次凋零效果触发1HP，上限10次=10HP）
+		Map<UUID, Integer> witherHitCount = new HashMap<>();
+		// 增强模式标记（灵魂能量满时施放）
+		boolean enhanced;
+		Integer summonCooldownTicks; // null = 起手无召狼配置；0 = 数据包明确设置免费
+		// 发光高亮：被施加发光的实体UUID集合
+		Set<UUID> glownEntities = new HashSet<>();
+		// 发光team名称（null=尚未创建）
+		String teamName;
+
+		DomainData(ServerLevel world, BlockPos center, int centerY) {
+			this.phase = Phase.CHARGING;
+			this.ticksElapsed = 0;
+			this.currentRadius = 0;
+			this.world = world;
+			this.center = center;
+			this.centerY = centerY;
+		}
+	}
+    /** Repair this skill's legacy persisted modifier only; live domains refresh their temporary debuff. */
+    public static void removeLegacyHealthReduction(LivingEntity entity) { removeHealthReduction(entity); }
+
 }

@@ -87,6 +87,7 @@ public final class SscAddonForge {
 
         // 法术系统
         SpellRegistry.init();
+        BalanceIntegration.addParticipant(SpellRegistry.INSTANCE);
         FormSpellStyle.register();
         DomainManager.init();
         JsonSnapshotSync.register();

@@ -16,6 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /** 冥狼召唤物本地追踪：桥接 Fabric 的 IPlayerEntityMinion 与 Forge 实体。 */
 public final class MinionTracker {
     public static final String ANUBIS_WOLF = "anubis_wolf";
+    /** Key of SSC Forge's owner registry in the player's persistent data (AnubisMinionService). */
+    private static final String SSC_MINIONS_KEY = "SscAnubisWolfMinions";
 
     private static final Map<UUID, Map<String, Set<UUID>>> MINIONS = new ConcurrentHashMap<>();
 
@@ -48,10 +50,25 @@ public final class MinionTracker {
         wolf.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, owner.getYRot(), 0.0f);
         wolf.setTame(true);
         wolf.setOwnerUUID(owner.getUUID());
-        world.addFreshEntity(wolf);
-        AnubisMinionService.summon(owner, wolf, new com.google.gson.JsonObject());
+        if (!world.addFreshEntity(wolf)) return null;
+        registerWithSsc(owner, wolf);
         add(owner, ANUBIS_WOLF, wolf.getUUID());
         return wolf;
+    }
+
+    /**
+     * Adds an already spawned wolf to SSC Forge's owner registry (the player's
+     * {@code SscAnubisWolfMinions} list, which SSC's recall and minion-death hooks read) and applies
+     * the owner's {@code wolf_minion_bonus} powers. {@link AnubisMinionService#summon} cannot be used
+     * for this: it always spawns a new wolf of its own.
+     */
+    public static void registerWithSsc(Player owner, AnubisWolfMinionEntity wolf) {
+        var data = owner.getPersistentData();
+        var list = data.getList(SSC_MINIONS_KEY, net.minecraft.nbt.Tag.TAG_STRING);
+        var entry = net.minecraft.nbt.StringTag.valueOf(wolf.getUUID().toString());
+        if (!list.contains(entry)) list.add(entry);
+        data.put(SSC_MINIONS_KEY, list);
+        AnubisMinionService.applySpawnBonuses(owner, wolf);
     }
 
     public static BlockPos nearbyEmptySpace(ServerLevel world, RandomSource random, BlockPos center,

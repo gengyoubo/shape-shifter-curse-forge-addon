@@ -11,7 +11,7 @@ import net.minecraft.util.Tuple;
  *  - ?mana 条中心对齐（mana 条宽?80）?
  *  - 长度 = FULL_WIDTH * current/max（线性），current=0 时不显示?
  *  - 位置紧贴 mana 条上?2 像素?
- *  - 仅在契灵形态显示（max>1 即代表持有该 power）?
+ *  - 玩家持有抗伤值能力时显示。
  */
 public class MancianimaResistanceBar extends SimpleResourceBarRenderer {
 	private static final ResourceLocation BAR_FULL = new ResourceLocation("my_addon", "textures/gui/mancianima_resistance_full.png");

@@ -1,11 +1,13 @@
 package github.com.gengyoubo.sscfa.item;
 
+import net.onixary.shapeShifterCurseForge.items.accessory.AccessoryItem;
+import github.com.gengyoubo.sscfa.util.FormUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
@@ -13,11 +15,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-/**
- * 便携冰箱：充能存于 NBT {@code Charge}，上限 {@value #MAX_CHARGE}，供暴雪罐充能配方读写。
- * 佩戴自动给雪球发射器装弹、自回充、寒棘狐专属佩戴限制依赖饰品系统，迁移后补回。
- */
-public class PortableFridgeItem extends Item {
+public class PortableFridgeItem extends AccessoryItem {
+
 	public static final int MAX_CHARGE = 64;
 
 	public PortableFridgeItem(Properties settings) {
@@ -25,7 +24,11 @@ public class PortableFridgeItem extends Item {
 	}
 
 	public static int getCharge(ItemStack stack) {
-		return stack.getTag() == null ? 0 : stack.getTag().getInt("Charge");
+		if (!stack.hasTag()) return 0;
+		if (stack.getTag() != null) {
+			return stack.getTag().getInt("Charge");
+		}
+		return 0;
 	}
 
 	public static void setCharge(ItemStack stack, int amount) {
@@ -33,12 +36,50 @@ public class PortableFridgeItem extends Item {
 	}
 
 	@Override
+	public boolean canEquip(ItemStack stack, LivingEntity entity, AccessoryItem.SlotData slotData) {
+		return github.com.gengyoubo.sscfa.item.AddonAccessoryGuard.canEquip(entity, FormUtils::isSnowFoxSP);
+	}
+
+	@Override
 	public InteractionResultHolder<ItemStack> use(Level world, Player user, InteractionHand hand) {
 		if (!world.isClientSide) {
-			user.displayClientMessage(Component.translatable("item.ssc_addon.portable_fridge.charge",
-					getCharge(user.getItemInHand(hand)), MAX_CHARGE), true);
+			user.displayClientMessage(Component.translatable("item.ssc_addon.portable_fridge.charge", getCharge(user.getItemInHand(hand)), MAX_CHARGE), true);
 		}
 		return InteractionResultHolder.success(user.getItemInHand(hand));
+	}
+
+	@Override
+	public void accessoryTick(ItemStack stack, LivingEntity entity, AccessoryItem.SlotData slotData) {
+		if (entity.level().isClientSide) return;
+
+		// 1. Logic: Refill Launcher every 0.5s (10 ticks)
+		if (entity.tickCount % 10 == 0 && entity instanceof Player player) {
+			int currentCharge = getCharge(stack);
+
+			if (currentCharge > 0) {
+				// Find Snowball Launcher in inventory
+				for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+					ItemStack invStack = player.getInventory().getItem(i);
+					if (invStack.getItem() instanceof SnowballLauncherItem) {
+						int currentAmmo = SnowballLauncherItem.getAmmo(invStack);
+						if (currentAmmo < SnowballLauncherItem.MAX_AMMO) {
+							SnowballLauncherItem.setAmmo(invStack, currentAmmo + 1);
+							setCharge(stack, currentCharge - 1);
+							// Only refill one at a time per tick cycle
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		// 2. Logic: Self-regenerate 1 charge every 2s (40 ticks)
+		if (entity.tickCount % 40 == 0) {
+			int currentCharge = getCharge(stack);
+			if (currentCharge < MAX_CHARGE) {
+				setCharge(stack, currentCharge + 1);
+			}
+		}
 	}
 
 	@Override
@@ -53,7 +94,7 @@ public class PortableFridgeItem extends Item {
 
 	@Override
 	public int getBarColor(ItemStack stack) {
-		return 0x00FFFF;
+		return 0x00FFFF; // Cyan color for ice/snow
 	}
 
 	@Override

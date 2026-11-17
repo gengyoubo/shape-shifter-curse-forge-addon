@@ -5,7 +5,6 @@ import github.com.gengyoubo.sscfa.effect.*;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import java.util.function.Supplier;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.item.alchemy.Potion;
@@ -45,19 +44,18 @@ public final class AddonEffects {
     public static final RegistryObject<MobEffect> EROSION_BRAND_MARKER_2 = EFFECTS.register("erosion_brand_marker_2", () -> new ErosionBrandMarkerEffect(0xFF8C00));
     public static final RegistryObject<MobEffect> EROSION_BRAND_MARKER_3 = EFFECTS.register("erosion_brand_marker_3", () -> new ErosionBrandMarkerEffect(0xDC143C));
 
-    // ===== 空壳：行为依赖能力/平衡/网络等未迁移系统 =====
-    public static final RegistryObject<MobEffect> FOX_FIRE_BURN = shell("fox_fire_burn", () -> new ShellEffect(MobEffectCategory.HARMFUL, 0x3366FF));
-    public static final RegistryObject<MobEffect> BLUE_FIRE_RING = shell("blue_fire_ring", () -> new ShellEffect(MobEffectCategory.BENEFICIAL, 0x3366FF));
-    public static final RegistryObject<MobEffect> PLAYING_DEAD = shell("playing_dead", () -> new ShellEffect(MobEffectCategory.BENEFICIAL, 0x586e7c));
-    public static final RegistryObject<MobEffect> PRE_INVISIBILITY = shell("pre_invisibility", () -> new ShellEffect(MobEffectCategory.BENEFICIAL, 0x101010).modifier(Attributes.MOVEMENT_SPEED, "12db6328-9844-4e20-9118-202758169972", -0.5, AttributeModifier.Operation.MULTIPLY_TOTAL));
-    public static final RegistryObject<MobEffect> FROST_FREEZE = shell("frost_freeze", () -> new ShellEffect(MobEffectCategory.HARMFUL, 0x7DD3FC));
-    public static final RegistryObject<MobEffect> FROST_FALL = shell("frost_fall", () -> new ShellEffect(MobEffectCategory.HARMFUL, 0xADD8E6));
-    public static final RegistryObject<MobEffect> PURIFIED = shell("purified", () -> new ShellEffect(MobEffectCategory.NEUTRAL, 0x99DDFF));
-    public static final RegistryObject<MobEffect> TIDAL_SLOW = shell("tidal_slow", () -> new ShellEffect(MobEffectCategory.HARMFUL, 0x33CCFF));
-    public static final RegistryObject<MobEffect> CURSE_MARK = shell("curse_mark", () -> new ShellEffect(MobEffectCategory.HARMFUL, 0x7B2FBE));
-    public static final RegistryObject<MobEffect> FROST_SHATTER = shell("frost_shatter", () -> new ShellEffect(MobEffectCategory.HARMFUL, 0x9FD8EF));
-    public static final RegistryObject<MobEffect> SHEEP_FORM = shell("sheep_form", () -> new ShellEffect(MobEffectCategory.HARMFUL, 0xE8D8C0).modifier(Attributes.ATTACK_DAMAGE, "A51E7C2D-9B34-4F5E-8D6A-3C0B7E1F9A24", -1.0, AttributeModifier.Operation.MULTIPLY_TOTAL));
-    public static final RegistryObject<MobEffect> SPIDER_WEB_BOUND = shell("spider_web_bound", () -> new ShellEffect(MobEffectCategory.HARMFUL, 0xBFC4CC).modifier(Attributes.MOVEMENT_SPEED, "6C9E2A1F-8B3D-4A7E-9F21-3D5C7A0B1E44", -0.5D, AttributeModifier.Operation.MULTIPLY_TOTAL));
+    public static final RegistryObject<MobEffect> FOX_FIRE_BURN = EFFECTS.register("fox_fire_burn", FoxFireBurnEffect::new);
+    public static final RegistryObject<MobEffect> BLUE_FIRE_RING = EFFECTS.register("blue_fire_ring", BlueFireRingEffect::new);
+    public static final RegistryObject<MobEffect> PLAYING_DEAD = EFFECTS.register("playing_dead", PlayingDeadEffect::new);
+    public static final RegistryObject<MobEffect> PRE_INVISIBILITY = EFFECTS.register("pre_invisibility", PreInvisibilityEffect::new);
+    public static final RegistryObject<MobEffect> FROST_FREEZE = EFFECTS.register("frost_freeze", FrostFreezeEffect::new);
+    public static final RegistryObject<MobEffect> FROST_FALL = EFFECTS.register("frost_fall", FrostFallEffect::new);
+    public static final RegistryObject<MobEffect> PURIFIED = EFFECTS.register("purified", PurifiedEffect::new);
+    public static final RegistryObject<MobEffect> TIDAL_SLOW = EFFECTS.register("tidal_slow", TidalSlowEffect::new);
+    public static final RegistryObject<MobEffect> CURSE_MARK = EFFECTS.register("curse_mark", CurseMarkEffect::new);
+    public static final RegistryObject<MobEffect> FROST_SHATTER = EFFECTS.register("frost_shatter", FrostShatterEffect::new);
+    public static final RegistryObject<MobEffect> SHEEP_FORM = EFFECTS.register("sheep_form", SheepFormEffect::new);
+    public static final RegistryObject<MobEffect> SPIDER_WEB_BOUND = EFFECTS.register("spider_web_bound", SpiderWebBoundEffect::new);
 
     // ===== 异常反应标记（anomaly_*），行为由异常系统驱动 =====
     public static final RegistryObject<MobEffect> ANOMALY_LUNAR_ECLIPSE = EFFECTS.register("anomaly_lunar_eclipse", () -> new AnomalyMarkerEffect(0xDBD7A7));
@@ -76,13 +74,21 @@ public final class AddonEffects {
     // ===== 月尘缓解（瞬时，作用于崩解度，待新魔法运行时迁移） =====
     public static final RegistryObject<MobEffect> MOON_DUST_RELIEF = EFFECTS.register("moon_dust_relief",
             () -> github.com.gengyoubo.sscfa.item.MoonDustReliefItem.RELIEF);
-    public static final RegistryObject<MobEffect> MOON_DUST_TUBE_RELIEF = shell("moon_dust_tube_relief", () -> new ShellEffect.Instant(MobEffectCategory.BENEFICIAL, MOON_DUST_COLOR));
+    public static final RegistryObject<MobEffect> MOON_DUST_TUBE_RELIEF = EFFECTS.register("moon_dust_tube_relief", () -> new MobEffect(MobEffectCategory.BENEFICIAL, MOON_DUST_COLOR) {
+        @Override public boolean isInstantenous() { return true; }
+        @Override public boolean isDurationEffectTick(int duration, int amplifier) { return false; }
+        @Override public void applyInstantenousEffect(net.minecraft.world.entity.Entity source, net.minecraft.world.entity.Entity attacker,
+                                                      net.minecraft.world.entity.LivingEntity target, int amplifier, double proximity) {
+            // Each test tube carries one third of a bottle; splash proximity scales it like the bottle relief.
+            if (target instanceof net.minecraft.server.level.ServerPlayer player && Double.isFinite(proximity) && proximity > 0)
+                github.com.gengyoubo.sscfa.neomagic.NeoRuntime.relieve(player,
+                        github.com.gengyoubo.sscfa.item.MoonDustReliefItem.bottle().relief()
+                                / github.com.gengyoubo.sscfa.item.PotionTestTubes.PORTIONS * Math.min(1, proximity));
+        }
+    });
     public static final RegistryObject<Potion> MOON_DUST_TUBE = POTIONS.register("moon_dust_tube", () ->
             new Potion(new MobEffectInstance(MOON_DUST_TUBE_RELIEF.get(), 1)));
 
-    private static RegistryObject<MobEffect> shell(String id, Supplier<MobEffect> factory) {
-        return EFFECTS.register(id, factory);
-    }
 
 
     public static void registerBrewing() {

@@ -8,6 +8,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.item.ItemStack;
+import net.onixary.shapeShifterCurseForge.other.advancement.SscAdvancementTriggers;
 
 /**
  * SSCA 进化加点系统的服务端校验、经验累计、存档迁移与转职结算???
@@ -129,8 +130,10 @@ public final class EvolutionManager {
         int fxDuration = net.onixary.shapeShifterCurseForge.form.TransformManager.TRANSFORM_FX_DURATION_IN + net.onixary.shapeShifterCurseForge.form.TransformManager.TRANSFORM_FX_DURATION_OUT;
         player.addEffect(new MobEffectInstance(github.com.gengyoubo.sscfa.init.AddonEffects.STUN.get(), fxDuration, 0, false, false, false));
         boolean accepted = net.onixary.shapeShifterCurseForge.form.TransformManager.startTransform(player, formId);
-        if (accepted) player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
-        if (!accepted) {
+        if (accepted) {
+            SscAdvancementTriggers.ON_ENABLE_MOD.trigger(player);
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
+        } else {
             comp.reset();
             player.removeEffect(github.com.gengyoubo.sscfa.init.AddonEffects.STUN.get());
             sync(player);

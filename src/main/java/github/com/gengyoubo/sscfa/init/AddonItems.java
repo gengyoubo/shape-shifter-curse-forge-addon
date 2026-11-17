@@ -16,6 +16,10 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.RecordItem;
 import net.minecraftforge.common.ForgeSpawnEggItem;
 import github.com.gengyoubo.sscfa.moonmarrow.SpUpgradeItem;
+import github.com.gengyoubo.sscfa.spell.FormationData;
+import github.com.gengyoubo.sscfa.spell.FormationElement;
+import github.com.gengyoubo.sscfa.spell.ScrollData;
+import github.com.gengyoubo.sscfa.spell.SpellRegistry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -209,7 +213,6 @@ public final class AddonItems {
                 output.accept(SPELL_RESEARCH_TABLE.get());
             }).build());
 
-    /** 法术页：法术卷轴与增强法阵的全套等级需法术系统生成，迁移前只放材料与药剂。 */
     public static final RegistryObject<CreativeModeTab> SPELL_TAB = TABS.register("spells", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.ssc_addon.spells"))
             .icon(() -> new ItemStack(BLANK_FORMATION_PAPER.get()))
@@ -219,10 +222,23 @@ public final class AddonItems {
                 output.accept(MOON_DUST_VIAL.get());
                 output.accept(MOON_DUST_BOTTLE.get());
                 output.accept(MOON_DUST_SPLASH.get());
-                output.accept(MAGIC_SCROLL.get());
-                output.accept(FORMATION.get());
-                output.accept(SPELL_FORMATION.get());
-                output.accept(ANALYZED_SPELL_DIAGRAM.get());
+                for (var spell : SpellRegistry.all()) {
+                    for (int level = 1; level <= spell.getMaxLevel(); level++) {
+                        output.accept(ScrollData.create(spell.getId().getPath(), level));
+                    }
+                }
+                for (var element : FormationElement.values()) {
+                    if (element == FormationElement.UNIVERSAL) continue;
+                    for (int level = 1; level <= FormationData.MAX_FORMATION_LEVEL; level++) {
+                        output.accept(FormationData.create(element, level));
+                    }
+                }
+                for (String variant : new String[]{FormationData.VARIANT_REGEN, FormationData.VARIANT_MANA,
+                        FormationData.VARIANT_EXP, FormationData.VARIANT_RECOVERY}) {
+                    for (int level = 1; level <= FormationData.MAX_FORMATION_LEVEL; level++) {
+                        output.accept(FormationData.create(FormationElement.UNIVERSAL, level, variant));
+                    }
+                }
             }).build());
 
     private static RegistryObject<Item> ink(FormationInkItem.Type type) {

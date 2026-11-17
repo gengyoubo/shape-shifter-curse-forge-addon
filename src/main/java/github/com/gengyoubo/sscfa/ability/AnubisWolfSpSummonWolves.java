@@ -375,7 +375,6 @@ public class AnubisWolfSpSummonWolves {
 
 		// 设置等级（level 3: HP=20, Attack=4, 治愈主???HP/hit??
 		wolf.setMinionLevel(BAL.i("minion_level", MINION_LEVEL));
-		AnubisMinionService.summon(player, wolf, new com.google.gson.JsonObject());
 
 		// 死亡领域联动增????
 		if (domainActive) {

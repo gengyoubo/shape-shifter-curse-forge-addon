@@ -92,7 +92,8 @@ public final class AddonNetwork {
 
     /** 该玩家的客户端能否接收此通道（装了本模组且此通道已声明）。 */
     public static boolean canSend(ServerPlayer player, ResourceLocation id) {
-        return CLIENTBOUND.contains(id) && player.connection != null && CHANNEL.isRemotePresent(player.connection.connection);
+        return CLIENTBOUND.contains(id) && player.connection != null
+                && player.connection.connection.isConnected() && CHANNEL.isRemotePresent(player.connection.connection);
     }
 
     public static void sendToPlayer(ServerPlayer player, ResourceLocation id, FriendlyByteBuf buf) {

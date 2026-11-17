@@ -35,6 +35,20 @@ public final class SscEvents {
         });
     }
 
+    /** Fabric START_SERVER_TICK. */
+    public static void onServerTickStart(Consumer<MinecraftServer> cb) {
+        MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent e) -> {
+            if (e.phase == TickEvent.Phase.START) cb.accept(e.getServer());
+        });
+    }
+
+    /** Fabric START_WORLD_TICK. */
+    public static void onWorldTickStart(Consumer<ServerLevel> cb) {
+        MinecraftForge.EVENT_BUS.addListener((TickEvent.LevelTickEvent e) -> {
+            if (e.phase == TickEvent.Phase.START && e.level instanceof ServerLevel sl) cb.accept(sl);
+        });
+    }
+
     public static void onWorldTick(Consumer<ServerLevel> cb) {
         MinecraftForge.EVENT_BUS.addListener((TickEvent.LevelTickEvent e) -> {
             if (e.phase == TickEvent.Phase.END && e.level instanceof ServerLevel sl) cb.accept(sl);
@@ -85,7 +99,10 @@ public final class SscEvents {
     }
 
     public static void onEntityLoad(EntityLoadConsumer cb) {
-        MinecraftForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> cb.accept(e.getEntity(), e.getLevel()));
+        // Server only, like Fabric's ServerEntityEvents.ENTITY_LOAD (Forge also posts this on the client).
+        MinecraftForge.EVENT_BUS.addListener((EntityJoinLevelEvent e) -> {
+            if (!e.getLevel().isClientSide()) cb.accept(e.getEntity(), e.getLevel());
+        });
     }
 
     @FunctionalInterface
@@ -122,11 +139,26 @@ public final class SscEvents {
     }
 
     public static void onEntityUnload(EntityUnloadConsumer cb) {
-        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.EntityLeaveLevelEvent e) -> cb.accept(e.getEntity(), e.getLevel()));
+        // Server only, like Fabric's ServerEntityEvents.ENTITY_UNLOAD.
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.EntityLeaveLevelEvent e) -> {
+            if (!e.getLevel().isClientSide()) cb.accept(e.getEntity(), e.getLevel());
+        });
     }
 
+    /**
+     * Fabric's EntitySleepEvents.ALLOW_RESETTING_TIME: when all players sleep, the night is skipped
+     * only if no sleeping player is refused by the callback.
+     */
     public static void allowResettingTime(java.util.function.Predicate<Player> cb) {
-        // no-op: sleeping time reset is not gated in the Forge port
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.level.SleepFinishedTimeEvent e) -> {
+            if (!(e.getLevel() instanceof ServerLevel level)) return;
+            for (ServerPlayer player : level.players()) {
+                if (player.isSleeping() && !cb.test(player)) {
+                    e.setTimeAddition(level.getDayTime());
+                    return;
+                }
+            }
+        });
     }
 
     @FunctionalInterface

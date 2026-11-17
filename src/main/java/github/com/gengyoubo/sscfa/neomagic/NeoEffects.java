@@ -57,6 +57,8 @@ public final class NeoEffects {
     private static boolean registered;
 
     private static final class Bolt {
+        /** Moon weaver: the bolt lays a web where it lands, or may cocoon what it hits directly. */
+        final github.com.gengyoubo.sscfa.spell.SpiderSpellLink.Impact weave = new github.com.gengyoubo.sscfa.spell.SpiderSpellLink.Impact();
         final ServerPlayer caster;
         final ServerLevel world;
         final NeoRuntime.Active active;
@@ -70,9 +72,10 @@ public final class NeoEffects {
             this.world = player.serverLevel();
             this.active = active;
             this.pos = player.getEyePosition();
-            this.velocity = direction.normalize();
+            this.velocity = direction.normalize().scale(active.style == null ? 1 : active.style.projectileSpeed);
             this.budget = budget;
             this.remaining = active.session.blueprint.range() * active.rangeMultiplier;
+            if (active.style != null && active.style.moonWeaver) weave.enable(active.style.weave.targets);
         }
     }
 
@@ -176,7 +179,7 @@ public final class NeoEffects {
     private static boolean apply(ServerPlayer player, NeoRuntime.Active active) {
         if (active.anomaly == null) active.anomaly = anomaly(player, active);
         NeoLegacyCasting.beginBlueprintEffect(player, active);
-        boolean released = applyNow(player, active);
+        boolean released = healingBatch(active, () -> applyNow(player, active));
         if (released) NeoLegacyCasting.blueprintReleased(player, active);
         return released;
     }
@@ -375,10 +378,43 @@ public final class NeoEffects {
     }
 
     private static void affect(ServerPlayer player, NeoRuntime.Active active, LivingEntity target, double budget) {
-        affectNow(player, active, target, budget);
+        affect(player, active, target, budget, null);
     }
 
-    private static boolean affectNow(ServerPlayer player, NeoRuntime.Active active, LivingEntity target, double budget) {
+    /**
+     * Form links around one hit: moisture healing batches lunar heals, the court (Netherjudge) and
+     * nightmare links attribute the hit, and the weave belongs to the bolt that hit.
+     */
+    private static void affect(ServerPlayer player, NeoRuntime.Active active, LivingEntity target, double budget,
+                               github.com.gengyoubo.sscfa.spell.SpiderSpellLink.Impact weave) {
+        FormSpellStyle style = active.style;
+        if (active.session.blueprint.output() == Core.LUNAR && !active.session.reversed && style != null && style.healing != null) {
+            style.healing.heal(target, budget, value -> github.com.gengyoubo.sscfa.spell.NightmareSpellLink.with(player,
+                    () -> affectNow(player, active, target, value, weave)));
+        } else {
+            github.com.gengyoubo.sscfa.spell.CourtSpellLink.with(style == null ? null : style.court,
+                    () -> github.com.gengyoubo.sscfa.spell.NightmareSpellLink.with(player,
+                            () -> affectNow(player, active, target, budget, weave)));
+        }
+    }
+
+    /** Wraps one release so moisture healing settles its batch once (and drops it on failure). */
+    private static <T> T healingBatch(NeoRuntime.Active active, java.util.function.Supplier<T> action) {
+        var healing = active.style == null ? null : active.style.healing;
+        if (healing == null) return action.get();
+        healing.begin();
+        try {
+            T result = action.get();
+            healing.end();
+            return result;
+        } catch (RuntimeException | Error failure) {
+            healing.abort();
+            throw failure;
+        }
+    }
+
+    private static boolean affectNow(ServerPlayer player, NeoRuntime.Active active, LivingEntity target, double budget,
+                                     github.com.gengyoubo.sscfa.spell.SpiderSpellLink.Impact weave) {
         Core core = active.session.blueprint.output();
         boolean healing = core == Core.LUNAR && !active.session.reversed;
         boolean invertedSelf = target == player && core == Core.LUNAR && active.session.reversed;
@@ -399,14 +435,15 @@ public final class NeoEffects {
             case THERMAL -> effective = target.hurt(player.damageSources().indirectMagic(player, player), (float) budget);
             case FROST -> {
                 if (effective = target.hurt(player.damageSources().indirectMagic(player, player), (float) (budget * .5))) {
-                    target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, (int) (budget * 12),
-                            Math.min(3, (int) (budget / 6))), player);
+                    // Parasitic fruit bat: the debuff spreads through the bat link.
+                    github.com.gengyoubo.sscfa.spell.BatSpellLink.with(active.style == null ? null : active.style.bat, () -> target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, (int) (budget * 12),
+                            Math.min(3, (int) (budget / 6))), player));
                 }
             }
             case CURSE -> {
                 if (effective = target.hurt(player.damageSources().indirectMagic(player, player), (float) (budget * .4))) {
-                    target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,
-                            Math.round((int) (budget * 20) * active.curseDurationMultiplier), 0), player);
+                    github.com.gengyoubo.sscfa.spell.BatSpellLink.with(active.style == null ? null : active.style.bat, () -> target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,
+                            Math.round((int) (budget * 20) * active.curseDurationMultiplier), 0), player));
                 }
             }
             case VOID -> {
@@ -418,6 +455,20 @@ public final class NeoEffects {
         }
         if (effective && !healing && !active.session.reversed && target != player) {
             NeoLegacyCasting.blueprintHit(player, active, target, conditionBeforeHit);
+        }
+        if (effective && weave != null) weave.hit(player, target);
+        if (effective && !healing && !active.session.reversed && active.style != null) {
+            github.com.gengyoubo.sscfa.spell.CourtSpellLink.hit(active.style.court, player, target);
+        }
+        var allay = active.style == null ? null : active.style.allay;
+        if (effective && !healing && !active.session.reversed && allay != null) {
+            allay.damage(player, target, Math.max(0, before - target.getHealth()));
+            Carrier carrier = active.session.blueprint.carrier();
+            // Fallen allay curse chains from contact / lock / projectile casts (projectiles only from a bolt).
+            if (core == Core.CURSE && (carrier == Carrier.CONTACT || carrier == Carrier.LOCK
+                    || carrier == Carrier.PROJECTILE && weave != null)) {
+                allay.chain(player, target, active.chainPrimaries, other -> affectNow(player, active, other, budget, null));
+            }
         }
         active.record.damage += Math.max(0, before - target.getHealth());
         active.record.absorbed += Math.max(0, absorption - target.getAbsorptionAmount());
@@ -478,16 +529,24 @@ public final class NeoEffects {
             LivingEntity hit = along(bolt.caster, bolt.pos, clipped,
                     bolt.active.session.quote.plan().focused() ? .08 : .3);
             if (hit != null || wall.getType() == HitResult.Type.BLOCK) {
+                healingBatch(bolt.active, () -> {
                 Plan plan = bolt.active.session.quote.plan();
                 boolean plain = plan.branches() == 1 && !plan.focused();
-                if (hit != null) affect(bolt.caster, bolt.active, hit, plain ? bolt.budget * 2 / 3 : bolt.budget);
+                if (hit != null) {
+                    bolt.weave.direct();
+                    affect(bolt.caster, bolt.active, hit, plain ? bolt.budget * 2 / 3 : bolt.budget, bolt.weave);
+                }
                 if (plain) {
                     var nearby = effectTargets(bolt.caster, bolt.active, hit == null ? clipped : hit.position(), 2);
                     nearby.remove(hit);
                     distribute(bolt.caster, bolt.active, nearby, bolt.budget / 3);
                 }
-                if (hit == null) measureBlock(bolt.caster, bolt.active, clipped,
-                        plain ? bolt.budget * 2 / 3 : bolt.budget);
+                if (hit == null) {
+                    measureBlock(bolt.caster, bolt.active, clipped, plain ? bolt.budget * 2 / 3 : bolt.budget);
+                    bolt.weave.ground(bolt.caster, wall);
+                }
+                return null;
+                });
                 finishBolt(bolt);
                 iterator.remove();
             } else {

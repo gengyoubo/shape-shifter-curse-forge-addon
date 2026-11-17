@@ -10,6 +10,7 @@ import github.com.gengyoubo.sscfa.client.renderer.PotionStorageBoxRenderer;
 import github.com.gengyoubo.sscfa.client.screen.PotionStorageBoxScreen;
 import github.com.gengyoubo.sscfa.client.screen.SpellbookScreen;
 import github.com.gengyoubo.sscfa.client.screen.PotionBagScreen;
+import github.com.gengyoubo.sscfa.client.tooltip.SpellIconTooltipComponent;
 import github.com.gengyoubo.sscfa.client.mana.AllaySPManaBar;
 import github.com.gengyoubo.sscfa.client.mana.AnubisWolfSPSoulBar;
 import github.com.gengyoubo.sscfa.client.mana.BatDesmodusBloodBar;
@@ -28,11 +29,20 @@ import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.entity.ThrownTridentRenderer;
 import github.com.gengyoubo.sscfa.init.AddonItems;
 import github.com.gengyoubo.sscfa.item.InfiniteEnergyPotionItem;
+import github.com.gengyoubo.sscfa.item.MagicScrollItem.SpellIconTooltipData;
+import github.com.gengyoubo.sscfa.network.AddonNetwork;
+import github.com.gengyoubo.sscfa.network.SscAddonNetworking;
+import github.com.gengyoubo.sscfa.spell.SpellRegistry;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RegisterClientTooltipComponentFactoriesEvent;
 import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -84,6 +94,19 @@ public final class AddonClientEvents {
     }
 
     @SubscribeEvent
+    public static void registerTooltipComponents(RegisterClientTooltipComponentFactoriesEvent event) {
+        event.register(SpellIconTooltipData.class, data -> new SpellIconTooltipComponent(data.texture()));
+    }
+
+    private static void formatSpellTooltip(ItemTooltipEvent event) {
+        if (event.getItemStack().getTooltipImage().orElse(null) instanceof SpellIconTooltipData) {
+            Minecraft client = Minecraft.getInstance();
+            SpellIconTooltipComponent.formatTooltip(client.font, event.getToolTip(),
+                    client.getWindow().getGuiScaledWidth());
+        }
+    }
+
+    @SubscribeEvent
     public static void registerClientReloadListeners(net.minecraftforge.client.event.RegisterClientReloadListenersEvent event) {
         github.com.gengyoubo.sscfa.client.tutorial.FormTutorialLessons.register(event);
         github.com.gengyoubo.sscfa.client.renderer.AllaySkinColor.init(event);
@@ -97,8 +120,19 @@ public final class AddonClientEvents {
     @SubscribeEvent
     public static void registerScreens(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
+            MinecraftForge.EVENT_BUS.addListener(AddonClientEvents::formatSpellTooltip);
             runMixinAuditIfRequested();
             BalanceClient.init(SscBalanceSchema.create());
+            AddonNetwork.registerClientReceiver(SscAddonNetworking.PACKET_SPELL_CONFIG_SYNC, buffer -> {
+                try {
+                    SpellRegistry.INSTANCE.receiveClientSync(buffer);
+                } catch (RuntimeException invalid) {
+                    var connection = Minecraft.getInstance().getConnection();
+                    if (connection != null) {
+                        connection.getConnection().disconnect(Component.literal("SSCA spell config sync failed: " + invalid.getMessage()));
+                    }
+                }
+            });
             CountdownClient.register();
             SkillCooldownClient.init();
             AddonSkillKeys.init();
@@ -156,6 +190,8 @@ public final class AddonClientEvents {
             MenuScreens.register(AddonMenus.ENERGY_BOTTLER.get(), EnergyBottlerScreen::new);
             MenuScreens.register(AddonMenus.POTION_STORAGE_BOX.get(), PotionStorageBoxScreen::new);
         MenuScreens.register(AddonMenus.SPELLBOOK_SCREEN_HANDLER.get(), SpellbookScreen::new);
+        MenuScreens.register(AddonMenus.INFUSION_ALTAR_SCREEN_HANDLER.get(),
+                github.com.gengyoubo.sscfa.client.screen.InfusionAltarScreen::new);
         MenuScreens.register(AddonMenus.POTION_BAG_SCREEN_HANDLER.get(), PotionBagScreen::new);
         SimpleResourceBarRenderer.register(new AllaySPManaBar());
         SimpleResourceBarRenderer.register(new AnubisWolfSPSoulBar());

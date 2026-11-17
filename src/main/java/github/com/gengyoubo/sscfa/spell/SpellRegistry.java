@@ -1,6 +1,8 @@
 package github.com.gengyoubo.sscfa.spell;
 
+import github.com.gengyoubo.sscfa.balance.BalanceIntegration;
 import github.com.gengyoubo.sscfa.spell.config.SpellConfig;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
@@ -14,7 +16,7 @@ import java.util.Map;
 
 /**
  * 魔法注册表（jackcooper）：id ?{@link Spell}。Java 侧只注册行为类（单例），数值由 JSON 数据包注入? * Forge 版用 {@link SimplePreparableReloadListener} 接入数据包重载，网络同步?{@link github.com.gengyoubo.sscfa.network.AddonNetwork}? */
-public final class SpellRegistry extends SimplePreparableReloadListener<Void> {
+public final class SpellRegistry extends SimplePreparableReloadListener<Void> implements BalanceIntegration.SyncParticipant {
 	private static final Map<ResourceLocation, Spell> SPELLS = new LinkedHashMap<>();
 	private volatile Map<String, String> rawJson = Map.of();
     private volatile Map<String, SpellConfig> serverConfigs = Map.of();
@@ -23,19 +25,24 @@ public final class SpellRegistry extends SimplePreparableReloadListener<Void> {
     private Map<String, SpellConfig> pendingConfigs;
 
     public SpellConfig configFor(String path, SpellConfig fallback) {
-        var configs = github.com.gengyoubo.sscfa.balance.BalanceIntegration.isClientThread()
+        var configs = BalanceIntegration.isClientThread()
                 ? clientConfigs : serverConfigs;
         return configs.getOrDefault(path, fallback);
     }
+    @Override
     public synchronized void commitPending() {
         if (pendingConfigs == null) return;
         rawJson = pendingRaw;
         serverConfigs = pendingConfigs;
         discardPending();
     }
+    @Override
     public synchronized void discardPending() { pendingConfigs = null; pendingRaw = null; }
+    @Override
     public synchronized void clearServer() { discardPending(); serverConfigs = Map.of(); rawJson = Map.of(); }
+    @Override
     public void clearClient() { clientConfigs = Map.of(); }
+    @Override
     public void sendTo(net.minecraft.server.level.ServerPlayer player) {
         sendTo(player, false);
     }
@@ -134,6 +141,16 @@ public final class SpellRegistry extends SimplePreparableReloadListener<Void> {
         SpellConfig config = SpellConfig.fromJson(GsonHelper.parse(json));
         if (!config.manaCostConfigured) throw new IllegalArgumentException("Missing/invalid mana_cost: " + path);
         return config;
+    }
+
+    public void receiveClientSync(FriendlyByteBuf buffer) {
+        int count = buffer.readInt();
+        if (count != SPELLS.size()) throw new IllegalArgumentException("Unexpected spell config count: " + count);
+        Map<String, String> raw = new LinkedHashMap<>();
+        for (int i = 0; i < count; i++) {
+            raw.put(buffer.readUtf(256), buffer.readUtf(2000000));
+        }
+        applyClientSync(raw);
     }
 
     public void applyClientSync(Map<String, String> raw) {

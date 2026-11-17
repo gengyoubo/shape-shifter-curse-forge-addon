@@ -1,7 +1,14 @@
 package github.com.gengyoubo.sscfa.power;
 
-/** 失败感知主动技能（Forge 简化）：保留失败标记入口。 */
+/**
+ * Fabric-era entry point that skill code still calls when an action fails.
+ * On Forge the skill power is {@link FailAwareActiveSelf}; this forwards to it so the
+ * cast settles on {@code fail_cooldown} instead of counting as a success.
+ */
 public final class FailAwareActiveSelfPower {
     private FailAwareActiveSelfPower() {}
-    public static void markFail() {}
+
+    public static void markFail() {
+        FailAwareActiveSelf.markFail();
+    }
 }

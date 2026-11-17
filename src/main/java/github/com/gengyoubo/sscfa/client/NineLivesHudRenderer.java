@@ -42,11 +42,4 @@ public final class NineLivesHudRenderer extends SimpleResourceBarRenderer {
     protected int width() {
         return TEX_WIDTH;
     }
-
-    /** 必须真正拥有?power 才渲染?*/
-    @Override
-    protected boolean requirePower() {
-        return true;
-    }
-
 }
