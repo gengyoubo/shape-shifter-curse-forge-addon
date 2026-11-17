@@ -102,12 +102,6 @@ dependencies {
     // Optional: accessories are equipped through Curios when it is installed (same version SSC Forge builds against).
     compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:5.9.1+1.20.1:api")
 
-    // MixinExtras (@WrapOperation / @WrapMethod / @Local used by the addon mixins)
-    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${project.mixinextras_version}"))
-    implementation(jarJar("io.github.llamalad7:mixinextras-forge:${project.mixinextras_version}")) {
-        jarJar.ranged(it, "[${project.mixinextras_version},)")
-    }
-
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
     // Optional recipe viewer / tooltip integrations (compile only; loaded only when installed at runtime)
@@ -161,8 +155,6 @@ tasks.register('energyNetworkTest', JavaExec) {
     }
 }
 check.dependsOn energyNetworkTest
-
-jarJar.enable()
 
 jar {
     from('LICENSE') {

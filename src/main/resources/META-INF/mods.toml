@@ -30,7 +30,7 @@ side="BOTH"
 [[dependencies.${mod_id}]]
 modId="shape_shifter_curse"
 mandatory=true
-versionRange="[${ssc_version},)"
+versionRange="[1.10.0.0,)"
 ordering="AFTER"
 side="BOTH"
 

@@ -4,13 +4,11 @@ import github.com.gengyoubo.sscfa.compat.PotionStackLimit;
 import github.com.gengyoubo.sscfa.item.PotionTestTubes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.PotionItem;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 /**
  * 创造模式物品栏：让使魔等「药水可叠加」形态在创造界面拿取药水时，把叠加上限从原版的 1
@@ -24,28 +22,28 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(CreativeModeInventoryScreen.class)
 public class CreativePotionStackMixin {
 
-	@WrapOperation(
+	@Redirect(
 			method = "slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ClickType;)V",
 			at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;getMaxStackSize()I"),
 			require = 0
 	)
-	private int ssc_addon$potionCreativeStackLimit(ItemStack stack, Operation<Integer> original) {
+	private int ssc_addon$potionCreativeStackLimit(ItemStack stack) {
 		if (PotionTestTubes.hasCustomStackLimit(stack)) {
 			return PotionTestTubes.stackLimit(stack, Minecraft.getInstance().player);
 		}
 		if (stack.getItem() instanceof github.com.gengyoubo.sscfa.item.WitherPotionItem) {
 			return Math.max(github.com.gengyoubo.sscfa.item.WitherPotionItem
-					.getStackLimitFor(Minecraft.getInstance().player), original.call(stack));
+					.getStackLimitFor(Minecraft.getInstance().player), stack.getMaxStackSize());
 		}
 		// 通用能量药水：与生存物品栏同源，按 ModifyPotionStackPower 抬升拿取上限
 		if (stack.getItem() instanceof github.com.gengyoubo.sscfa.item.UniversalEnergyPotionItem) {
 			int n = PotionStackLimit.of(Minecraft.getInstance().player);
-			return n > 1 ? Math.max(n, original.call(stack)) : original.call(stack);
+			return n > 1 ? Math.max(n, stack.getMaxStackSize()) : stack.getMaxStackSize();
 		}
 		if (stack.getItem() instanceof PotionItem) {
 			int n = PotionStackLimit.of(Minecraft.getInstance().player);
-			if (n > 1) return Math.max(n, original.call(stack));
+			if (n > 1) return Math.max(n, stack.getMaxStackSize());
 		}
-		return original.call(stack);
+		return stack.getMaxStackSize();
 	}
 }

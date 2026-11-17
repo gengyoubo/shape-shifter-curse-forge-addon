@@ -1,7 +1,5 @@
 package github.com.gengyoubo.sscfa.mixin.render;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import github.com.gengyoubo.sscfa.SscAddon;
@@ -15,6 +13,7 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
@@ -22,20 +21,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ItemInHandLayer.class)
 public class UpgradeAxolotlThirdPersonSpearMixin {
 
-    @WrapOperation(
+    @Redirect(
             method = "render",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/world/entity/LivingEntity;getMainHandItem()Lnet/minecraft/world/item/ItemStack;"),
             require = 0
     )
-    private ItemStack sscAddon$swapTpSpear(LivingEntity entity, Operation<ItemStack> original) {
+    private ItemStack sscAddon$swapTpSpear(LivingEntity entity) {
         if (entity instanceof AbstractClientPlayer
                 && UpgradeAxolotlSpearRenderState.isCharging(entity.getUUID())) {
             ItemStack spear = new ItemStack(SscAddon.WATER_SPEAR);
             spear.getOrCreateTag().putInt("CustomModelData", 1);
             return spear;
         }
-        return original.call(entity);
+        return entity.getMainHandItem();
     }
 
     @Inject(method = "renderArmWithItem", at = @At("HEAD"), require = 0)

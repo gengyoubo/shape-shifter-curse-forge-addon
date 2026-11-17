@@ -1,12 +1,10 @@
 package github.com.gengyoubo.sscfa.mixin;
 
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import github.com.gengyoubo.sscfa.spell.DomainManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -21,8 +19,8 @@ public abstract class DomainEntityBoundaryMixin {
 		return DomainManager.limitMovement((Entity) (Object) this, movement);
 	}
 
-	@ModifyExpressionValue(method = "move", at = @At(value = "INVOKE",
-			target = "Lnet/minecraft/world/entity/Entity;collide(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/phys/Vec3;"))
+	// The collision-adjusted movement is stored in local slot 3.
+	@ModifyVariable(method = "move", at = @At("STORE"), index = 3)
 	private Vec3 ssca$domainFinalMovement(Vec3 movement) {
 		return DomainManager.finishMovement((Entity) (Object) this, movement);
 	}

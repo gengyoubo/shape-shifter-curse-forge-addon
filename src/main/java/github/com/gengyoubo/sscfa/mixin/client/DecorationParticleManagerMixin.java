@@ -1,8 +1,5 @@
 package github.com.gengyoubo.sscfa.mixin.client;
 
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -30,6 +27,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
@@ -73,16 +71,16 @@ public abstract class DecorationParticleManagerMixin {
         FirstPersonParticles.tag(particle);
     }
 
-    @WrapOperation(method = "tickParticle", at = @At(value = "INVOKE",
+    @Redirect(method = "tickParticle", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/particle/Particle;tick()V"))
-    private void ssca$inheritDecoration(Particle particle, Operation<Void> original) {
+    private void ssca$inheritDecoration(Particle particle) {
         var owner = particle instanceof ParticleOwnership owned ? owned.ssca$getDecorationOwner() : null;
         if (owner == null) {
-            original.call(particle);
+            particle.tick();
         } else if (particle instanceof ParticleOwnership own && own.ssca$isProjectileDecoration()) {
-            FirstPersonParticles.emitProjectile(owner, () -> original.call(particle));
+            FirstPersonParticles.emitProjectile(owner, particle::tick);
         } else {
-            FirstPersonParticles.emit(owner, () -> original.call(particle));
+            FirstPersonParticles.emit(owner, particle::tick);
         }
     }
 
@@ -120,27 +118,27 @@ public abstract class DecorationParticleManagerMixin {
         ssca$routingTick = client.level == null ? Long.MIN_VALUE : client.level.getGameTime();
     }
 
-    @ModifyExpressionValue(remap = false, method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V",
-            at = @At(value = "FIELD", target = "Lnet/minecraft/client/particle/ParticleEngine;particles:Ljava/util/Map;"))
-    private Map<ParticleRenderType, Queue<Particle>> ssca$renderQueues(Map<ParticleRenderType, Queue<Particle>> original) {
-        return ssca$frameParticles == null ? original : ssca$frameParticles;
+    @Redirect(remap = false, method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V",
+            at = @At(value = "FIELD", remap = true, target = "Lnet/minecraft/client/particle/ParticleEngine;particles:Ljava/util/Map;"))
+    private Map<ParticleRenderType, Queue<Particle>> ssca$renderQueues(ParticleEngine engine) {
+        return ssca$frameParticles == null ? particles : ssca$frameParticles;
     }
 
-    @WrapOperation(remap = false, method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V",
-            at = @At(value = "INVOKE",
+    @Redirect(remap = false, method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V",
+            at = @At(value = "INVOKE", remap = true,
                     target = "Lnet/minecraft/client/particle/ParticleRenderType;begin(Lcom/mojang/blaze3d/vertex/BufferBuilder;Lnet/minecraft/client/renderer/texture/TextureManager;)V"))
     private void ssca$beginSheet(ParticleRenderType sheet, com.mojang.blaze3d.vertex.BufferBuilder buffer,
-                                 TextureManager textures, Operation<Void> original) {
+                                 TextureManager textures) {
         ssca$drawingSheet = sheet;
-        original.call(sheet, buffer, textures);
+        sheet.begin(buffer, textures);
     }
 
-    @WrapOperation(remap = false, method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V",
-            at = @At(value = "INVOKE",
+    @Redirect(remap = false, method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V",
+            at = @At(value = "INVOKE", remap = true,
                     target = "Lnet/minecraft/client/particle/ParticleRenderType;end(Lcom/mojang/blaze3d/vertex/Tesselator;)V"))
-    private void ssca$drawSheet(ParticleRenderType sheet, Tesselator tessellator, Operation<Void> original) {
+    private void ssca$drawSheet(ParticleRenderType sheet, Tesselator tessellator) {
         try {
-            original.call(sheet, tessellator);
+            sheet.end(tessellator);
             if (ssca$fadedParticles != null) ssca$fadedParticles.draw();
         } finally {
             ssca$drawingSheet = null;
@@ -148,18 +146,17 @@ public abstract class DecorationParticleManagerMixin {
         }
     }
 
-    @WrapOperation(remap = false, method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V",
-            at = @At(value = "INVOKE",
+    @Redirect(remap = false, method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V",
+            at = @At(value = "INVOKE", remap = true,
                     target = "Lnet/minecraft/client/particle/Particle;render(Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/client/Camera;F)V"))
-    private void ssca$drawWithOpacity(Particle particle, VertexConsumer vertices, Camera camera, float tickDelta,
-                                      Operation<Void> original) {
+    private void ssca$drawWithOpacity(Particle particle, VertexConsumer vertices, Camera camera, float tickDelta) {
         if (!(particle instanceof OwnedDecoration decoration)) {
-            original.call(particle, vertices, camera, tickDelta);
+            particle.render(vertices, camera, tickDelta);
             return;
         }
         float visibility = decoration.ssca$cameraVisibility(camera, tickDelta);
         if (visibility >= 1) {
-            original.call(particle, vertices, camera, tickDelta);
+            particle.render(vertices, camera, tickDelta);
             return;
         }
         if (visibility <= 0) return;
@@ -170,7 +167,7 @@ public abstract class DecorationParticleManagerMixin {
         }
         VertexConsumer fadedVertices = target;
         ParticleOpacity.draw(decoration, visibility,
-                () -> original.call(particle, fadedVertices, camera, tickDelta));
+                () -> particle.render(fadedVertices, camera, tickDelta));
     }
 
     @Inject(remap = false, method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V",

@@ -1,7 +1,5 @@
 package github.com.gengyoubo.sscfa.mixin.player;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import github.com.gengyoubo.sscfa.SscAddon;
 import github.com.gengyoubo.sscfa.ability.MancianimaAggroTracker;
 import github.com.gengyoubo.sscfa.util.FormIdentifiers;
@@ -21,6 +19,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import github.com.gengyoubo.sscfa.compat.MoistureTickSnapshot;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
@@ -75,38 +74,62 @@ public abstract class SscPlayerMixin implements MoistureTickSnapshot {
 	}
 
 	/**
-	 * 契灵基础攻击设定（用 @WrapOperation 兼容 SSC 主包同位置的 @Redirect）：
+	 * 契灵基础攻击设定：
 	 * - 无法攻击劫掠阵营生物
 	 * - 空手：固定 1 颗心（2.0F），无视护甲（indirectMagic 伤害源）
 	 * - 持武器：总伤害 -20%（暴击通过 base*0.8*1.5 = base*1.2 自动 -20%）
 	 * - 主动攻击 mob → 激怒该 mob（之后 mob 才能将契灵设为目标）
 	 */
-	@WrapOperation(method = "attack", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
-	private boolean ssc_addon$mancianimaAttackScale(Entity target, DamageSource source, float amount, Operation<Boolean> original) {
+	@Inject(method = "attack", at = @At("HEAD"), cancellable = true)
+	private void ssc_addon$mancianimaRejectRaider(Entity target, CallbackInfo ci) {
 		Player self = (Player) (Object) this;
-		if (!FormUtils.isForm(self, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) {
-			return original.call(target, source, amount);
-		}
-		// 无法攻击劫掠阵营生物
-		if (target instanceof Raider) {
+		if (target instanceof Raider && FormUtils.isForm(self, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) {
 			if (!self.level().isClientSide()) {
 				self.playSound(SoundEvents.FIRE_EXTINGUISH, 0.5f, 0.8f);
 			}
-			return false;
+			ci.cancel();
 		}
-		boolean bareHand = self.getMainHandItem().isEmpty();
-		boolean result;
-		if (bareHand) {
-			DamageSource bypassSrc = self.damageSources().indirectMagic(self, self);
-			result = original.call(target, bypassSrc, github.com.gengyoubo.sscfa.ability.NpcCombatEnhancements.fixedDamage(self, target, 2.0F));
-		} else {
-			result = original.call(target, source, amount * 0.8F);
-		}
-		// 激怒被攻击的 mob（仅在伤害命中时记录；坚守者/铁傀儡 本就主动攻击，仍记录无副作用）
-		if (result && target instanceof Mob mob && !self.level().isClientSide()) {
+	}
+
+	@Unique private Entity ssca$primaryAttackTarget;
+
+	@Inject(method = "attack", at = @At(value = "INVOKE", ordinal = 0,
+			target = "Lnet/minecraft/world/damagesource/DamageSources;playerAttack(Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/damagesource/DamageSource;"))
+	private void ssca$rememberPrimaryAttackTarget(Entity target, CallbackInfo ci) {
+		ssca$primaryAttackTarget = target;
+	}
+
+	// Modify the arguments before SSC Forge's primary-hit redirect consumes them.
+	// No explicit index: once SSC Forge's @Redirect is applied, the call becomes
+	// (Entity, DamageSource, float), so indices shift. Type matching works either way.
+	@ModifyArg(method = "attack", at = @At(value = "INVOKE",
+			target = "Lnet/minecraft/world/entity/Entity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
+	private DamageSource ssc_addon$mancianimaAttackSource(DamageSource source) {
+		Player self = (Player) (Object) this;
+		return FormUtils.isForm(self, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA) && self.getMainHandItem().isEmpty()
+				? self.damageSources().indirectMagic(self, self) : source;
+	}
+
+	@ModifyArg(method = "attack", at = @At(value = "INVOKE",
+			target = "Lnet/minecraft/world/entity/Entity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
+	private float ssc_addon$mancianimaAttackScale(float amount) {
+		Entity target = ssca$primaryAttackTarget;
+		ssca$primaryAttackTarget = null;
+		Player self = (Player) (Object) this;
+		if (!FormUtils.isForm(self, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) return amount;
+		return self.getMainHandItem().isEmpty()
+				? github.com.gengyoubo.sscfa.ability.NpcCombatEnhancements.fixedDamage(self, target, 2.0F)
+				: amount * 0.8F;
+	}
+
+	@Inject(method = "attack", at = @At(value = "INVOKE",
+			target = "Lnet/minecraft/world/entity/player/Player;setLastHurtMob(Lnet/minecraft/world/entity/Entity;)V"))
+	private void ssc_addon$mancianimaProvoke(Entity target, CallbackInfo ci) {
+		Player self = (Player) (Object) this;
+		if (target instanceof Mob mob && !self.level().isClientSide()
+				&& FormUtils.isForm(self, FormIdentifiers.FAMILIAR_FOX_MANCIANIMA)) {
 			MancianimaAggroTracker.provoke(mob.getUUID(), self.getUUID());
 		}
-		return result;
 	}
 	/**
 	 * 死亡时掉落药水袋内物品（仅当 keepInventory 关闭时）。（原 PotionBagDeathDropMixin 合并至此；行为不变。）

@@ -1,10 +1,11 @@
 package github.com.gengyoubo.sscfa.mixin.client;
 
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import github.com.gengyoubo.sscfa.client.ClawClientState;
 import net.minecraft.client.gui.Gui;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
+import net.minecraft.client.player.LocalPlayer;
 
 /**
  * 妞嬪海浼掗妴宀€鏌ф搴ょ箾閻栴亗鈧秴鍣弰鐔告暰閸戣鍠庨崡瀛樻蒋閹恒儳顓搁妴? *
@@ -16,15 +17,15 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(Gui.class)
 public class ClawCrosshairMixin {
 
-    @ModifyExpressionValue(
+    @Redirect(
             method = "renderCrosshair",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/client/player/LocalPlayer;getAttackStrengthScale(F)F"),
             require = 0)
-    private float ssc_addon$clawCrosshairProgress(float original) {
+    private float ssc_addon$clawCrosshairProgress(LocalPlayer player, float partialTick) {
         if (ClawClientState.isActive()) {
             return ClawClientState.getCrosshairProgress();
         }
-        return original;
+        return player.getAttackStrengthScale(partialTick);
     }
 }

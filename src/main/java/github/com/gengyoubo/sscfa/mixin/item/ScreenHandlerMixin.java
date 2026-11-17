@@ -1,7 +1,5 @@
 package github.com.gengyoubo.sscfa.mixin.item;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import github.com.gengyoubo.sscfa.SscAddon;
 import github.com.gengyoubo.sscfa.item.AllayJukeboxItem;
 import github.com.gengyoubo.sscfa.item.PotionBagItem;
@@ -24,6 +22,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
@@ -94,18 +93,18 @@ public abstract class ScreenHandlerMixin {
         }
     }
 
-    @WrapOperation(method = "moveItemStackTo",
+    @Redirect(method = "moveItemStackTo",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/inventory/Slot;getMaxStackSize()I"),
             require = 0)
-    private int ssc_addon$insertItemEmptySlotCap(Slot slot, Operation<Integer> original) {
+    private int ssc_addon$insertItemEmptySlotCap(Slot slot) {
         Player player = this.ssc_addon$clickPlayer;
         if (player != null && slot.container instanceof Inventory) {
             int limit = ssc_addon$potionInsertLimit(this.getCarried(), player);
             if (limit > 0) {
-                return Math.min(limit, original.call(slot));
+                return Math.min(limit, slot.getMaxStackSize());
             }
         }
-        return original.call(slot);
+        return slot.getMaxStackSize();
     }
 
     @Unique

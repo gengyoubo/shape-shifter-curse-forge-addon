@@ -5,10 +5,9 @@ import github.com.gengyoubo.sscfa.util.FormIdentifiers;
 import github.com.gengyoubo.sscfa.util.FormUtils;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 /**
  * 濡ゆ浜堕ˉ銈嗘償閿曚礁娈伴柣鎺曟硾濞叉牜鎮伴埀顒勫箯閿旇棄鐒婚梻鍡楁閸ㄦ岸鎮欓惂鍝ョ闁告艾绉堕弫閬嶅储閸℃钑夐柛妯煎枎濞叉粍绌卞┑鍫熸畬闁挎稑鑻悿鍕⒔閸涱収妲遍柣鐐叉椤﹁法绮斿鍛皻闁哄拋鍨界槐姘跺Υ? *
@@ -17,14 +16,14 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(FoodData.class)
 public abstract class GoldenSandstormHungerMixin {
 
-	@WrapOperation(
+	@Redirect(
 			method = "tick",
 			at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;heal(F)V"),
 			require = 0
 	)
-	private void ssc_addon$blockNaturalRegen(Player player, float amount, Operation<Void> original) {
+	private void ssc_addon$blockNaturalRegen(Player player, float amount) {
 		// 闂佸弶鍨堕惌娆忕暆濮濆└缂佸倷鑳堕弫銈嗩殰闁稁妫ㄩ幖杈剧畳閸ゆ粓鎮炵捄鐑樼閻炴稈鍋?		if (FormUtils.isForm(player, FormIdentifiers.GOLDEN_SANDSTORM_SP)) return;
 		// 閻炴凹鍋呴崝鍛村蓟閹炬剚鍓鹃悗娑欏姉婵悂骞€娴ｇ儤鐣遍悗鍦仒缂嶅绮嬫担鐑樻殢濡ゆ浜堕ˉ銈嗘償閿曚礁娈伴柣鎺曟硾濞叉牜鎮伴埀?		if (InfectionSporeManager.isInfected(player.getUUID())) return;
-		original.call(player, amount);
+		player.heal(amount);
 	}
 }

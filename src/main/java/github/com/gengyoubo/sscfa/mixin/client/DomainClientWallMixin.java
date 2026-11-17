@@ -1,6 +1,5 @@
 package github.com.gengyoubo.sscfa.mixin.client;
 
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import github.com.gengyoubo.sscfa.client.renderer.DomainRenderer;
 import github.com.gengyoubo.sscfa.spell.DomainCollision;
 import github.com.gengyoubo.sscfa.spell.DomainRules;
@@ -25,8 +24,7 @@ public abstract class DomainClientWallMixin {
         return DomainRules.limitMovement(entity.position(), movement, entity.getBbWidth() * 0.5, shells);
     }
 
-    @ModifyExpressionValue(method = "move", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/entity/Entity;collide(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/phys/Vec3;"))
+    @ModifyVariable(method = "move", at = @At("STORE"), index = 3)
     private Vec3 ssca$domainClientFinalMovement(Vec3 movement) {
         Entity entity = (Entity) (Object) this;
         if (!entity.level().isClientSide()) return movement;
