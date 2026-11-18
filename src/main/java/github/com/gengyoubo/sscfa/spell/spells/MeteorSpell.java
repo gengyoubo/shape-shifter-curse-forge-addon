@@ -52,7 +52,7 @@ public class MeteorSpell extends Spell {
 	}
 
 	public MeteorSpell() {
-		super(new ResourceLocation("ssc_addon", "meteor"), SpellRarity.PURPLE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "meteor"), SpellRarity.PURPLE);
 	}
 
 	/** 按住瞄准型：最大施法距离 32 格（客户端按住施法键显示落点预览圈，松开施放）。 */

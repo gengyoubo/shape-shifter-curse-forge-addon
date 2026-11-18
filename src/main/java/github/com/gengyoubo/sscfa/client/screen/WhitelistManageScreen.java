@@ -541,7 +541,7 @@ public class WhitelistManageScreen extends Screen {
     private ItemStack tryGetSpawnEgg(String typeId) {
         if (typeId == null || typeId.isEmpty()) return ItemStack.EMPTY;
         try {
-            ResourceLocation id = new ResourceLocation(typeId);
+            ResourceLocation id = ResourceLocation.parse(typeId);
             EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(id);
             if (type == null) return ItemStack.EMPTY;
             SpawnEggItem egg = SpawnEggItem.byId(type);
@@ -555,7 +555,7 @@ public class WhitelistManageScreen extends Screen {
     private Component resolveSpeciesName(MobEntry entry) {
         if (entry.typeId() != null) {
             try {
-                ResourceLocation id = new ResourceLocation(entry.typeId());
+                ResourceLocation id = ResourceLocation.parse(entry.typeId());
                 EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(id);
                 if (type != null) return type.getDescription();
             } catch (Exception ignored) {

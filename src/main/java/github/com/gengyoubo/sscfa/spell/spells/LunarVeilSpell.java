@@ -35,7 +35,7 @@ public class LunarVeilSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.lunar_veil");
 
 	public LunarVeilSpell() {
-		super(new ResourceLocation("ssc_addon", "lunar_veil"), SpellRarity.GREEN);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "lunar_veil"), SpellRarity.GREEN);
 	}
 
 	@Override

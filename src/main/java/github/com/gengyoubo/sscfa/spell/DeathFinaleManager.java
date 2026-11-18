@@ -29,7 +29,7 @@ import java.util.UUID;
 
 /** 死亡终章：服务端掌握目标与危险标记，仅成功完成引导后结算。 */
 public final class DeathFinaleManager {
-    public static final ResourceLocation SNAPSHOT = new ResourceLocation("ssc_addon", "death_finale_state");
+    public static final ResourceLocation SNAPSHOT = ResourceLocation.fromNamespaceAndPath("ssc_addon", "death_finale_state");
 
     private static final Map<UUID, Sequence> ACTIVE = new LinkedHashMap<>();
     private static final Set<UUID> VIEWERS = new HashSet<>();

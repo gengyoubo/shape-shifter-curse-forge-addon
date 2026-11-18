@@ -64,11 +64,11 @@ public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess 
     @Unique private static final github.com.gengyoubo.sscfa.balance.BalanceReader BAL_UPGRADE_FOX_NODES = new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.upgrade_fox_nodes");
     @Unique private static final net.minecraft.resources.ResourceKey<net.minecraft.world.damagesource.DamageType> ssca$TETHER_SACRIFICE_KEY =
             net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,
-                    new net.minecraft.resources.ResourceLocation("my_addon", "tether_sacrifice"));
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("my_addon", "tether_sacrifice"));
     /** Jumping spider eating a fluid cocoon: its own poison passes the form's poison immunity. Server thread only. */
     @Unique private static final ThreadLocal<Boolean> ssca$salticidaeCocoonBypass = ThreadLocal.withInitial(() -> Boolean.FALSE);
     @Unique private static final net.minecraft.resources.ResourceLocation ssca$SPIDER_FLUID_COCOON =
-            new net.minecraft.resources.ResourceLocation("shape-shifter-curse", "spider_fluid_cocoon");
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("shape-shifter-curse", "spider_fluid_cocoon");
 
     @Unique
     private static final net.minecraft.world.entity.EquipmentSlot[] ssca$armorSlots = {

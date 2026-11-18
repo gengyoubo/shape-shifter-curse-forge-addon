@@ -34,11 +34,11 @@ import java.util.function.IntConsumer;
 /**
  * 施法读条管理器（Forge 简化版）：起手校验、GCD、读条推进、释?打断、冷却结算、移动减速与状态同步? * 形态协?崩解（NeoMagic）等高级结算待对应系统移植后补回? */
 public final class SpellChannelManager {
-	public static final ResourceLocation STATE = new ResourceLocation("ssc_addon", "spell_channel_state");
-	public static final ResourceLocation RELEASE = new ResourceLocation("ssc_addon", "spell_channel_release");
-	public static final ResourceLocation CANCEL_HOLD = new ResourceLocation("ssc_addon", "spell_channel_cancel_hold");
-	public static final ResourceLocation SUPPRESSION = new ResourceLocation("ssc_addon", "spell_channel_suppression");
-	public static final ResourceLocation CAST_VISUAL = new ResourceLocation("ssc_addon", "spell_cast_visual");
+	public static final ResourceLocation STATE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "spell_channel_state");
+	public static final ResourceLocation RELEASE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "spell_channel_release");
+	public static final ResourceLocation CANCEL_HOLD = ResourceLocation.fromNamespaceAndPath("ssc_addon", "spell_channel_cancel_hold");
+	public static final ResourceLocation SUPPRESSION = ResourceLocation.fromNamespaceAndPath("ssc_addon", "spell_channel_suppression");
+	public static final ResourceLocation CAST_VISUAL = ResourceLocation.fromNamespaceAndPath("ssc_addon", "spell_cast_visual");
 	private static final Set<SpellCastingRules.Tier> NO_ARM_POSE_TIERS =
 			Set.of(SpellCastingRules.Tier.INSTANT, SpellCastingRules.Tier.BASIC_1, SpellCastingRules.Tier.BASIC_2);
 	private static final UUID SLOW_ID = UUID.fromString("e178a586-4244-4fa7-a8b2-38a6a436d1d5");

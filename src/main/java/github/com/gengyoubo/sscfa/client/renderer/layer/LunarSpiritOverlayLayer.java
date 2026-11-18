@@ -19,9 +19,9 @@ import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 public class LunarSpiritOverlayLayer extends GeoRenderLayer<LunarSpiritEntity> {
 
 	private static final ResourceLocation[] OVERLAY_TEXTURES = {
-			new ResourceLocation("my_addon", "textures/entity/moon_spirit_pink_overlay.png"),
-			new ResourceLocation("my_addon", "textures/entity/moon_spirit_cyan_overlay.png"),
-			new ResourceLocation("my_addon", "textures/entity/moon_spirit_green_overlay.png")
+			ResourceLocation.fromNamespaceAndPath("my_addon", "textures/entity/moon_spirit_pink_overlay.png"),
+			ResourceLocation.fromNamespaceAndPath("my_addon", "textures/entity/moon_spirit_cyan_overlay.png"),
+			ResourceLocation.fromNamespaceAndPath("my_addon", "textures/entity/moon_spirit_green_overlay.png")
 	};
 
 	public LunarSpiritOverlayLayer(GeoEntityRenderer<LunarSpiritEntity> renderer) {

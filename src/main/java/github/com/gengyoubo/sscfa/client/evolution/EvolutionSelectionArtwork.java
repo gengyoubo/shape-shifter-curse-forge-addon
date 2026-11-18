@@ -105,7 +105,7 @@ final class EvolutionSelectionArtwork {
     }
 
     private static ResourceLocation texture(String path) {
-        return new ResourceLocation("my_addon", "textures/gui/evolution/" + path + ".png");
+        return ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/evolution/" + path + ".png");
     }
 
     private static void blit(GuiGraphics graphics, ResourceLocation texture, int x, int y, int width, int height,

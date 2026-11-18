@@ -201,7 +201,7 @@ public final class AddonClientEvents {
         github.com.gengyoubo.sscfa.client.NineLivesHudRenderer.register();
         github.com.gengyoubo.sscfa.client.SeedEnergyHudRenderer.register();
         github.com.gengyoubo.sscfa.client.MoistureWaterRecoveryClient.register();
-            var empty = new ResourceLocation(SscAddonForge.MOD_ID, "empty");
+            var empty = ResourceLocation.fromNamespaceAndPath(SscAddonForge.MOD_ID, "empty");
             for (var item : java.util.List.of(AddonItems.INFINITE_ENERGY_POTION, AddonItems.INFINITE_ENERGY_POTION_SPLASH, AddonItems.INFINITE_ENERGY_POTION_LINGERING)) {
                 ItemProperties.register(item.get(), empty, (stack, world, entity, seed) -> {
                     var level = world != null ? world : entity != null ? entity.level() : null;

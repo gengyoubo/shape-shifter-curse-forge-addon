@@ -18,23 +18,23 @@ public final class BarKeys {
 
 	/** SP 悦灵 mana（max 200，信标增幅回复）。 */
 	public static final ResourceBarDef ALLAY_MANA = new ResourceBarDef(
-			new ResourceLocation("my_addon", "form_allay_sp_mana_resource"), "mana", 200, FormIdentifiers.ALLAY_SP);
+			ResourceLocation.fromNamespaceAndPath("my_addon", "form_allay_sp_mana_resource"), "mana", 200, FormIdentifiers.ALLAY_SP);
 
 	/** 吸血蝙蝠血条（max 100，战斗攒/脱战衰减/三段效果）。 */
 	public static final ResourceBarDef BAT_BLOOD = new ResourceBarDef(
-			new ResourceLocation("my_addon", "form_bat_desmodus_blood_resource"), "blood", 100, FormIdentifiers.BAT_DESMODUS);
+			ResourceLocation.fromNamespaceAndPath("my_addon", "form_bat_desmodus_blood_resource"), "blood", 100, FormIdentifiers.BAT_DESMODUS);
 
 	/** SP 阿努比斯灵魂能量（max 100，累积制满清零）。 */
 	public static final ResourceBarDef ANUBIS_SOUL = new ResourceBarDef(
-			new ResourceLocation("my_addon", "form_anubis_wolf_sp_soul_energy"), "energy", 100, FormIdentifiers.ANUBIS_WOLF_SP);
+			ResourceLocation.fromNamespaceAndPath("my_addon", "form_anubis_wolf_sp_soul_energy"), "energy", 100, FormIdentifiers.ANUBIS_WOLF_SP);
 
 	/** SP 雪狐寒霜能量（max 100，技能扣费制）。 */
 	public static final ResourceBarDef SNOW_FOX = new ResourceBarDef(
-			new ResourceLocation("my_addon", "form_snow_fox_sp_resource"), "mana", 100, FormIdentifiers.SNOW_FOX_SP);
+			ResourceLocation.fromNamespaceAndPath("my_addon", "form_snow_fox_sp_resource"), "mana", 100, FormIdentifiers.SNOW_FOX_SP);
 
 	/** 寄生果蝠种子能量（10 格点条）。 */
 	public static final ResourceBarDef SEED = new ResourceBarDef(
-			new ResourceLocation("my_addon", "form_bat_parasitic_fruit_seed_energy"), "seed", 10, FormIdentifiers.BAT_PARASITIC_FRUIT);
+			ResourceLocation.fromNamespaceAndPath("my_addon", "form_bat_parasitic_fruit_seed_energy"), "seed", 10, FormIdentifiers.BAT_PARASITIC_FRUIT);
 
 	// ==================== 原版体系直通适配 ====================
 
@@ -43,7 +43,7 @@ public final class BarKeys {
 	 * kind 同为 "mana"；id 用占位标识（真实读写走 ManaUtils 直通，见 ResourceBars）。
 	 */
 	public static final ResourceBarDef VANILLA_MANA = new ResourceBarDef(
-			new ResourceLocation("ssc_addon", "vanilla_mana_adapter"), "mana", 100);
+			ResourceLocation.fromNamespaceAndPath("ssc_addon", "vanilla_mana_adapter"), "mana", 100);
 
 	/** 全部条（调度器遍历用；VANILLA_MANA 不参与 regen 调度——原版自带 tick）。 */
 	public static final ResourceBarDef[] ALL = {

@@ -39,7 +39,7 @@ public class CorruptMistSpell extends Spell {
 	}
 
 	public CorruptMistSpell() {
-		super(new ResourceLocation("ssc_addon", "corrupt_mist"), SpellRarity.BLUE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "corrupt_mist"), SpellRarity.BLUE);
 	}
 
 	@Override

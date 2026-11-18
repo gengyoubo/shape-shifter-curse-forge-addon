@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>跨玩家不叠加：同一坐标在一个周期内只会被任一玩家判定一次。</p>
  */
 public final class FruitBatPlantGrowthPower implements SscPowerType {
-    public static final ResourceLocation TYPE = new ResourceLocation("my_addon", "fruit_bat_plant_growth");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("my_addon", "fruit_bat_plant_growth");
 
     /** 维度 -> (方块坐标 -> 上次判定时的世界 tick) */
     private static final Map<ServerLevel, Map<Long, Long>> RECENT_PROCESSED = new WeakHashMap<>();

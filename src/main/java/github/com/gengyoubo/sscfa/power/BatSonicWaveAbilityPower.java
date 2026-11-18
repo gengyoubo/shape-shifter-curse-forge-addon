@@ -33,7 +33,7 @@ import java.util.List;
  * 命中后按 12/6/3 累积血渴值。冷却字段同统一技能（默认 160 tick，施放即起算），雾化与净化期间不能释放。
  */
 public final class BatSonicWaveAbilityPower implements SscPowerType {
-	public static final ResourceLocation TYPE = new ResourceLocation("my_addon", "sonic_wave");
+	public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("my_addon", "sonic_wave");
 
 	private static final String SCOPE = "abilities.bat_sonic_wave";
 	private static final double RANGE = 8.0;

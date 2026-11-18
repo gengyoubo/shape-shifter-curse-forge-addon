@@ -30,7 +30,7 @@ import java.util.UUID;
 
 /** 死亡终章客户端表现：法阵/边界圆环 + 危险目标屏幕晕影。 */
 public final class DeathFinaleClient {
-    private static final ResourceLocation FROST = new ResourceLocation("textures/misc/powder_snow_outline.png");
+    private static final ResourceLocation FROST = ResourceLocation.parse("textures/misc/powder_snow_outline.png");
     private static final Map<UUID, View> VIEWS = new HashMap<>();
     private static ClientLevel world;
 

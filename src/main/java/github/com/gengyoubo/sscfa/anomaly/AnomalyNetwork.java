@@ -16,8 +16,8 @@ import java.util.UUID;
 
 /** 异常快照的变更驱动同步；倒计时由客户端按服务端时间锚插值。 */
 public final class AnomalyNetwork {
-    public static final ResourceLocation STATE = new ResourceLocation("ssc_addon", "anomaly_snapshot");
-    public static final ResourceLocation CONFIG = new ResourceLocation("ssc_addon", "anomaly_rules");
+    public static final ResourceLocation STATE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "anomaly_snapshot");
+    public static final ResourceLocation CONFIG = ResourceLocation.fromNamespaceAndPath("ssc_addon", "anomaly_rules");
     public static final int MAX_CONFIG_CHARS = 262144;
 
     private static final AnomalySnapshot EMPTY =

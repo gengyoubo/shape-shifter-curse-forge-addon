@@ -14,9 +14,9 @@ import net.minecraft.world.inventory.Slot;
  */
 public class SpellbookScreen extends AbstractContainerScreen<SpellbookScreenHandler> {
 
-	private static final ResourceLocation TEXTURE = new ResourceLocation("ssc_addon", "textures/gui/moon_dust_spellbook.png");
-	private static final ResourceLocation PLAYER_INFORMATION = new ResourceLocation("ssc_addon", "textures/gui/spellbook_player_information.png");
-	private static final ResourceLocation SLOT_CELL = new ResourceLocation("ssc_addon", "textures/gui/spellbook_slot.png");
+	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/moon_dust_spellbook.png");
+	private static final ResourceLocation PLAYER_INFORMATION = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/spellbook_player_information.png");
+	private static final ResourceLocation SLOT_CELL = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/spellbook_slot.png");
 	private static final int BOOK_WIDTH=176, SIDE_X=182, SIDE_WIDTH=136;
 
 	public SpellbookScreen(SpellbookScreenHandler handler, Inventory inventory, Component title) {

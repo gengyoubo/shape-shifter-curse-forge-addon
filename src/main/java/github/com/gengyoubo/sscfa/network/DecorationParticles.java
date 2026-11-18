@@ -10,7 +10,7 @@ import net.minecraft.world.entity.Entity;
 
 /** Explicit opt-in for self decoration. Other viewers receive the original vanilla particle packet. */
 public final class DecorationParticles {
-    public static final ResourceLocation ID = new ResourceLocation("ssc_addon", "self_decoration_v1");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("ssc_addon", "self_decoration_v1");
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("SSCA_DecorationParticles");
     private static boolean loggedOnce;
 

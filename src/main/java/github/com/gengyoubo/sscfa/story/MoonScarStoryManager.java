@@ -32,7 +32,7 @@ import java.util.UUID;
  * 形态本身的存??重生由主包形态系统保证（red 死亡重生仍??red，变?sp 后才?sp）??
  */
 public final class MoonScarStoryManager {
-	public static final ResourceLocation MOON_SCAR_POWER_ADV = new ResourceLocation("ssc_addon", "moon_scar_power");
+	public static final ResourceLocation MOON_SCAR_POWER_ADV = ResourceLocation.fromNamespaceAndPath("ssc_addon", "moon_scar_power");
 	/** 未提示玩家的成就检查降频：??20 tick（??1 秒）一次，已提示玩家直接跳过??*/
 	private static final int TIP_CHECK_INTERVAL = 20;
 	/** 真睡变身所需睡眠时长??00 tick（??5 秒?? vanilla 睡眠阈值）。睡满后由本模组主动叫醒??red??*/

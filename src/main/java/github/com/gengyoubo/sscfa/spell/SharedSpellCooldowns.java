@@ -25,7 +25,7 @@ import java.util.UUID;
  * 旧卷轴自带较长 CD 时不被清空表清零）。</p>
  */
 public final class SharedSpellCooldowns extends SavedData {
-	public static final net.minecraft.resources.ResourceLocation SYNC = new net.minecraft.resources.ResourceLocation("ssc_addon", "shared_spell_cooldowns");
+	public static final net.minecraft.resources.ResourceLocation SYNC = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("ssc_addon", "shared_spell_cooldowns");
 	// Client mirror only; never populated or cleared by server lifecycle events.
 	private static final Map<String, Long> CLIENT_ENDS = new HashMap<>();
     private static final Map<String,Integer> CLIENT_TOTALS=new HashMap<>();

@@ -24,8 +24,8 @@ public final class InstinctAnchorGameTests {
     @GameTest(template = "gametest_floor")
     public static void anchorFreezesInstinctAndBlocksTransformation(GameTestHelper helper) {
         var player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "ssca_anchor_test"));
-        var spider = new ResourceLocation("shape-shifter-curse", "spider_1");
-        var bat = new ResourceLocation("shape-shifter-curse", "bat_3");
+        var spider = ResourceLocation.fromNamespaceAndPath("shape-shifter-curse", "spider_1");
+        var bat = ResourceLocation.fromNamespaceAndPath("shape-shifter-curse", "bat_3");
         helper.assertTrue(FormManager.setForm(player, spider), "test form must be available");
         var data = SscApi.currentForm(player).orElseThrow();
         data.setInstinctValue(45);

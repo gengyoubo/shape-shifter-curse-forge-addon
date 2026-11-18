@@ -21,7 +21,7 @@ public class CurseMarkSpell extends Spell {
 	@Override public double getProjectileRange(int level) { return SpellCurseMarkEntity.maxDistance(); }
 
 	public CurseMarkSpell() {
-		super(new ResourceLocation("ssc_addon", "curse_mark"), SpellRarity.GREEN);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "curse_mark"), SpellRarity.GREEN);
 	}
 
 	@Override

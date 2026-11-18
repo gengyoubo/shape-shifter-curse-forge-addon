@@ -30,7 +30,7 @@ public final class NeoMagic {
     private NeoMagic() {}
 
     public static ResourceLocation id(String path) {
-        return new ResourceLocation(NAMESPACE, path);
+        return ResourceLocation.fromNamespaceAndPath(NAMESPACE, path);
     }
 
     /** 濡紕绮嶉悧鍫熸拱閿涙稑绱戦崣鎴犲箚婢у啯鍨ㄥù瀣槸娑擃厽瀣佹稉宥呭煂閺冩湹璐?{@code "test"}閵?*/

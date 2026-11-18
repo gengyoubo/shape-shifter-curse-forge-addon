@@ -19,7 +19,7 @@ import java.util.UUID;
 
 /** Sends deadline changes immediately and a sparse recovery snapshot; never predicts or changes mana. */
 public final class SpellbookStatusSync {
-    public static final ResourceLocation STATE = new ResourceLocation("ssc_addon", "spellbook_status_v1");
+    public static final ResourceLocation STATE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "spellbook_status_v1");
     private static final int HEARTBEAT_TICKS = 100;
     private record Audience(ServerPlayer player, ServerLevel world, SpellbookStatus status, int sent) {}
     private static final Map<UUID, Audience> AUDIENCES = new HashMap<>();

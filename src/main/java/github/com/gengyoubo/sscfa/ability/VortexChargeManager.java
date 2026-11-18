@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class VortexChargeManager {
 	public static final ResourceLocation VORTEX_STATE =
-			new ResourceLocation("my_addon", "form_axolotl_sp_vortex_impact_vortex_state");
+			ResourceLocation.fromNamespaceAndPath("my_addon", "form_axolotl_sp_vortex_impact_vortex_state");
 
 	/**
 	 * 涡流「移动免疫」实体类?tag：命中的实体不被涡流吸附 / 击退（仍正常受伤）?
@@ -45,7 +45,7 @@ public final class VortexChargeManager {
 	 * 其它数据?/ 模组把自?boss 追加进来，无需改代码即可扩展兼容?
 	 */
 	private static final TagKey<EntityType<?>> VORTEX_IMMUNE =
-			TagKey.create(Registries.ENTITY_TYPE, new ResourceLocation("my_addon", "vortex_immune"));
+			TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath("my_addon", "vortex_immune"));
 
 	// 以下均为默认值；运行时从 balance 快照读取（abilities.vortex_charge?
 	private static final int AIR_PER_HIT = 8;

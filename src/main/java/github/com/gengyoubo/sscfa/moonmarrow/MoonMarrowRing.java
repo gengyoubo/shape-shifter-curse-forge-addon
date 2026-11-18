@@ -32,12 +32,12 @@ public final class MoonMarrowRing {
 	private static final String SSC = "shape-shifter-curse";
 	private static final String ADDON = "my_addon";
 
-	public static final ResourceLocation FAMILIAR_FOX_3 = new ResourceLocation(SSC, "familiar_fox_3");
-	public static final ResourceLocation FAMILIAR_FOX_SP = new ResourceLocation(ADDON, "familiar_fox_sp");
-	public static final ResourceLocation AXOLOTL_SP = new ResourceLocation(ADDON, "axolotl_sp");
-	public static final ResourceLocation FAMILIAR_FOX_RED = new ResourceLocation(ADDON, "familiar_fox_red");
-	public static final ResourceLocation UPGRADE_FAMILIAR_FOX = new ResourceLocation(ADDON, "upgrade_familiar_fox");
-	public static final ResourceLocation UPGRADE_AXOLOTL = new ResourceLocation(ADDON, "upgrade_axolotl");
+	public static final ResourceLocation FAMILIAR_FOX_3 = ResourceLocation.fromNamespaceAndPath(SSC, "familiar_fox_3");
+	public static final ResourceLocation FAMILIAR_FOX_SP = ResourceLocation.fromNamespaceAndPath(ADDON, "familiar_fox_sp");
+	public static final ResourceLocation AXOLOTL_SP = ResourceLocation.fromNamespaceAndPath(ADDON, "axolotl_sp");
+	public static final ResourceLocation FAMILIAR_FOX_RED = ResourceLocation.fromNamespaceAndPath(ADDON, "familiar_fox_red");
+	public static final ResourceLocation UPGRADE_FAMILIAR_FOX = ResourceLocation.fromNamespaceAndPath(ADDON, "upgrade_familiar_fox");
+	public static final ResourceLocation UPGRADE_AXOLOTL = ResourceLocation.fromNamespaceAndPath(ADDON, "upgrade_axolotl");
 
 	/** 起点形态 → 月髓环进化目标形态。 */
 	private static final Map<ResourceLocation, ResourceLocation> UPGRADES = new LinkedHashMap<>();
@@ -60,19 +60,19 @@ public final class MoonMarrowRing {
 
 	static {
 		registerUpgrade(FAMILIAR_FOX_3, FAMILIAR_FOX_SP);
-		registerUpgrade(new ResourceLocation(SSC, "axolotl_3"), AXOLOTL_SP);
-		registerUpgrade(new ResourceLocation(SSC, "allay_sp"), new ResourceLocation(ADDON, "fallen_allay_sp"));
-		registerUpgrade(new ResourceLocation(SSC, "anubis_wolf_3"), new ResourceLocation(ADDON, "anubis_wolf_sp"));
+		registerUpgrade(ResourceLocation.fromNamespaceAndPath(SSC, "axolotl_3"), AXOLOTL_SP);
+		registerUpgrade(ResourceLocation.fromNamespaceAndPath(SSC, "allay_sp"), ResourceLocation.fromNamespaceAndPath(ADDON, "fallen_allay_sp"));
+		registerUpgrade(ResourceLocation.fromNamespaceAndPath(SSC, "anubis_wolf_3"), ResourceLocation.fromNamespaceAndPath(ADDON, "anubis_wolf_sp"));
 		// 吸血蝙蝠：原版蝙蝠三阶段永久态 → desmodus
-		registerUpgrade(new ResourceLocation(SSC, "bat_3"), new ResourceLocation(ADDON, "bat_desmodus"));
+		registerUpgrade(ResourceLocation.fromNamespaceAndPath(SSC, "bat_3"), ResourceLocation.fromNamespaceAndPath(ADDON, "bat_desmodus"));
 		// 风灵：原版豹猫永久形态 ocelot_3 → 风灵
-		registerUpgrade(new ResourceLocation(SSC, "ocelot_3"), new ResourceLocation(ADDON, "ocelot_wind_spirit"));
+		registerUpgrade(ResourceLocation.fromNamespaceAndPath(SSC, "ocelot_3"), ResourceLocation.fromNamespaceAndPath(ADDON, "ocelot_wind_spirit"));
 		// 月织蛛：原版蜘蛛三阶段永久态 → 月织蛛
-		registerUpgrade(new ResourceLocation(SSC, "spider_3"), new ResourceLocation(ADDON, "spider_moon_weaver"));
+		registerUpgrade(ResourceLocation.fromNamespaceAndPath(SSC, "spider_3"), ResourceLocation.fromNamespaceAndPath(ADDON, "spider_moon_weaver"));
 		// 食梦魔：原版野猫 SP 形态 → 食梦魔
-		registerUpgrade(new ResourceLocation(SSC, "feral_cat_sp"), new ResourceLocation(ADDON, "wild_cat_nightmare"));
+		registerUpgrade(ResourceLocation.fromNamespaceAndPath(SSC, "feral_cat_sp"), ResourceLocation.fromNamespaceAndPath(ADDON, "wild_cat_nightmare"));
 		// 寒棘狐：原版雪狐三阶段永久态 → 寒棘狐
-		registerUpgrade(new ResourceLocation(SSC, "snow_fox_3"), new ResourceLocation(ADDON, "snow_fox_frostspine"));
+		registerUpgrade(ResourceLocation.fromNamespaceAndPath(SSC, "snow_fox_3"), ResourceLocation.fromNamespaceAndPath(ADDON, "snow_fox_frostspine"));
 		// SSCA 进化路线起点 → SP 形态：需解锁全部分支（见 evolutionGate）
 		registerUpgrade(UPGRADE_FAMILIAR_FOX, FAMILIAR_FOX_SP);
 		registerUpgrade(UPGRADE_AXOLOTL, AXOLOTL_SP);

@@ -11,11 +11,11 @@ import net.onixary.shapeShifterCurseForge.power.FormPowerRegistry;
 /** 通用能量药水对前置模组的资源读写适配。 */
 public final class EnergyRestoration {
     private static final ResourceLocation[] RESOURCES = {
-            new ResourceLocation("my_addon", "form_allay_sp_mana_resource"),
-            new ResourceLocation("my_addon", "form_bat_desmodus_blood_resource"),
-            new ResourceLocation("my_addon", "form_anubis_wolf_sp_soul_energy"),
-            new ResourceLocation("my_addon", "form_snow_fox_sp_resource"),
-            new ResourceLocation("my_addon", "form_bat_parasitic_fruit_seed_energy")
+            ResourceLocation.fromNamespaceAndPath("my_addon", "form_allay_sp_mana_resource"),
+            ResourceLocation.fromNamespaceAndPath("my_addon", "form_bat_desmodus_blood_resource"),
+            ResourceLocation.fromNamespaceAndPath("my_addon", "form_anubis_wolf_sp_soul_energy"),
+            ResourceLocation.fromNamespaceAndPath("my_addon", "form_snow_fox_sp_resource"),
+            ResourceLocation.fromNamespaceAndPath("my_addon", "form_bat_parasitic_fruit_seed_energy")
     };
 
     private EnergyRestoration() {}
@@ -33,7 +33,7 @@ public final class EnergyRestoration {
     private static boolean hasActiveChild(Player player, ResourceLocation id) {
         String path = id.getPath();
         for (int cut = path.lastIndexOf('_'); cut > 0; cut = path.lastIndexOf('_', cut - 1)) {
-            ResourceLocation parent = new ResourceLocation(id.getNamespace(), path.substring(0, cut));
+            ResourceLocation parent = ResourceLocation.fromNamespaceAndPath(id.getNamespace(), path.substring(0, cut));
             if (!FormPowerRegistry.has(player, parent)) continue;
             var definition = FormPowerRegistry.get(parent);
             if (definition == null || !"apoli:multiple".equals(FormPowerRegistry.typeOf(definition.data()))) continue;

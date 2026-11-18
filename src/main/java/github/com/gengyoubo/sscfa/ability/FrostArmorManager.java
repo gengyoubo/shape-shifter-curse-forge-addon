@@ -119,7 +119,7 @@ public final class FrostArmorManager {
 				// 独??thorn_burst 源保留寒棘狐归属，??NPC 伤害加成读取；专属类型阻止反刺递归??
 				fAttacker.hurt(new net.minecraft.world.damagesource.DamageSource(fAttacker.level().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE).getHolderOrThrow(net.minecraft.resources.ResourceKey.create(
 							net.minecraft.core.registries.Registries.DAMAGE_TYPE,
-							new net.minecraft.resources.ResourceLocation("my_addon", "thorn_burst"))), victim), burstDamage);
+							net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("my_addon", "thorn_burst"))), victim), burstDamage);
 			});
 			// 棘爆反馈：碎冰音 + 雪花爆裂粒子（攻击者处?
 			sw.playSound(null, attacker.getX(), attacker.getY(), attacker.getZ(),

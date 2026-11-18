@@ -23,7 +23,7 @@ public final class AxolotlShifterSpawnHandler {
 	private static boolean initialized;
 
 	private AxolotlShifterSpawnHandler() {}
-
+	@SuppressWarnings("removal")
 	public static void register() {
 		if (initialized) return;
 		initialized = true;

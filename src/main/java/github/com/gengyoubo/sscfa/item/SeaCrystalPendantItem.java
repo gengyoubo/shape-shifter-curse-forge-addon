@@ -33,8 +33,8 @@ public class SeaCrystalPendantItem extends AccessoryItem {
 	}
 
 	// 沉船宝藏?+ 藏宝图（埋藏的宝藏）箱，均以 15% 概率掉落；本饰品无法合成，仅此两种途径获得
-	private static final ResourceLocation SHIPWRECK_TREASURE_LOOT = new ResourceLocation("minecraft", "chests/shipwreck_treasure");
-	private static final ResourceLocation BURIED_TREASURE_LOOT = new ResourceLocation("minecraft", "chests/buried_treasure");
+	private static final ResourceLocation SHIPWRECK_TREASURE_LOOT = ResourceLocation.fromNamespaceAndPath("minecraft", "chests/shipwreck_treasure");
+	private static final ResourceLocation BURIED_TREASURE_LOOT = ResourceLocation.fromNamespaceAndPath("minecraft", "chests/buried_treasure");
 
 	/** 注册海晶荧光坠到沉船宝藏?+ 藏宝图宝藏箱战利品表（各 15% 概率）；本饰品无法合成，仅此两种途径获得?*/
 	public static void registerLootTable() {}

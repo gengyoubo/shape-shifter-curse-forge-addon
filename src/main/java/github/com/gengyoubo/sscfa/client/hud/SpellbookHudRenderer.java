@@ -67,7 +67,7 @@ public class SpellbookHudRenderer {
     private static final SpellbookHudRenderer BEFORE_CHAT = new SpellbookHudRenderer();
 
     private static ResourceLocation texture(String name) {
-        return new ResourceLocation("ssca_neomagic", "textures/gui/spell_hud/" + name + ".png");
+        return ResourceLocation.fromNamespaceAndPath("ssca_neomagic", "textures/gui/spell_hud/" + name + ".png");
     }
 
     /** Called once by InGameHud, immediately before vanilla chat. */

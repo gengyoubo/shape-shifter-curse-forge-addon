@@ -34,7 +34,7 @@ public class IceBarrageSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.ice_barrage");
 
 	public IceBarrageSpell() {
-		super(new ResourceLocation("ssc_addon", "ice_barrage"), SpellRarity.GREEN);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "ice_barrage"), SpellRarity.GREEN);
 	}
 
 	@Override

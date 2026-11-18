@@ -14,7 +14,7 @@ import net.minecraft.world.phys.Vec3;
 /** 月灵光弹：程序化八面体发光体，按变体染色并自转。 */
 public class LunarSpiritBoltRenderer extends EntityRenderer<LunarSpiritBoltEntity> {
     private static final ResourceLocation TEXTURE =
-            new ResourceLocation("my_addon", "textures/entity/moon_spirit_green.png");
+            ResourceLocation.fromNamespaceAndPath("my_addon", "textures/entity/moon_spirit_green.png");
     private static final float BOLT_SIZE = 0.18f;
     private static final Vec3 TOP = new Vec3(0, 1, 0);
     private static final Vec3 BOTTOM = new Vec3(0, -1, 0);

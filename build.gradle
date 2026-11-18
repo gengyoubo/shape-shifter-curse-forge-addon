@@ -96,7 +96,7 @@ dependencies {
     minecraft "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}"
 
     // Required
-    implementation fg.deobf("net.onixary:shape_shifter_curse:${project.ssc_version}")
+    implementation fg.deobf("net.onixary:shape_shifter_curse:1.10.0.10")
     implementation fg.deobf("software.bernie.geckolib:geckolib-forge-${project.minecraft_version}:${project.geckolib_version}")
 
     // Optional: accessories are equipped through Curios when it is installed (same version SSC Forge builds against).
@@ -155,6 +155,16 @@ tasks.register('energyNetworkTest', JavaExec) {
     }
 }
 check.dependsOn energyNetworkTest
+
+tasks.register('spellbookHudLayerTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'github.com.gengyoubo.sscfa.client.hud.SpellbookHudLayerTest'
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+check.dependsOn spellbookHudLayerTest
 
 jar {
     from('LICENSE') {

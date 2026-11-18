@@ -33,7 +33,7 @@ public final class AddonNetwork {
     private static final Logger LOGGER = LoggerFactory.getLogger("ssc_addon/network");
     private static final String PROTOCOL = "1";
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(SscAddonForge.MOD_ID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
+            ResourceLocation.fromNamespaceAndPath(SscAddonForge.MOD_ID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
     @FunctionalInterface
     public interface ServerReceiver {

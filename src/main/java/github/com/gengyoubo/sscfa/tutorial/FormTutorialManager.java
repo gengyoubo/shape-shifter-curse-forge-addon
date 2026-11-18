@@ -14,9 +14,9 @@ import github.com.gengyoubo.sscfa.util.FormUtils;
 
 /** The client asks only with its book open; a displayed tutorial or an OS browser handoff records it. */
 public final class FormTutorialManager {
-    public static final ResourceLocation REQUEST = new ResourceLocation("ssc_addon", "form_tutorial_request");
-    public static final ResourceLocation OFFER = new ResourceLocation("ssc_addon", "form_tutorial_offer");
-    public static final ResourceLocation ACTION = new ResourceLocation("ssc_addon", "form_tutorial_action");
+    public static final ResourceLocation REQUEST = ResourceLocation.fromNamespaceAndPath("ssc_addon", "form_tutorial_request");
+    public static final ResourceLocation OFFER = ResourceLocation.fromNamespaceAndPath("ssc_addon", "form_tutorial_offer");
+    public static final ResourceLocation ACTION = ResourceLocation.fromNamespaceAndPath("ssc_addon", "form_tutorial_action");
     private record Pending(ServerPlayer player, UUID nonce, ResourceLocation form) { }
     private record RequestKey(UUID player, boolean manual) { }
     private record Request(ServerPlayer player, ResourceLocation form, int tick) { }

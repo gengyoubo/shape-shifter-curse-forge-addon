@@ -26,8 +26,8 @@ import java.util.UUID;
  * 网络下发走 {@link AddonNetwork}。异常脉冲（anomaly pressure）依赖异常系统，待其移植后补回。
  */
 public final class DomainManager {
-	public static final ResourceLocation STATE = new ResourceLocation("ssc_addon", "domain_state");
-	public static final ResourceLocation SOUND = new ResourceLocation("ssc_addon", "domain_sound");
+	public static final ResourceLocation STATE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "domain_state");
+	public static final ResourceLocation SOUND = ResourceLocation.fromNamespaceAndPath("ssc_addon", "domain_sound");
 	private static final Map<UUID, Field> FIELDS = new LinkedHashMap<>();
     private static final github.com.gengyoubo.sscfa.network.SnapshotAudience AUDIENCE =
             new github.com.gengyoubo.sscfa.network.SnapshotAudience();

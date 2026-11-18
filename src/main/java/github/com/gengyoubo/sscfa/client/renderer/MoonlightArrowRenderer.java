@@ -52,7 +52,7 @@ public class MoonlightArrowRenderer extends EntityRenderer<SpellMoonlightArrowEn
 
 	@Override
 	public ResourceLocation getTextureLocation(SpellMoonlightArrowEntity entity) {
-		return new ResourceLocation("minecraft", "textures/item/spectral_arrow.png");
+		return ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/spectral_arrow.png");
 	}
 }
 

@@ -22,17 +22,17 @@ public final class EvolutionItemsLoot {
 	/** 目标原版结构箱子战利品表。 */
 	private static final Set<ResourceLocation> TARGET_CHESTS = Set.of(
 			// 沉船（补给舱 + 宝藏舱）
-			new ResourceLocation("minecraft", "chests/shipwreck_supply"),
-			new ResourceLocation("minecraft", "chests/shipwreck_treasure"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/shipwreck_supply"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/shipwreck_treasure"),
 			// 古城
-			new ResourceLocation("minecraft", "chests/ancient_city"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/ancient_city"),
 			// 堡垒遗迹（猪人城堡）4 种箱子
-			new ResourceLocation("minecraft", "chests/bastion_treasure"),
-			new ResourceLocation("minecraft", "chests/bastion_other"),
-			new ResourceLocation("minecraft", "chests/bastion_bridge"),
-			new ResourceLocation("minecraft", "chests/bastion_hoglin_stable"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/bastion_treasure"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/bastion_other"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/bastion_bridge"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/bastion_hoglin_stable"),
 			// 末地船（与末地城宝藏箱共用 end_city_treasure）
-			new ResourceLocation("minecraft", "chests/end_city_treasure")
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/end_city_treasure")
 	);
 
 	/** 每个箱子生成月髓环 / 进化石（二选一）的总概率。 */

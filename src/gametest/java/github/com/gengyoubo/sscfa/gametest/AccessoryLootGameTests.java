@@ -25,7 +25,7 @@ public final class AccessoryLootGameTests {
 
     private static void assertPool(GameTestHelper helper, net.minecraft.world.level.storage.loot.LootDataManager loot,
                                    String table, String pool) {
-        var lootTable = loot.getLootTable(new ResourceLocation("minecraft", table));
+        var lootTable = loot.getLootTable(ResourceLocation.fromNamespaceAndPath("minecraft", table));
         helper.assertTrue(lootTable.getPool(pool) != null, table + " is missing pool " + pool);
     }
 }

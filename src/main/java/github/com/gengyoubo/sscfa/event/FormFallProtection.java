@@ -11,7 +11,7 @@ import net.minecraftforge.fml.common.Mod;
 /** Reject immune landings before vanilla emits the hurt animation and landing damage sound. */
 @Mod.EventBusSubscriber(modid = SscAddonForge.MOD_ID)
 public final class FormFallProtection {
-    private static final ResourceLocation FALL_IMMUNITY = new ResourceLocation("shape-shifter-curse", "fall_immunity");
+    private static final ResourceLocation FALL_IMMUNITY = ResourceLocation.fromNamespaceAndPath("shape-shifter-curse", "fall_immunity");
 
     private FormFallProtection() {}
 

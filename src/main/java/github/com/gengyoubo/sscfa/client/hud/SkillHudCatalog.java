@@ -41,9 +41,9 @@ public final class SkillHudCatalog {
     }
 
     private static final ResourceLocation ICON_INVISIBILITY =
-            new ResourceLocation("my_addon", "textures/gui/skill_icons/invisibility.png");
+            ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/skill_icons/invisibility.png");
     private static final ResourceLocation ICON_WEAKNESS =
-            new ResourceLocation("my_addon", "textures/gui/skill_icons/weakness_spot.png");
+            ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/skill_icons/weakness_spot.png");
 
     private static final Map<String, List<Skill>> FORMS = new HashMap<>();
 
@@ -179,7 +179,7 @@ public final class SkillHudCatalog {
     }
 
     private static ResourceLocation powerId(String path) {
-        return path == null ? null : new ResourceLocation(path.contains(":") ? path : "my_addon:" + path);
+        return path == null ? null : ResourceLocation.parse(path.contains(":") ? path : "my_addon:" + path);
     }
 
     private static Skill skill(String icon, String cooldown, boolean primary) {
@@ -196,7 +196,7 @@ public final class SkillHudCatalog {
 
     private static Skill skill(String icon, String cooldown, String internal, int ticks, String talent,
                                boolean primary, Predicate<Player> condition) {
-        return new Skill(new ResourceLocation("my_addon", "textures/gui/skill_icons/" + icon + ".png"),
+        return new Skill(ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/skill_icons/" + icon + ".png"),
                 powerId(cooldown), powerId(internal), ticks, talent, primary, condition, null);
     }
 

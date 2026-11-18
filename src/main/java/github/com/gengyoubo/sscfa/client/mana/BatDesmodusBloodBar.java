@@ -8,9 +8,9 @@ import net.minecraft.resources.ResourceLocation;
  * 位置复用魔力条配置，吸血蝙蝠形态无魔力条，两者不冲突?
  */
 public class BatDesmodusBloodBar extends SimpleResourceBarRenderer {
-	private static final ResourceLocation TEX_FULL = new ResourceLocation("my_addon", "textures/gui/bat_desmodus_blood_bar_full.png");
-	private static final ResourceLocation TEX_EMPTY = new ResourceLocation("my_addon", "textures/gui/bat_desmodus_blood_bar_empty.png");
-	private static final ResourceLocation RESOURCE_ID = new ResourceLocation("my_addon", "form_bat_desmodus_blood_resource");
+	private static final ResourceLocation TEX_FULL = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/bat_desmodus_blood_bar_full.png");
+	private static final ResourceLocation TEX_EMPTY = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/bat_desmodus_blood_bar_empty.png");
+	private static final ResourceLocation RESOURCE_ID = ResourceLocation.fromNamespaceAndPath("my_addon", "form_bat_desmodus_blood_resource");
 
 	@Override
 	protected ResourceLocation resourceId() {

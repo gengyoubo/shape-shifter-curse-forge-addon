@@ -188,7 +188,7 @@ public final class NeoEffects {
         String identity = "blueprint/" + blueprint.core().name().toLowerCase(Locale.ROOT)
                 + "/" + blueprint.carrier().name().toLowerCase(Locale.ROOT)
                 + "/" + controls + "/" + blueprint.output().name().toLowerCase(Locale.ROOT);
-        return new SpellAnomalyContext(new ResourceLocation("ssca_neomagic", identity),
+        return new SpellAnomalyContext(ResourceLocation.fromNamespaceAndPath("ssca_neomagic", identity),
                 NeoLegacyCasting.element(blueprint.output()).id, blueprint.band() + 1, 0,
                 player.getUUID(), UUID.fromString(active.record.id));
     }

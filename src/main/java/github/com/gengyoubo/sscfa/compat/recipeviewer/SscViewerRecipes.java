@@ -123,7 +123,7 @@ public final class SscViewerRecipes {
                                     ItemStack output, boolean shapeless, boolean dynamic, String note) {
         ResourceLocation source = recipe.getId();
         ResourceLocation id = variant.isEmpty() ? source
-                : new ResourceLocation(source.getNamespace(), source.getPath() + "/" + variant);
+                : ResourceLocation.fromNamespaceAndPath(source.getNamespace(), source.getPath() + "/" + variant);
         return new Crafting(id, grid, output, shapeless, dynamic, note);
     }
 
@@ -200,19 +200,19 @@ public final class SscViewerRecipes {
             brew("infinite_lingering", SscAddon.INFINITE_ENERGY_POTION_SPLASH, Items.DRAGON_BREATH, SscAddon.INFINITE_ENERGY_POTION_LINGERING),
             brew("universal_splash", SscAddon.UNIVERSAL_ENERGY_POTION, Items.GUNPOWDER, SscAddon.UNIVERSAL_ENERGY_POTION_SPLASH),
             brew("universal_lingering", SscAddon.UNIVERSAL_ENERGY_POTION_SPLASH, Items.DRAGON_BREATH, SscAddon.UNIVERSAL_ENERGY_POTION_LINGERING),
-            new Brewing(new ResourceLocation("ssc_addon", "moon_dust_bottle"),
+            new Brewing(ResourceLocation.fromNamespaceAndPath("ssc_addon", "moon_dust_bottle"),
                     PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.AWKWARD),
                     new ItemStack(RegCustomItem.UNTREATED_MOONDUST), new ItemStack(AddonItems.MOON_DUST_BOTTLE.get())),
             brew("moon_dust_splash", AddonItems.MOON_DUST_BOTTLE.get(), Items.GUNPOWDER, AddonItems.MOON_DUST_SPLASH.get()));
     }
 
     private static Brewing brew(String path, Item input, Item ingredient, Item output) {
-        return new Brewing(new ResourceLocation("ssc_addon", path), new ItemStack(input), new ItemStack(ingredient), new ItemStack(output));
+        return new Brewing(ResourceLocation.fromNamespaceAndPath("ssc_addon", path), new ItemStack(input), new ItemStack(ingredient), new ItemStack(output));
     }
 
     public static List<Process> processes() {
         var result = new ArrayList<Process>();
-        result.add(new Process(new ResourceLocation("ssc_addon", "energy_bottling"), new ItemStack(AddonBlocks.ENERGY_BOTTLER.get()),
+        result.add(new Process(ResourceLocation.fromNamespaceAndPath("ssc_addon", "energy_bottling"), new ItemStack(AddonBlocks.ENERGY_BOTTLER.get()),
             List.of(new ItemStack(Items.GLASS_BOTTLE)), EnergyBottlerBlockEntity.makeEnergyBottle(),
             Component.translatable("recipe.ssc_addon.bottling", EnergyBottlerBlockEntity.ENERGY_PER_BOTTLE, EnergyBottlerBlockEntity.CRAFT_TIME / 20)));
         return result;

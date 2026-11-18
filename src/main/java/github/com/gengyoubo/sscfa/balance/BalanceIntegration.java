@@ -34,9 +34,9 @@ import java.util.concurrent.TimeUnit;
  * 单人集成服务端与客户端在同一进程，但两端各持独立的状态与快照，靠 {@link #currentSnapshot()} 按逻辑端读取。</p>
  */
 public final class BalanceIntegration {
-    public static final ResourceLocation PACKET_BALANCE_S2C = new ResourceLocation("my_addon", "balance_sync");
-    public static final ResourceLocation PACKET_BALANCE_ACK = new ResourceLocation("my_addon", "balance_ack");
-    public static final ResourceLocation PACKET_BALANCE_RESYNC = new ResourceLocation("my_addon", "balance_resync");
+    public static final ResourceLocation PACKET_BALANCE_S2C = ResourceLocation.fromNamespaceAndPath("my_addon", "balance_sync");
+    public static final ResourceLocation PACKET_BALANCE_ACK = ResourceLocation.fromNamespaceAndPath("my_addon", "balance_ack");
+    public static final ResourceLocation PACKET_BALANCE_RESYNC = ResourceLocation.fromNamespaceAndPath("my_addon", "balance_resync");
 
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
 

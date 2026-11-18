@@ -93,5 +93,5 @@ public final class SpiderSalticidaePerks {
     }
 
     private static int scaleTicks(int base, double multiplier) { return Math.max(0, (int) Math.ceil(base * multiplier)); }
-    private static ResourceLocation addon(String path) { return new ResourceLocation("my_addon", path); }
+    private static ResourceLocation addon(String path) { return ResourceLocation.fromNamespaceAndPath("my_addon", path); }
 }

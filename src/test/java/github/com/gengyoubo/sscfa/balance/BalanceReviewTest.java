@@ -99,11 +99,11 @@ public final class BalanceReviewTest {
         var low = resourcePack("low");
         var high = resourcePack("high");
         var files = new java.util.LinkedHashMap<net.minecraft.resources.ResourceLocation, List<net.minecraft.server.packs.resources.Resource>>();
-        files.put(new net.minecraft.resources.ResourceLocation("ssc_addon", "balance/z.json"), List.of(resource(low,
+        files.put(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("ssc_addon", "balance/z.json"), List.of(resource(low,
                 "{\"schema_version\":1,\"abilities\":{\"bat_sonic_wave\":{\"damage\":5}}}")));
-        files.put(new net.minecraft.resources.ResourceLocation("ssc_addon", "balance/a.json"), List.of(resource(high,
+        files.put(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("ssc_addon", "balance/a.json"), List.of(resource(high,
                 "{\"schema_version\":1,\"abilities\":{\"bat_sonic_wave\":{\"damage\":9}}}")));
-        files.put(new net.minecraft.resources.ResourceLocation("other", "balance/ignored.json"), List.of(resource(high, "invalid")));
+        files.put(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("other", "balance/ignored.json"), List.of(resource(high, "invalid")));
         var manager = (net.minecraft.server.packs.resources.ResourceManager) java.lang.reflect.Proxy.newProxyInstance(
                 BalanceReviewTest.class.getClassLoader(), new Class<?>[]{net.minecraft.server.packs.resources.ResourceManager.class},
                 (proxy, method, arguments) -> switch (method.getName()) {
@@ -128,7 +128,7 @@ public final class BalanceReviewTest {
         check(layers.size() == 3, "resource loader finds two canonical files and ignores other namespaces");
         check(BalanceSnapshot.fromTree(schema, BalanceMerge.merge(layers), "packs")
                 .getDouble("abilities.bat_sonic_wave", "damage") == 9, "higher pack beats lower pack even with earlier filename");
-        files.put(new net.minecraft.resources.ResourceLocation("ssc_addon", "balance/broken.json"), List.of(resource(high, "[]")));
+        files.put(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("ssc_addon", "balance/broken.json"), List.of(resource(high, "[]")));
         reject(() -> loader.readLayers(manager), "one bad resource rejects entire candidate");
     }
     private static net.minecraft.server.packs.PackResources resourcePack(String name) {

@@ -51,7 +51,7 @@ public class SpaceBlinkSpell extends Spell {
 	}
 
 	public SpaceBlinkSpell() {
-		super(new ResourceLocation("ssc_addon", "space_blink"), SpellRarity.GREEN);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "space_blink"), SpellRarity.GREEN);
 	}
 
 	/** 当前有效瞬移距离（客户端预览/服务端结算共用）。 */

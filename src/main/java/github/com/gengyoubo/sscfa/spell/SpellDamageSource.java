@@ -19,7 +19,7 @@ import net.minecraft.world.entity.Entity;
 public final class SpellDamageSource {
 
 	public static final ResourceKey<DamageType> SPELL_DAMAGE =
-			ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("ssc_addon", "spell_damage"));
+			ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("ssc_addon", "spell_damage"));
 
 	private static volatile Holder<DamageType> holder;
 

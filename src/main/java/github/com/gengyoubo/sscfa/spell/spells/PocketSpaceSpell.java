@@ -11,7 +11,7 @@ import net.minecraft.world.item.ItemStack;
 
 public final class PocketSpaceSpell extends Spell {
 	public PocketSpaceSpell() {
-		super(new ResourceLocation("ssc_addon", "pocket_space"), SpellRarity.WHITE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "pocket_space"), SpellRarity.WHITE);
 	}
 
 	@Override

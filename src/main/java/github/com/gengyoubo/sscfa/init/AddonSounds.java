@@ -19,6 +19,6 @@ public final class AddonSounds {
     private AddonSounds() {}
 
     private static RegistryObject<SoundEvent> sound(String id) {
-        return SOUNDS.register(id, () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(SscAddonForge.MOD_ID, id)));
+        return SOUNDS.register(id, () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(SscAddonForge.MOD_ID, id)));
     }
 }

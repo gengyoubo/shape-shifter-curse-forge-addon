@@ -54,7 +54,7 @@ public final class MancianimaTeleport {
 	public static final int MANA_REGEN_PAUSE_TICKS = 100;
 	/** sp_mana_regen 的暂停计时子资源（apoli:multiple 子????power_id + "_" + sub_key??*/
 	private static final net.minecraft.resources.ResourceLocation MANA_REGEN_PAUSE_RES =
-			new net.minecraft.resources.ResourceLocation("my_addon", "form_familiar_fox_sp_mana_regen_regen_pause_timer");
+			net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("my_addon", "form_familiar_fox_sp_mana_regen_regen_pause_timer");
 	// 阶??5：运行时快照读取（abilities.mancianima_teleport；快照未初始化回退默认常量）?
 	// MANA_COST=5 ??RED_LINK_CD_TICKS=200 ??client/hud/SkillHudCatalog 引用——HUD 是展示阈值??
 	// 那两处保持常量引用不改；服务端消费一律??BAL??

@@ -66,6 +66,6 @@ public final class GoldenSandstormPerks {
     }
 
     private static ResourceLocation addon(String path) {
-        return new ResourceLocation("my_addon", path);
+        return ResourceLocation.fromNamespaceAndPath("my_addon", path);
     }
 }

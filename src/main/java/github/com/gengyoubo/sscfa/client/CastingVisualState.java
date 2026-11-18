@@ -76,8 +76,8 @@ public final class CastingVisualState {
 			int schoolColor = active ? buf.readInt() : 0;
 			int rarityColor = active ? buf.readInt() : 0;
 			ResourceLocation spellId = active ? buf.readResourceLocation() : null;
-			boolean explosion = spellId != null && spellId.equals(new ResourceLocation("ssc_addon", "explosion"));
-			boolean deathFinale = spellId != null && spellId.equals(new ResourceLocation("ssc_addon", "death_finale"));
+			boolean explosion = spellId != null && spellId.equals(ResourceLocation.fromNamespaceAndPath("ssc_addon", "explosion"));
+			boolean deathFinale = spellId != null && spellId.equals(ResourceLocation.fromNamespaceAndPath("ssc_addon", "death_finale"));
 			Minecraft client = Minecraft.getInstance();
 			checkWorld(client);
 			if (client.level == null) return;

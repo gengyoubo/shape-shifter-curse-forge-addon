@@ -131,7 +131,7 @@ public final class BatSpellLink {
     private static void tick(MinecraftServer server){
         Store s=Store.get(server);Iterator<Group> groups=s.saved.groups.values().iterator();
         while(groups.hasNext()){
-            Group g=groups.next();if(g.worldKey==null)g.worldKey=ResourceKey.create(Registries.DIMENSION,new ResourceLocation(g.world));ServerLevel world=server.getLevel(g.worldKey);
+            Group g=groups.next();if(g.worldKey==null)g.worldKey=ResourceKey.create(Registries.DIMENSION,ResourceLocation.parse(g.world));ServerLevel world=server.getLevel(g.worldKey);
             if(world==null)continue;long now=world.getGameTime();
             if(now>=g.expires){g.nodes.values().forEach(s::unindex);groups.remove();s.setDirty();continue;}
             ServerPlayer owner=server.getPlayerList().getPlayer(g.cast.owner);

@@ -57,7 +57,7 @@ private void ensureResearchMigration() {
     research.migrated = true;
 }
 
-public static final ResourceLocation SYNC = new ResourceLocation("ssc_addon", "formation_knowledge_sync");
+public static final ResourceLocation SYNC = ResourceLocation.fromNamespaceAndPath("ssc_addon", "formation_knowledge_sync");
 private static final Map<java.util.UUID, FormationKnowledgeComponent> CLIENT_STORE = new java.util.concurrent.ConcurrentHashMap<>();
 public static FormationKnowledgeComponent get(Player player) {
 if (!player.level().isClientSide() && player.getServer() != null) {

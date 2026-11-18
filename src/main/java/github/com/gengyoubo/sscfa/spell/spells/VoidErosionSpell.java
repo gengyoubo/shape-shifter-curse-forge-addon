@@ -34,7 +34,7 @@ public class VoidErosionSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.void_erosion");
 
 	public VoidErosionSpell() {
-		super(new ResourceLocation("ssc_addon", "void_erosion"), SpellRarity.GREEN);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "void_erosion"), SpellRarity.GREEN);
 	}
 
 	@Override

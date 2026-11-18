@@ -67,9 +67,9 @@ public final class AddonAnomalyEffects {
     public static final RegistryObject<MobEffect> SUMMON_WEAKNESS = EFFECTS.register("anomaly_summon_weakness", () -> new AnomalyMarkerEffect(0xA48FBC));
     public static final RegistryObject<MobEffect> FIRE_ZONE = EFFECTS.register("anomaly_fire_zone", () -> new AnomalyMarkerEffect(0xE57F46));
     public static final ResourceKey<DamageType> FIRE_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
-            new ResourceLocation("ssc_addon", "anomaly_fire"));
+            ResourceLocation.fromNamespaceAndPath("ssc_addon", "anomaly_fire"));
     public static final ResourceKey<DamageType> MAGIC_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
-            new ResourceLocation("ssc_addon", "anomaly_magic"));
+            ResourceLocation.fromNamespaceAndPath("ssc_addon", "anomaly_magic"));
 
     @FunctionalInterface public interface BaseExecutor { void apply(LivingEntity target, SpellAnomalyContext context); }
     @FunctionalInterface public interface ReactionExecutor { void apply(LivingEntity target, SpellAnomalyContext context); }

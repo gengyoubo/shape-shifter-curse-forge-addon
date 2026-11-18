@@ -24,7 +24,7 @@ import org.joml.Matrix4f;
 
 /** 寒棘狐「凝棘」蓄力法阵：青蓝雪花法阵 + 中央预览冰锥。 */
 public class FrostArrayRenderer extends EntityRenderer<FrostArrayEntity> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("minecraft", "textures/misc/white.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/misc/white.png");
 
     private static final float[] ICE_CYAN = {0.45f, 0.85f, 1.00f, 0.85f};
     private static final float[] ICE_BLUE = {0.35f, 0.60f, 1.00f, 0.80f};

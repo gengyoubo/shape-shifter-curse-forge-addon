@@ -30,7 +30,7 @@ public class SpaceStrideSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.space_stride");
 
 	public SpaceStrideSpell() {
-		super(new ResourceLocation("ssc_addon", "space_stride"), SpellRarity.WHITE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "space_stride"), SpellRarity.WHITE);
 	}
 
 	@Override

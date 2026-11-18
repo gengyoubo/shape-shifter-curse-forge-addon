@@ -22,7 +22,7 @@ import java.util.UUID;
 
 /** 服务端授权的持续视觉租约；实际粒子表现由客户端按同一配方重放。 */
 public final class SustainedVisuals {
-    public static final ResourceLocation STATE = new ResourceLocation("ssc_addon", "sustained_visuals_v2");
+    public static final ResourceLocation STATE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "sustained_visuals_v2");
 
     public record Key(UUID source, Kind kind) {}
 

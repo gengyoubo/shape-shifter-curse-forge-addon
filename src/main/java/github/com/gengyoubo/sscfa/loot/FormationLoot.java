@@ -28,21 +28,21 @@ public final class FormationLoot {
 
 	/** 目标原版结构箱子战利品表（与魔法卷轴同域）。 */
 	private static final ResourceLocation[] TARGET_CHESTS = {
-			new ResourceLocation("minecraft", "chests/simple_dungeon"),
-			new ResourceLocation("minecraft", "chests/abandoned_mineshaft"),
-			new ResourceLocation("minecraft", "chests/igloo_chest"),
-			new ResourceLocation("minecraft", "chests/woodland_mansion"),
-			new ResourceLocation("minecraft", "chests/ruined_portal"),
-			new ResourceLocation("minecraft", "chests/shipwreck_treasure"),
-			new ResourceLocation("minecraft", "chests/buried_treasure"),
-			new ResourceLocation("minecraft", "chests/underwater_ruin_small"),
-			new ResourceLocation("minecraft", "chests/underwater_ruin_big"),
-			new ResourceLocation("minecraft", "chests/stronghold_library"),
-			new ResourceLocation("minecraft", "chests/stronghold_corridor"),
-			new ResourceLocation("minecraft", "chests/stronghold_crossing"),
-			new ResourceLocation("minecraft", "chests/ancient_city"),
-			new ResourceLocation("minecraft", "chests/bastion_other"),
-			new ResourceLocation("minecraft", "chests/end_city_treasure")
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/simple_dungeon"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/abandoned_mineshaft"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/igloo_chest"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/woodland_mansion"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/ruined_portal"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/shipwreck_treasure"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/buried_treasure"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/underwater_ruin_small"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/underwater_ruin_big"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/stronghold_library"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/stronghold_corridor"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/stronghold_crossing"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/ancient_city"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/bastion_other"),
+			ResourceLocation.fromNamespaceAndPath("minecraft", "chests/end_city_treasure")
 	};
 
 	public static void register() {

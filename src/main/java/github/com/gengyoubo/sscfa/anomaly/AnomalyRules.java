@@ -18,7 +18,7 @@ import java.util.Map;
 
 /** 数据包配置解析一次；伤害/命中路径只索引不可变快照。 */
 public final class AnomalyRules extends SimplePreparableReloadListener<Void> {
-    private static final ResourceLocation RESOURCE = new ResourceLocation("ssc_addon", "anomaly/defaults.json");
+    private static final ResourceLocation RESOURCE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "anomaly/defaults.json");
     private static final String[] REQUIRED_SPELLS = {
             "fire_bolt", "flame_nova", "meteor", "explosion", "frost_spike", "ice_barrage", "frost_nova",
             "frost_armor", "moonlight_arrow", "lunar_mend", "lunar_veil", "lunar_phase", "curse_mark",

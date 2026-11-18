@@ -34,7 +34,7 @@ public final class MistFormDimensions {
 	 * 低优先级：覆盖形态自身的尺寸缩放。Forge 在实体构造函数里也会发这个事件，那时效果表还没建好
 	 * （{@code getActiveEffectsMap()} 为 null），直接跳过。
 	 */
-	@SubscribeEvent(priority = EventPriority.LOW)
+	@SubscribeEvent(priority = EventPriority.LOW)@SuppressWarnings("removal")
 	public static void onSize(EntityEvent.Size event) {
 		if (event.getEntity() instanceof Player player && player.getActiveEffectsMap() != null
 				&& AddonEffects.MIST_FORM.isPresent() && player.hasEffect(AddonEffects.MIST_FORM.get())) {

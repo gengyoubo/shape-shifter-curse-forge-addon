@@ -5,9 +5,9 @@ import net.minecraft.resources.ResourceLocation;
 
 /** The research table's actual PNG skin; preserve pixel borders when resizing the tutorial. */
 final class FormTutorialTextures {
-    private static final ResourceLocation WINDOW = new ResourceLocation("ssc_addon", "textures/gui/spell_research_background.png");
-    private static final ResourceLocation INSET = new ResourceLocation("ssc_addon", "textures/gui/magic_slot_panel.png");
-    private static final ResourceLocation THUMB = new ResourceLocation("ssc_addon", "textures/gui/scroll_thumb.png");
+    private static final ResourceLocation WINDOW = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/spell_research_background.png");
+    private static final ResourceLocation INSET = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/magic_slot_panel.png");
+    private static final ResourceLocation THUMB = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/scroll_thumb.png");
 
     private FormTutorialTextures() {}
 

@@ -37,7 +37,7 @@ public record SpellAnomalyContext(ResourceLocation spellId, String element, int 
                 || !nbt.contains("Amount", Tag.TAG_ANY_NUMERIC)
                 || !nbt.hasUUID("Caster") || !nbt.hasUUID("Cast")) return null;
         try {
-            return new SpellAnomalyContext(new ResourceLocation(nbt.getString("Spell")), nbt.getString("Element"),
+            return new SpellAnomalyContext(ResourceLocation.parse(nbt.getString("Spell")), nbt.getString("Element"),
                     nbt.getInt("Level"), nbt.getDouble("Amount"), nbt.getUUID("Caster"), nbt.getUUID("Cast"));
         } catch (IllegalArgumentException invalid) {
             return null;

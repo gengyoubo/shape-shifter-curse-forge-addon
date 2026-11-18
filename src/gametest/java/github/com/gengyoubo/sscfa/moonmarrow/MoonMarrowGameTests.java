@@ -26,7 +26,7 @@ public final class MoonMarrowGameTests {
     @GameTest(template = "gametest_floor")
     public static void branchGateRequiresBothUnlocks(GameTestHelper helper) {
         var player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "ssca_moon_gate"));
-        var oldId = new ResourceLocation("my_addon", "upgrade_axolotl");
+        var oldId = ResourceLocation.fromNamespaceAndPath("my_addon", "upgrade_axolotl");
         helper.assertTrue(FormManager.setForm(player, oldId), "upgrade axolotl must exist");
         var data = EvolutionManager.get(player);
         data.setRoute("axolotl");

@@ -41,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>每个玩家的状态按 UUID 存在本类里；形态切换、离线时由 {@link #onRemoved} 清理。特效走服务端直接发原版粒子。</p>
  */
 public final class MistFormAbilityPower implements SscPowerType {
-	public static final ResourceLocation TYPE = new ResourceLocation("my_addon", "mist_form");
+	public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("my_addon", "mist_form");
 
 	private static final String SCOPE = "abilities.bat_mist_burst";
 	private static final int MIST_BURST_DELAY = 20;

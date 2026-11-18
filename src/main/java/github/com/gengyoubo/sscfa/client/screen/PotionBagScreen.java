@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 public class PotionBagScreen extends AbstractContainerScreen<PotionBagScreenHandler> {
-	private static final ResourceLocation TEXTURE = new ResourceLocation("ssc_addon", "textures/gui/container/potion_bag.png");
+	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/container/potion_bag.png");
 
 	public PotionBagScreen(PotionBagScreenHandler handler, Inventory inventory, Component title) {
 		super(handler, inventory, title);

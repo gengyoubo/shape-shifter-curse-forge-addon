@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link #onRemoved} 清理。</p>
  */
 public final class TrueInvisibilityAbilityPower implements SscPowerType {
-	public static final ResourceLocation TYPE = new ResourceLocation("my_addon", "true_invisibility");
+	public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("my_addon", "true_invisibility");
 
 	private static final int DEFAULT_DURATION = 100;
 

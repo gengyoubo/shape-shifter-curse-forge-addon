@@ -49,7 +49,7 @@ public final class FormIdMigration {
     private FormIdMigration() { }
 
     private static void alias(Map<ResourceLocation, ResourceLocation> aliases, String oldPath, String newPath) {
-        aliases.put(new ResourceLocation("my_addon", oldPath), new ResourceLocation("my_addon", newPath));
+        aliases.put(ResourceLocation.fromNamespaceAndPath("my_addon", oldPath), ResourceLocation.fromNamespaceAndPath("my_addon", newPath));
     }
 
     public static Map<ResourceLocation, ResourceLocation> aliases() {

@@ -29,11 +29,11 @@ import snownee.jade.api.config.IPluginConfig;
 
 @WailaPlugin("ssc_addon")
 public final class SSCA_JadePlugin implements IWailaPlugin {
-    private static final ResourceLocation ENERGY_UID = new ResourceLocation("ssc_addon", "energy");
-    private static final ResourceLocation RESEARCH_UID = new ResourceLocation("ssc_addon", "research");
-    private static final ResourceLocation ALTAR_UID = new ResourceLocation("ssc_addon", "altar");
-    private static final ResourceLocation TOOLTIP_UID = new ResourceLocation("ssc_addon", "block_tooltip");
-    private static final ResourceLocation TIDAL_ORB_UID = new ResourceLocation("ssc_addon", "tidal_orb");
+    private static final ResourceLocation ENERGY_UID = ResourceLocation.fromNamespaceAndPath("ssc_addon", "energy");
+    private static final ResourceLocation RESEARCH_UID = ResourceLocation.fromNamespaceAndPath("ssc_addon", "research");
+    private static final ResourceLocation ALTAR_UID = ResourceLocation.fromNamespaceAndPath("ssc_addon", "altar");
+    private static final ResourceLocation TOOLTIP_UID = ResourceLocation.fromNamespaceAndPath("ssc_addon", "block_tooltip");
+    private static final ResourceLocation TIDAL_ORB_UID = ResourceLocation.fromNamespaceAndPath("ssc_addon", "tidal_orb");
 
     @Override
     public void register(IWailaCommonRegistration registration) {
@@ -74,7 +74,7 @@ public final class SSCA_JadePlugin implements IWailaPlugin {
                 data.putInt("Capacity", extractor.getEnergyCapacity());
             }
         }
-        @Override public ResourceLocation getUid() { return new ResourceLocation("ssc_addon", "extractor_energy"); }
+        @Override public ResourceLocation getUid() { return ResourceLocation.fromNamespaceAndPath("ssc_addon", "extractor_energy"); }
     }
 
     private static final class BottlerEnergyProvider extends BaseBlockProvider {
@@ -87,7 +87,7 @@ public final class SSCA_JadePlugin implements IWailaPlugin {
                 data.putInt("EnergyPerBottle", EnergyBottlerBlockEntity.ENERGY_PER_BOTTLE);
             }
         }
-        @Override public ResourceLocation getUid() { return new ResourceLocation("ssc_addon", "bottler_energy"); }
+        @Override public ResourceLocation getUid() { return ResourceLocation.fromNamespaceAndPath("ssc_addon", "bottler_energy"); }
     }
 
     private static final class ResearchProvider extends BaseBlockProvider {

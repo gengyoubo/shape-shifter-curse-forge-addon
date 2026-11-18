@@ -38,7 +38,7 @@ public class SummonLunarSpiritSpell extends Spell {
 	public static final int CONTRACT_CAPACITY = 6;
 
 	public SummonLunarSpiritSpell() {
-		super(new ResourceLocation("ssc_addon", "summon_lunar_spirit"), SpellRarity.BLUE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "summon_lunar_spirit"), SpellRarity.BLUE);
 	}
 
 	@Override
@@ -76,7 +76,7 @@ public class SummonLunarSpiritSpell extends Spell {
 				+ (level - 1) * BAL.i("life_per_level", LIFE_PER_LEVEL);
         var creatingCast = github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.current();
         var boltAnomaly = creatingCast == null ? null : new github.com.gengyoubo.sscfa.anomaly.SpellAnomalyContext(
-                new ResourceLocation("ssc_addon", "summon_lunar_spirit_bolt"), "summon", level,
+                ResourceLocation.fromNamespaceAndPath("ssc_addon", "summon_lunar_spirit_bolt"), "summon", level,
                 github.com.gengyoubo.sscfa.anomaly.AnomalyRules.syntheticAmount("summon_lunar_spirit_bolt", level),
                 creatingCast.casterUUID(), creatingCast.castUUID());
 		for (int i = 0; i < count; i++) {

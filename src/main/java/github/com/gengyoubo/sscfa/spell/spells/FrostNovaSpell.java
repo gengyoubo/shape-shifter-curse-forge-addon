@@ -32,7 +32,7 @@ public class FrostNovaSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.frost_nova");
 
 	public FrostNovaSpell() {
-		super(new ResourceLocation("ssc_addon", "frost_nova"), SpellRarity.GREEN);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "frost_nova"), SpellRarity.GREEN);
 	}
 
 	@Override

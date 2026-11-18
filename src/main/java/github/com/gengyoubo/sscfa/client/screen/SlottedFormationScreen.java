@@ -100,7 +100,7 @@ public final class SlottedFormationScreen extends AbstractContainerScreen<SpellR
     public void projectUnlocked(String spell,int selectedLevel){
         requestedProjection=spell;level=Math.max(1,Math.min(5,selectedLevel));slots=RuneLayout.empty(level);
     }
-    private static ResourceLocation image(String name){return new ResourceLocation("ssc_addon","textures/gui/formation_research/"+name+".png");}
+    private static ResourceLocation image(String name){return ResourceLocation.fromNamespaceAndPath("ssc_addon","textures/gui/formation_research/"+name+".png");}
     private static Component text(String key,Object...args){return SlottedResearchManager.text(key,args);}
     @Override protected void init(){
         super.init();this.topPos=(this.height-this.imageHeight-28)/2+28;handoff=false;pageButtons.clear();studyButtons.clear();dragging=false;paletteScrolling=false;paletteDragging=false;

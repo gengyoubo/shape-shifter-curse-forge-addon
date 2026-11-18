@@ -23,7 +23,7 @@ import net.minecraft.sounds.SoundSource;
 public class SpaceRecallSpell extends Spell {
 
 	public SpaceRecallSpell() {
-		super(new ResourceLocation("ssc_addon", "space_recall"), SpellRarity.BLUE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "space_recall"), SpellRarity.BLUE);
 	}
 
 	@Override

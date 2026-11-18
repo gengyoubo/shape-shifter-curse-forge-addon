@@ -38,7 +38,7 @@ public class DreadWhisperSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.dread_whisper");
 
 	public DreadWhisperSpell() {
-		super(new ResourceLocation("ssc_addon", "dread_whisper"), SpellRarity.GREEN);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "dread_whisper"), SpellRarity.GREEN);
 	}
     @Override public boolean supportsCurseChain(){return true;}
 

@@ -60,7 +60,7 @@ public final class MancianimaMarkManager {
 	}
 
 	/** S2C 包：将本地玩家持有的标记同步到客户端，用?entity_glow */
-	public static final ResourceLocation PACKET_MARK_SYNC = new ResourceLocation("ssc_addon", "mancianima_mark_sync");
+	public static final ResourceLocation PACKET_MARK_SYNC = ResourceLocation.fromNamespaceAndPath("ssc_addon", "mancianima_mark_sync");
 
 	public static final class Mark {
 		public final UUID targetUuid;
@@ -98,7 +98,7 @@ public final class MancianimaMarkManager {
 	public static final double UPGRADE_FOX_MANA_REGEN_AMOUNT = 1.0;
 	/** 进化使魔 mana 回复暂停计时器资??id（常量复用，避免??tick 现场构??Identifier??*/
 	private static final ResourceLocation UPGRADE_FOX_MANA_REGEN_PAUSE_TIMER =
-			new ResourceLocation("my_addon", "form_upgrade_familiar_fox_mana_regen_pause_pause_timer");
+			ResourceLocation.fromNamespaceAndPath("my_addon", "form_upgrade_familiar_fox_mana_regen_pause_pause_timer");
 
 	// 阶??5：运行时快照读取（abilities.mancianima_mark；快照未初始化回退默认常量???
 	private static final BalanceReader BAL = new BalanceReader("abilities.mancianima_mark");

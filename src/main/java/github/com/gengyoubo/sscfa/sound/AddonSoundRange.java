@@ -38,7 +38,7 @@ public final class AddonSoundRange {
     public static SoundEvent extend(SoundEvent event, float callVolume) {
         if (isExtended(event, callVolume)) return event;
         ResourceLocation id = event.getLocation();
-        ResourceLocation marker = new ResourceLocation("ssc_addon", PREFIX + id.getNamespace() + "/" + id.getPath());
+        ResourceLocation marker = ResourceLocation.fromNamespaceAndPath("ssc_addon", PREFIX + id.getNamespace() + "/" + id.getPath());
         return SoundEvent.createFixedRangeEvent(marker, (float) SoundRangeRules.distance(event.getRange(callVolume)));
     }
 

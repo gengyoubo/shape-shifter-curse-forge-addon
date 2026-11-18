@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 本类只负责回答「该实体现在有没有这个能力」。</p>
  */
 public final class EffectEfficiencyReductionPower implements SscPowerType {
-    public static final ResourceLocation TYPE = new ResourceLocation("ssc_addon", "effect_efficiency_reduction");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "effect_efficiency_reduction");
 
     private static final Set<UUID> ACTIVE = ConcurrentHashMap.newKeySet();
 

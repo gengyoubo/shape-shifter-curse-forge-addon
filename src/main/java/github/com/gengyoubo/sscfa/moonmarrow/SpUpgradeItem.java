@@ -33,10 +33,10 @@ import java.util.List;
  * 形态映射与剧情/进化挂钩见 {@link MoonMarrowRing}。
  */
 public class SpUpgradeItem extends Item {
-	public static final ResourceKey<DamageType> CURSED_EROSION = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("my_addon", "cursed_erosion"));
-	public static final ResourceKey<DamageType> CURSED_BURST = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("my_addon", "cursed_burst"));
-	private static final ResourceLocation ADV_SUCCESS = new ResourceLocation("ssc_addon", "tonight_moon_beautiful");
-	private static final ResourceLocation ADV_BOOM = new ResourceLocation("ssc_addon", "boom_boom_boom");
+	public static final ResourceKey<DamageType> CURSED_EROSION = ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("my_addon", "cursed_erosion"));
+	public static final ResourceKey<DamageType> CURSED_BURST = ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("my_addon", "cursed_burst"));
+	private static final ResourceLocation ADV_SUCCESS = ResourceLocation.fromNamespaceAndPath("ssc_addon", "tonight_moon_beautiful");
+	private static final ResourceLocation ADV_BOOM = ResourceLocation.fromNamespaceAndPath("ssc_addon", "boom_boom_boom");
 	private static final String RED_EXPIRE_TAG = "ssc_addon_red_expire:";
 	private static final int RED_DURATION_TICKS = 12000;
 

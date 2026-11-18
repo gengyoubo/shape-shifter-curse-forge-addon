@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
  * 新旧原版都能编译。目前远距扑袭入口与其附属强化均按用户要求暂时停用。</p>
  */
 public final class SscPerkIds {
-    public static final ResourceLocation OCELOT_LONG_POUNCE = new ResourceLocation("shape-shifter-curse", "ocelot_long_pounce");
+    public static final ResourceLocation OCELOT_LONG_POUNCE = ResourceLocation.fromNamespaceAndPath("shape-shifter-curse", "ocelot_long_pounce");
 
     private SscPerkIds() { }
 }

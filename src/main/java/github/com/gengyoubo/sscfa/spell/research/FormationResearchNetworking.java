@@ -8,7 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.*;
 
 public final class FormationResearchNetworking {
-    public static final ResourceLocation ACTION = new ResourceLocation("ssc_addon", "formation_research_action"), STATE = new ResourceLocation("ssc_addon", "formation_research_state");
+    public static final ResourceLocation ACTION = ResourceLocation.fromNamespaceAndPath("ssc_addon", "formation_research_action"), STATE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "formation_research_state");
     private static final Map<UUID, Long> LAST = new HashMap<>();
     public static void register() {
         github.com.gengyoubo.sscfa.network.AddonNetwork.registerServerReceiver(ACTION, (player, buf) -> {

@@ -20,7 +20,7 @@ import java.util.UUID;
 
 /** 把「每 tick 递减」的资源倒计时批量同步给附近客户端，客户端按服务端时间锚本地预测。 */
 public final class CountdownSync {
-    public static final ResourceLocation STATE = new ResourceLocation("ssc_addon", "countdowns_v1");
+    public static final ResourceLocation STATE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "countdowns_v1");
 
     public record Key(UUID owner, ResourceLocation resource) {}
 

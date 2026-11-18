@@ -17,7 +17,7 @@ import net.minecraft.world.entity.player.Inventory;
 public class EnergyBottlerScreen extends AbstractContainerScreen<EnergyBottlerScreenHandler> {
 
 	/** 背景图资源（176x184：含边框/面板/全部槽位，坐标与槽位一一对应）。 */
-	private static final ResourceLocation BACKGROUND = new ResourceLocation("ssc_addon", "textures/gui/container/energy_bottler.png");
+	private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/container/energy_bottler.png");
 
 	private static final int ENERGY_BAR_X = 8;
 	private static final int ENERGY_BAR_Y = 17;

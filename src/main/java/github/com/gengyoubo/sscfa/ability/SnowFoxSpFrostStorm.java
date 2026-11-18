@@ -40,9 +40,9 @@ public class SnowFoxSpFrostStorm {
             new github.com.gengyoubo.sscfa.balance.BalanceReader("abilities.snow_fox_sp_frost_storm");
     //未使? private static final int COOLDOWN = 600;  30秒CD = 600tick（CD 已回?power JSON 原生管理??
     
-    private static final ResourceLocation RESOURCE_ID = new ResourceLocation("my_addon", "form_snow_fox_sp_resource");
+    private static final ResourceLocation RESOURCE_ID = ResourceLocation.fromNamespaceAndPath("my_addon", "form_snow_fox_sp_resource");
     public static final String SKILL_ID = "my_addon:form_snow_fox_sp_ranged_secondary";
-    private static final ResourceLocation REGEN_COOLDOWN_ID = new ResourceLocation("my_addon", "form_snow_fox_sp_frost_regen_cooldown_resource");
+    private static final ResourceLocation REGEN_COOLDOWN_ID = ResourceLocation.fromNamespaceAndPath("my_addon", "form_snow_fox_sp_frost_regen_cooldown_resource");
     
     /**
      * 开始蓄力（点按技能键时调用）

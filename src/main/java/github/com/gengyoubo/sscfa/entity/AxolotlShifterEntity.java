@@ -87,7 +87,7 @@ public class AxolotlShifterEntity extends PathfinderMob implements GeoEntity {
 	private static final float BURST_RADIUS = BURST_POWER * 2.0f;
 	private static final int BURST_MOISTURE_COST = 15;
 	private static final TagKey<EntityType<?>> WATER_EXPLODE_IMMUNE =
-			TagKey.create(Registries.ENTITY_TYPE, new ResourceLocation("shape-shifter-curse", "water_explode_immune"));
+			TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath("shape-shifter-curse", "water_explode_immune"));
 
 	public static final int MAX_MOISTURE = 300;
 	private static final int MOISTURE_DRAIN_PER_SEC = 3;
@@ -116,9 +116,9 @@ public class AxolotlShifterEntity extends PathfinderMob implements GeoEntity {
 	private static final UUID MOISTURE_HEALTH_UUID = UUID.fromString("8e6e6b3a-1c2d-4e5f-9a8b-7c6d5e4f3a2b");
 
 	private static final ResourceKey<DamageType> ATTACK_DAMAGE_KEY =
-			ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("ssc_addon", "axolotl_shifter_attack"));
+			ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("ssc_addon", "axolotl_shifter_attack"));
 	private static final ResourceKey<DamageType> THIRST_DAMAGE_KEY =
-			ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("ssc_addon", "axolotl_shifter_thirst"));
+			ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("ssc_addon", "axolotl_shifter_thirst"));
 
 	private static final DustParticleOptions DEEP_BLUE_DUST =
 			new DustParticleOptions(new Vector3f(0.11f, 0.18f, 0.69f), 2.0f);

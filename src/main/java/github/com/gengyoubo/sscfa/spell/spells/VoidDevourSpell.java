@@ -32,7 +32,7 @@ public class VoidDevourSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.void_devour");
 
 	public VoidDevourSpell() {
-		super(new ResourceLocation("ssc_addon", "void_devour"), SpellRarity.BLUE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "void_devour"), SpellRarity.BLUE);
 	}
 
 	/** 按住瞄准型：最大施法距离（含等级缩放；客户端按住施法键显示落点预览圈，松开施放）。 */

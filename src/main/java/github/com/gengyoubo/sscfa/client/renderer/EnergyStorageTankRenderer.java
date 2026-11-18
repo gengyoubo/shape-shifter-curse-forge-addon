@@ -46,7 +46,7 @@ public class EnergyStorageTankRenderer implements BlockEntityRenderer<EnergyStor
 	private static final int FULL_BRIGHT = 0xF000F0;
 
 	/** 能量液体帧动画贴图（方块图集精灵，图集动画器自动逐帧播放）。 */
-	private static final ResourceLocation ENERGY_LIQUID = new ResourceLocation("ssc_addon", "block/energy_liquid");
+	private static final ResourceLocation ENERGY_LIQUID = ResourceLocation.fromNamespaceAndPath("ssc_addon", "block/energy_liquid");
 
 	public EnergyStorageTankRenderer(BlockEntityRendererProvider.Context ctx) {
 	}

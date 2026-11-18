@@ -224,7 +224,7 @@ public final class SscAddonNetworking {
 	private SscAddonNetworking() {}
 
 	private static ResourceLocation id(String path) {
-		return new ResourceLocation("my_addon", path);
+		return ResourceLocation.fromNamespaceAndPath("my_addon", path);
 	}
 
 	/** 该玩家是否在限频间隔内重复发包；返回 true 时丢弃这个包。 */

@@ -59,7 +59,7 @@ public final class MancianimaPrimary {
 	public static final float DAMAGE_CAP = 37.0f;
 	public static final int MANA_REGEN_PAUSE_TICKS = 100;    // 5s
 	private static final net.minecraft.resources.ResourceLocation MANA_REGEN_PAUSE_RES =
-			new net.minecraft.resources.ResourceLocation("my_addon", "form_familiar_fox_sp_mana_regen_regen_pause_timer");
+			net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("my_addon", "form_familiar_fox_sp_mana_regen_regen_pause_timer");
 	// 阶??5：运行时快照读取（abilities.mancianima_primary；快照未初始化回退默认常量?
 	private static final BalanceReader BAL = new BalanceReader("abilities.mancianima_primary");
 	/** 客户端按键调用的入口?*/

@@ -22,9 +22,9 @@ import org.joml.Vector3f;
 
 /** 荧光幼灵潮汐球渲染器：非拴人走原版飞行物品，拴人时绘制激活态潮涌核心。 */
 public class TidalOrbRenderer extends ThrownItemRenderer<TidalOrbEntity> {
-    private static final ResourceLocation WIND_TEX = new ResourceLocation("textures/entity/conduit/wind.png");
-    private static final ResourceLocation WIND_VERTICAL_TEX = new ResourceLocation("textures/entity/conduit/wind_vertical.png");
-    private static final ResourceLocation OPEN_EYE_TEX = new ResourceLocation("textures/entity/conduit/open_eye.png");
+    private static final ResourceLocation WIND_TEX = ResourceLocation.parse("textures/entity/conduit/wind.png");
+    private static final ResourceLocation WIND_VERTICAL_TEX = ResourceLocation.parse("textures/entity/conduit/wind_vertical.png");
+    private static final ResourceLocation OPEN_EYE_TEX = ResourceLocation.parse("textures/entity/conduit/open_eye.png");
 
     private static final Vector3f C_CYAN = new Vector3f(0.20f, 0.78f, 0.92f);
     private static final Vector3f C_BLUE = new Vector3f(0.25f, 0.45f, 0.95f);

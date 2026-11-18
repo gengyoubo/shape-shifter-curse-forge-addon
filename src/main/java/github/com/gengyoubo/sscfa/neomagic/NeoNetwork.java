@@ -38,9 +38,9 @@ import static github.com.gengyoubo.sscfa.neomagic.INeoModel.Risk;
 
 /** 新魔法 HUD 同步与崩解度调试指令；不接收旧实验研究协议。 */
 public final class NeoNetwork {
-    public static final ResourceLocation HUD = new ResourceLocation("ssc_addon", "neomagic_hud");
-    public static final ResourceLocation HUD_V2 = new ResourceLocation("ssc_addon", "neomagic_hud_v2");
-    public static final ResourceLocation HUD_RESYNC_V2 = new ResourceLocation("ssc_addon", "neomagic_hud_resync_v2");
+    public static final ResourceLocation HUD = ResourceLocation.fromNamespaceAndPath("ssc_addon", "neomagic_hud");
+    public static final ResourceLocation HUD_V2 = ResourceLocation.fromNamespaceAndPath("ssc_addon", "neomagic_hud_v2");
+    public static final ResourceLocation HUD_RESYNC_V2 = ResourceLocation.fromNamespaceAndPath("ssc_addon", "neomagic_hud_resync_v2");
 
     private record HudSnapshot(ServerPlayer player, ServerLevel world, Object connection,
                                CompoundTag state, int sentTick, int fullTick) {}
@@ -182,7 +182,7 @@ public final class NeoNetwork {
         n.putInt("CD", data.cooldowns.getOrDefault(blueprint.identity(), 0));
         n.putBoolean("Stored", NeoEffects.hasStored(player.getUUID()));
         if (!legacyName.isEmpty()) {
-            Spell spell = SpellRegistry.get(new ResourceLocation(legacyName));
+            Spell spell = SpellRegistry.get(ResourceLocation.parse(legacyName));
             if (spell != null) {
                 n.putInt("CD", (int) Math.max(0,
                         SharedSpellCooldowns.getCooldownEndOf(player, spell) - player.level().getGameTime()));

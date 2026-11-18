@@ -20,8 +20,8 @@ import java.util.UUID;
 
 /** 新世界按玩家播放一次法术教程；只确认真实显示后才记录观看。 */
 public final class SpellTutorialManager {
-    public static final ResourceLocation OFFER = new ResourceLocation("ssc_addon", "spell_tutorial_offer");
-    public static final ResourceLocation ACTION = new ResourceLocation("ssc_addon", "spell_tutorial_action");
+    public static final ResourceLocation OFFER = ResourceLocation.fromNamespaceAndPath("ssc_addon", "spell_tutorial_offer");
+    public static final ResourceLocation ACTION = ResourceLocation.fromNamespaceAndPath("ssc_addon", "spell_tutorial_action");
 
     private record Pending(ServerPlayer player, UUID nonce) {}
 

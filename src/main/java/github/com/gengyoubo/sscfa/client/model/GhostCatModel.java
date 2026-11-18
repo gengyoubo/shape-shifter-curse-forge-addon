@@ -9,16 +9,16 @@ public class GhostCatModel extends GeoModel<GhostCatEntity> {
 
     @Override
     public ResourceLocation getModelResource(GhostCatEntity entity) {
-        return new ResourceLocation("my_addon", "geo/form_wild_cat_sp.geo.json");
+        return ResourceLocation.fromNamespaceAndPath("my_addon", "geo/form_wild_cat_sp.geo.json");
     }
 
     @Override
     public ResourceLocation getTextureResource(GhostCatEntity entity) {
-        return new ResourceLocation("my_addon", "textures/form_wild_cat_sp/form_wild_cat_sp.png");
+        return ResourceLocation.fromNamespaceAndPath("my_addon", "textures/form_wild_cat_sp/form_wild_cat_sp.png");
     }
 
     @Override
     public ResourceLocation getAnimationResource(GhostCatEntity entity) {
-        return new ResourceLocation("ssc_addon", "animations/axolotl_shifter.animation.json");
+        return ResourceLocation.fromNamespaceAndPath("ssc_addon", "animations/axolotl_shifter.animation.json");
     }
 }

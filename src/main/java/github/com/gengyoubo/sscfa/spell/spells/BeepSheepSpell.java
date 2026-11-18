@@ -35,7 +35,7 @@ public class BeepSheepSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.beep_sheep");
 
 	public BeepSheepSpell() {
-		super(new ResourceLocation("ssc_addon", "beep_sheep"), SpellRarity.WHITE); // NORMAL 五级品质走 JSON levels[].rarity（白→橙），基底回退白色
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "beep_sheep"), SpellRarity.WHITE); // NORMAL 五级品质走 JSON levels[].rarity（白→橙），基底回退白色
 	}
 
 	@Override

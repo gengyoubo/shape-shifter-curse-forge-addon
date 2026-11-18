@@ -483,7 +483,7 @@ public class FoxFireballEntity extends Projectile implements net.minecraft.world
     }
 
     private DamageSource magicSource(LivingEntity target, LivingEntity owner) {
-        ResourceKey<DamageType> key = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("minecraft", "magic"));
+        ResourceKey<DamageType> key = ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("minecraft", "magic"));
         return new net.minecraft.world.damagesource.DamageSource(target.level().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE).getHolderOrThrow(key), owner, owner);
     }
 
@@ -494,7 +494,7 @@ public class FoxFireballEntity extends Projectile implements net.minecraft.world
     }
 
     private DamageSource physicalSource(LivingEntity target, LivingEntity owner) {
-        ResourceKey<DamageType> key = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("minecraft", "mob_attack"));
+        ResourceKey<DamageType> key = ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("minecraft", "mob_attack"));
         return new net.minecraft.world.damagesource.DamageSource(target.level().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE).getHolderOrThrow(key), owner, owner);
     }
 

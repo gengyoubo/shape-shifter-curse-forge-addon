@@ -54,7 +54,7 @@ public final class KillEmpowerCast {
 		if (redForm) base = amulet ? 9.0f : 5.0f; else base = amulet ? 8.0f : 4.0f;	// Red 环基??5??；SP 环基??4??（护?+4??
 		final double ringRadius = amulet ? 3.6 : 6.0;
 		AABB box = player.getBoundingBox().inflate(ringRadius);
-		ResourceKey<DamageType> genericKey = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("minecraft", "generic"));
+		ResourceKey<DamageType> genericKey = ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("minecraft", "generic"));
 		world.getEntitiesOfClass(LivingEntity.class, box, e -> e != player && e.isAlive() && !e.isSpectator()).forEach(e -> {
 			if (WhitelistUtils.isProtected(player, e)) return;
 			if (player.distanceToSqr(e) > ringRadius * ringRadius) return;
@@ -80,10 +80,10 @@ public final class KillEmpowerCast {
 	}
 
 	/** 火??toggle 资??id 常量（红/SP ??普??护符，避??HUD 每??new Identifier）??*/
-	private static final ResourceLocation TOGGLE_SP = new ResourceLocation("my_addon", "form_familiar_fox_sp_blue_fire_ring_toggle_state");
-	private static final ResourceLocation TOGGLE_RED = new ResourceLocation("my_addon", "form_familiar_fox_red_blue_fire_ring_toggle_state");
-	private static final ResourceLocation AMULET_TOGGLE_SP = new ResourceLocation("my_addon", "form_familiar_fox_sp_blue_fire_ring_amulet_toggle_state");
-	private static final ResourceLocation AMULET_TOGGLE_RED = new ResourceLocation("my_addon", "form_familiar_fox_red_blue_fire_ring_amulet_toggle_state");
+	private static final ResourceLocation TOGGLE_SP = ResourceLocation.fromNamespaceAndPath("my_addon", "form_familiar_fox_sp_blue_fire_ring_toggle_state");
+	private static final ResourceLocation TOGGLE_RED = ResourceLocation.fromNamespaceAndPath("my_addon", "form_familiar_fox_red_blue_fire_ring_toggle_state");
+	private static final ResourceLocation AMULET_TOGGLE_SP = ResourceLocation.fromNamespaceAndPath("my_addon", "form_familiar_fox_sp_blue_fire_ring_amulet_toggle_state");
+	private static final ResourceLocation AMULET_TOGGLE_RED = ResourceLocation.fromNamespaceAndPath("my_addon", "form_familiar_fox_red_blue_fire_ring_amulet_toggle_state");
 
 	/** 客户端按主技能键（赋能态）。返?true 表示已处理??*/
 	public static boolean tryCastRing(ServerPlayer player) {
@@ -107,9 +107,9 @@ public final class KillEmpowerCast {
 		if (normalRingOn) {
 			player.removeEffect(github.com.gengyoubo.sscfa.init.AddonEffects.BLUE_FIRE_RING.get());
 			String ringPrefix = (redForm ? "form_familiar_fox_red" : "form_familiar_fox_sp") + "_blue_fire_ring";
-			boolean amuletRingOn = PowerUtils.getResourceValue(player, new ResourceLocation("my_addon", ringPrefix + "_amulet_toggle_state")) == 1;
+			boolean amuletRingOn = PowerUtils.getResourceValue(player, ResourceLocation.fromNamespaceAndPath("my_addon", ringPrefix + "_amulet_toggle_state")) == 1;
 			String ringPower = ringPrefix + (amuletRingOn ? "_amulet" : "");
-			PowerUtils.setResourceValueAndSync(player, new ResourceLocation("my_addon", ringPower + "_toggle_state"), 0);
+			PowerUtils.setResourceValueAndSync(player, ResourceLocation.fromNamespaceAndPath("my_addon", ringPower + "_toggle_state"), 0);
 			// 关哪套环就按该火??JSON ??cooldown 起??
 			github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.completed(player, "my_addon:" + ringPower + "_key_activation");
 			world.playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -163,7 +163,7 @@ public final class KillEmpowerCast {
 		// 免费释放：不?mana、不检?CD/mana 条件；??CD 若在走不受影响（不重置）
 		Vec3 eye = player.getEyePosition();
 		Vec3 look = player.getViewVector(1.0f);
-		ResourceKey<DamageType> magicKey = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("minecraft", "magic"));
+		ResourceKey<DamageType> magicKey = ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("minecraft", "magic"));
 		AABB box = player.getBoundingBox().inflate(breathDist).expandTowards(look.scale(breathDist));
 		world.getEntitiesOfClass(LivingEntity.class, box, t -> t != player && t.isAlive() && !t.isSpectator()).forEach(t -> {
 			if (WhitelistUtils.isProtected(player, t)) return;

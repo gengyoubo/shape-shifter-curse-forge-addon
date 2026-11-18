@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /** 荧光幼灵「潮汐束缚」守卫者激光渲染器：从水球向每个被拴目标画光束。 */
 public final class TidalTetherBeamRenderer {
 
-    private static final ResourceLocation BEAM_TEXTURE = new ResourceLocation("textures/entity/guardian_beam.png");
+    private static final ResourceLocation BEAM_TEXTURE = ResourceLocation.parse("textures/entity/guardian_beam.png");
     private static final int EXPIRE_TICKS = 60;
 
     private static final Map<Integer, Entry> ACTIVE = new ConcurrentHashMap<>();

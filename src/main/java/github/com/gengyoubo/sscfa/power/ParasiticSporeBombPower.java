@@ -24,7 +24,7 @@ import net.onixary.shapeShifterCurseForge.power.FormPowerRuntime;
  * 消耗种子能量，能量不足时只播放失败音效；冷却字段同统一技能（施放即起算）。</p>
  */
 public final class ParasiticSporeBombPower implements SscPowerType {
-    public static final ResourceLocation TYPE = new ResourceLocation("my_addon", "parasitic_spore_bomb");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("my_addon", "parasitic_spore_bomb");
 
     // 以下均为默认值；运行时从 balance 快照读取（abilities.parasitic_spore_bomb）
     /** 投掷物初速度（与原版雪球速度相近） */

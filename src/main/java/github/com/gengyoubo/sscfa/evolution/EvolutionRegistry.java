@@ -16,7 +16,7 @@ import java.util.Map;
 /** SSCA 进化路线数据驱动加载器（Forge 版 datapack reload listener）。 */
 public final class EvolutionRegistry extends SimplePreparableReloadListener<Void> {
     public static final EvolutionRegistry INSTANCE = new EvolutionRegistry();
-    private static final ResourceLocation ID = new ResourceLocation("ssc_addon", "ssca_evolution_routes");
+    private static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("ssc_addon", "ssca_evolution_routes");
     private static final String DIR = "ssca_evolution/routes";
 
     private record Snapshot(Map<String, EvolutionRoute> routes, Map<String, String> rawJson) {}

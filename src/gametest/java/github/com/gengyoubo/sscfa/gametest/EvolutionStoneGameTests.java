@@ -25,11 +25,11 @@ import java.util.UUID;
 public final class EvolutionStoneGameTests {
     @GameTest(template = "gametest_floor")
     public static void formAliasesResolveToRegisteredForm(GameTestHelper helper) {
-        var oldId = new ResourceLocation("my_addon", "axolotl_sp");
+        var oldId = ResourceLocation.fromNamespaceAndPath("my_addon", "axolotl_sp");
         var oldForm = FormRegistry.get(oldId);
         helper.assertTrue(oldForm != null, "legacy form must remain registered");
         helper.assertTrue(oldForm == FormRegistry.get(FormIdentifiers.AXOLOTL_SP), "new form id must resolve to the same definition");
-        helper.assertTrue(FormIdentifiers.AXOLOTL_FLUORESCENT.equals(EvolutionStoneItem.targetOf(new ResourceLocation("my_addon", "upgrade_axolotl"))),
+        helper.assertTrue(FormIdentifiers.AXOLOTL_FLUORESCENT.equals(EvolutionStoneItem.targetOf(ResourceLocation.fromNamespaceAndPath("my_addon", "upgrade_axolotl"))),
                 "legacy evolution route must resolve to its target");
         helper.succeed();
     }
@@ -37,7 +37,7 @@ public final class EvolutionStoneGameTests {
     @GameTest(template = "gametest_floor")
     public static void stoneStartsSpiderEvolutionAndConsumesOnce(GameTestHelper helper) {
         var player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "ssca_stone_test"));
-        helper.assertTrue(FormManager.setForm(player, new ResourceLocation("shape-shifter-curse", "spider_3")), "spider form must be available");
+        helper.assertTrue(FormManager.setForm(player, ResourceLocation.fromNamespaceAndPath("shape-shifter-curse", "spider_3")), "spider form must be available");
         ItemStack stack = new ItemStack(AddonItems.EVOLUTION_STONE.get());
         stack.finishUsingItem(helper.getLevel(), player);
         helper.assertTrue(TransformManager.isTransforming(player), "stone must start transformation");

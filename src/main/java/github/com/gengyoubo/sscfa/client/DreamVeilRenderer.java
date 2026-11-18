@@ -21,7 +21,7 @@ import java.util.UUID;
  * 只有贴图白色边缘在屏幕四周叠粉光。仅入梦目标本人收到 S2C 状态包。
  */
 public final class DreamVeilRenderer {
-    private static final ResourceLocation VEIL_TEXTURE = new ResourceLocation("textures/misc/nausea.png");
+    private static final ResourceLocation VEIL_TEXTURE = ResourceLocation.parse("textures/misc/nausea.png");
 
     private static final float TINT_R = 1.0F;
     private static final float TINT_G = 0.43F;

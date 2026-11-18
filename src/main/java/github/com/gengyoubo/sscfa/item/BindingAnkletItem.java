@@ -111,7 +111,7 @@ public class BindingAnkletItem extends AccessoryItem {
 	/*  战利品注入：劫掠者哨?25%                                       */
 	/* ------------------------------------------------------------ */
 
-	private static final ResourceLocation PILLAGER_OUTPOST_LOOT = new ResourceLocation("minecraft", "chests/pillager_outpost");
+	private static final ResourceLocation PILLAGER_OUTPOST_LOOT = ResourceLocation.fromNamespaceAndPath("minecraft", "chests/pillager_outpost");
 
 	public static void registerLootTable() {}
 

@@ -19,7 +19,7 @@ public class WitchFamiliarEyesLayer extends GeoRenderLayer<WitchFamiliarEntity> 
 
 	// 眼睛发光纹理（只包含眼睛像素，其余透明）
 	private static final ResourceLocation EYES_TEXTURE =
-			new ResourceLocation("ssc_addon", "textures/entity/witch_familiar_eyes.png");
+			ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/entity/witch_familiar_eyes.png");
 
 	public WitchFamiliarEyesLayer(GeoEntityRenderer<WitchFamiliarEntity> renderer) {
 		super(renderer);

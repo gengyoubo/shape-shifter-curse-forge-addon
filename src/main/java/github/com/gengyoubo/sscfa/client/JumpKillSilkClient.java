@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /** 跳蛛「安全丝」客户端：维护锚点镜像，并在实体渲染后画一条蛛丝。 */
 public final class JumpKillSilkClient {
 
-    private static final ResourceLocation ROPE_TEXTURE = new ResourceLocation("my_addon", "textures/entity/web_swing_rope.png");
+    private static final ResourceLocation ROPE_TEXTURE = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/entity/web_swing_rope.png");
     private static final float ROPE_HALF_WIDTH = 0.04f;
 
     private static final Map<UUID, Vec3> ANCHORS = new ConcurrentHashMap<>();

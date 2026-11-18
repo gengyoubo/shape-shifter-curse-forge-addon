@@ -10,11 +10,11 @@ import software.bernie.geckolib.model.GeoModel;
  * 贴图按实体 VARIANT 切换（粉/蓝/绿）。
  */
 public class LunarSpiritModel extends GeoModel<LunarSpiritEntity> {
-	private static final ResourceLocation MODEL = new ResourceLocation("my_addon", "geo/moon_spirit.geo.json");
-	private static final ResourceLocation ANIMATION = new ResourceLocation("my_addon", "animations/moon_spirit.animation.json");
-	private static final ResourceLocation PINK = new ResourceLocation("my_addon", "textures/entity/moon_spirit_pink.png");
-	private static final ResourceLocation CYAN = new ResourceLocation("my_addon", "textures/entity/moon_spirit_cyan.png");
-	private static final ResourceLocation GREEN = new ResourceLocation("my_addon", "textures/entity/moon_spirit_green.png");
+	private static final ResourceLocation MODEL = ResourceLocation.fromNamespaceAndPath("my_addon", "geo/moon_spirit.geo.json");
+	private static final ResourceLocation ANIMATION = ResourceLocation.fromNamespaceAndPath("my_addon", "animations/moon_spirit.animation.json");
+	private static final ResourceLocation PINK = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/entity/moon_spirit_pink.png");
+	private static final ResourceLocation CYAN = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/entity/moon_spirit_cyan.png");
+	private static final ResourceLocation GREEN = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/entity/moon_spirit_green.png");
 
 	@Override
 	public ResourceLocation getModelResource(LunarSpiritEntity entity) {

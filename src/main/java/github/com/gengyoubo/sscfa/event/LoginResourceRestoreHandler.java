@@ -20,9 +20,9 @@ public final class LoginResourceRestoreHandler {
     private record Pending(Map<ResourceLocation, Integer> resources, double mana, String manaType) { }
     private static final Map<UUID, Pending> PENDING = new HashMap<>();
     private static final java.util.Set<ResourceLocation> OTHER_PERSISTENT = java.util.Set.of(
-            new ResourceLocation("my_addon", "form_mancianima_resistance"),
-            new ResourceLocation("my_addon", "form_ocelot_nova_nine_lives"),
-            new ResourceLocation("my_addon", "form_snow_fox_sp_switch_state"));
+            ResourceLocation.fromNamespaceAndPath("my_addon", "form_mancianima_resistance"),
+            ResourceLocation.fromNamespaceAndPath("my_addon", "form_ocelot_nova_nine_lives"),
+            ResourceLocation.fromNamespaceAndPath("my_addon", "form_snow_fox_sp_switch_state"));
 
     /** Only actual persistent resource bars participate; timers, charge and toggle states do not. */
     public static boolean isPersistentResource(ResourceLocation id) {

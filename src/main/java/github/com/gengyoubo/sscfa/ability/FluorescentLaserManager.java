@@ -45,7 +45,7 @@ public final class FluorescentLaserManager {
 	private static final int WINDOW_TICKS = 100;           // 5 秒发射窗?
 	private static final int SHOT_TICKS = 8;               // 每道激?8t
 	private static final net.minecraft.resources.ResourceLocation SHOT_HUD =
-			new net.minecraft.resources.ResourceLocation("my_addon", "form_axolotl_fluorescent_shot_cd");
+			net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("my_addon", "form_axolotl_fluorescent_shot_cd");
 	private static final int SHOT_DAMAGE_INTERVAL = 2;     // ?2t 判定一次（?4 次）
 	private static final float SHOT_DAMAGE = 12.0f;        // 每道 12 点物理（每目标每道只 1 次）
 	/** 技?ID? 荷光幼灵/阿漪挂载的激?power）；增强版每发累?extra_cooldowns.per_shot?*/

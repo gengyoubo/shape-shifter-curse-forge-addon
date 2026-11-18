@@ -24,7 +24,7 @@ import java.util.Map;
 /** Small, depth-tested living-entity badges drawn from the authoritative anomaly mirror. */
 public final class AnomalyBadgeRenderer {
     private static final ResourceLocation ATLAS =
-            new ResourceLocation("ssc_addon", "textures/gui/anomaly/badges64.png");
+            ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/anomaly/badges64.png");
     private static final float[][] CORNERS = {{1, 0}, {1, 1}, {0, 1}, {0, 0}};
     private static final Matrix4f BILLBOARD = new Matrix4f();
     private static final Vector3f RIGHT = new Vector3f();

@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 没有独立冷却，破隐时与主技能一起结算（{@link TrueInvisibilityAbilityPower#applyUniversalCooldown}）。</p>
  */
 public final class TrueInvisibilityDashAbilityPower implements SscPowerType {
-	public static final ResourceLocation TYPE = new ResourceLocation("my_addon", "true_invisibility_dash");
+	public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("my_addon", "true_invisibility_dash");
 
 	private static final int STUN_DELAY_TICKS = 20;
 	private static final int STUN_TICKS = 100;

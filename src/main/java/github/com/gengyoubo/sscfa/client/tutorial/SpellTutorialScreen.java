@@ -22,9 +22,9 @@ import java.util.List;
 /** 独立画面中的自动演示；只绘制示意物，不操作真实物品、研究进度或施法。 */
 public final class SpellTutorialScreen extends Screen {
     public static final int PAGE_COUNT = 9;
-    private static final ResourceLocation PANEL = new ResourceLocation("textures/gui/demo_background.png");
+    private static final ResourceLocation PANEL = ResourceLocation.parse("textures/gui/demo_background.png");
     private static final ResourceLocation RUNES =
-            new ResourceLocation("ssc_addon", "textures/gui/formation_research/runes.png");
+            ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/formation_research/runes.png");
     private static final String[] PAGES = {
             "overview", "analysis", "identify", "runes", "upgrade", "enhance", "casting", "collapse", "growth"};
 

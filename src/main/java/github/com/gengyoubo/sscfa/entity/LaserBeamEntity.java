@@ -425,7 +425,7 @@ public class LaserBeamEntity extends Entity {
 		List<LivingEntity> targets = sw.getEntitiesOfClass(LivingEntity.class, box,
 				e -> e.isAlive() && !e.isSpectator() && !e.getUUID().equals(ownerUuid));
 		ResourceKey<net.minecraft.world.damagesource.DamageType> key =
-				ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("minecraft", "magic"));
+				ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("minecraft", "magic"));
 		for (LivingEntity t : targets) {
 			// 默认白名单豁?
 			if (WhitelistUtils.isProtected(owner, t)) continue;
@@ -498,7 +498,7 @@ public class LaserBeamEntity extends Entity {
 
 	/** laser_state 资源 id? 空闲 /1 蓄力 /2 释放 /3 消退）?*/
 	public static final ResourceLocation LASER_STATE =
-			new ResourceLocation("my_addon", "form_axolotl_fluorescent_laser_state");
+			ResourceLocation.fromNamespaceAndPath("my_addon", "form_axolotl_fluorescent_laser_state");
 
 	/** 客户端查询某玩家的活跃激光实体（供视角限速读?phase/phaseTick）?*/
 	public static LaserBeamEntity getActiveForClient(net.minecraft.client.player.LocalPlayer player) {

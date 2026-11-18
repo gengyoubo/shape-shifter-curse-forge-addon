@@ -13,7 +13,7 @@ import net.minecraft.world.entity.player.Inventory;
  */
 public class PotionStorageBoxScreen extends AbstractContainerScreen<PotionStorageBoxScreenHandler> {
 
-	private static final ResourceLocation TEXTURE = new ResourceLocation("ssc_addon", "textures/gui/container/potion_storage_box.png");
+	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/container/potion_storage_box.png");
 
 	public PotionStorageBoxScreen(PotionStorageBoxScreenHandler handler, Inventory inventory, Component title) {
 		super(handler, inventory, title);

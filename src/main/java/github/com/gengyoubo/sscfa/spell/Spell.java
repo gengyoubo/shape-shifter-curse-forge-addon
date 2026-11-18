@@ -348,7 +348,7 @@ public abstract class Spell implements SpellRegistry.SpellConfigInjector {
 	 * 返回 null 表示无专用图标（HUD 回落到绘制卷轴物品本身）。
 	 */
 	public ResourceLocation getIconTexture() {
-		return new ResourceLocation("ssc_addon", "textures/gui/spell_icons/" + id.getPath() + ".png");
+		return ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/spell_icons/" + id.getPath() + ".png");
 	}
 
 	// ---- 经验机制桥（2026-09-15：exp_mode 0=释放即得 / 1=命中才得 / 2=释放 20%+命中补到 100%） ----

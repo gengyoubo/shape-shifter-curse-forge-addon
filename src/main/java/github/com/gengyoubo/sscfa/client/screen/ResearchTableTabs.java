@@ -13,7 +13,7 @@ import net.minecraft.world.item.Items;
 
 public final class ResearchTableTabs {
     public static final int ANALYSIS=0, RESEARCH=1, WORKSHOP=2, SCRIBE=3, LEARN=4, COUNT=5;
-    private static final ResourceLocation TABS=new ResourceLocation("minecraft","textures/gui/container/creative_inventory/tabs.png");
+    private static final ResourceLocation TABS=ResourceLocation.fromNamespaceAndPath("minecraft","textures/gui/container/creative_inventory/tabs.png");
     private static final Item[] ICONS={Items.WRITABLE_BOOK,Items.ENCHANTED_BOOK,Items.MAP,Items.PAPER,Items.BOOK};
     private ResearchTableTabs(){}
     public static Button tutorial(int left,int top,Runnable action){

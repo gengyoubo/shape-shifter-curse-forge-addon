@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * （{@link ParametricVisuals#touch}）。同一玩家可以有多层（{@code layer}），各层独立续租。</p>
  */
 public final class BlueFireRingVisualPower implements SscPowerType {
-    public static final ResourceLocation TYPE = new ResourceLocation("ssc_addon", "blue_fire_ring_visual");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "blue_fire_ring_visual");
 
     /** 一个玩家一层火环的状态。 */
     private static final class State {

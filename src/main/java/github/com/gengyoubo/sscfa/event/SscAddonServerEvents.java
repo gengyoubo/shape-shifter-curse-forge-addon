@@ -236,7 +236,7 @@ public final class SscAddonServerEvents {
 		if (previous != null && previous > 0 && count == 0) {
 			SscAddon.WATER_SPEAR_CRAFT_CD.put(player.getUUID(), server.getTickCount() + (long) SscAddon.WATER_SPEAR_CRAFT_CD_TICKS);
 			player.getCooldowns().addCooldown(Items.ARROW, SscAddon.WATER_SPEAR_CRAFT_CD_TICKS);
-			PowerUtils.resetCooldown(player, new ResourceLocation("my_addon", "form_axolotl_sp_water_spear_craft_spear"));
+			PowerUtils.resetCooldown(player, ResourceLocation.fromNamespaceAndPath("my_addon", "form_axolotl_sp_water_spear_craft_spear"));
 		}
 	}
 

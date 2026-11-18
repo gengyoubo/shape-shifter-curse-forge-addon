@@ -40,12 +40,12 @@ import java.util.Locale;
 
 public class SpellResearchTableScreen extends AbstractContainerScreen<SpellResearchTableScreenHandler> {
 
-	private static final ResourceLocation BACKGROUND = new ResourceLocation("ssc_addon", "textures/gui/spell_research_background.png");
-	private static final ResourceLocation ANALYSIS_PROGRESS = new ResourceLocation("ssc_addon", "textures/gui/formation_research/analysis_progress.png");
-	private static final ResourceLocation SLOT_CELL = new ResourceLocation("ssc_addon", "textures/gui/spellbook_slot.png");
-	private static final ResourceLocation LIST_PANEL = new ResourceLocation("ssc_addon", "textures/gui/magic_slot_panel.png");
-	private static final ResourceLocation FRAME = new ResourceLocation("ssc_addon", "textures/gui/formation_frame.png");
-	private static final ResourceLocation SCROLL_THUMB = new ResourceLocation("ssc_addon", "textures/gui/scroll_thumb.png");
+	private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/spell_research_background.png");
+	private static final ResourceLocation ANALYSIS_PROGRESS = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/formation_research/analysis_progress.png");
+	private static final ResourceLocation SLOT_CELL = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/spellbook_slot.png");
+	private static final ResourceLocation LIST_PANEL = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/magic_slot_panel.png");
+	private static final ResourceLocation FRAME = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/formation_frame.png");
+	private static final ResourceLocation SCROLL_THUMB = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/scroll_thumb.png");
 	private static final int TAB_HEIGHT = 28;
 	private static final int PANEL_X = 8, PANEL_Y = 42, PANEL_W = 131, PANEL_H = 72;
 	private static final int CELL = 22, COLUMNS = 5, VISIBLE_ROWS = 3;

@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class FormUtils {
 	// 通过实体类型 ID 判断，避免直接引用 SSC 的实体类
-	private static final ResourceLocation TRANSFORMATIVE_WOLF_TYPE_ID = new ResourceLocation("shape-shifter-curse", "t_wolf");
+	private static final ResourceLocation TRANSFORMATIVE_WOLF_TYPE_ID = ResourceLocation.fromNamespaceAndPath("shape-shifter-curse", "t_wolf");
 
 	private FormUtils() {}
 

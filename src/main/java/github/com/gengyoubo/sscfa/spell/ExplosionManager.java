@@ -16,7 +16,7 @@ import java.util.UUID;
  * Clients receive elapsed ticks every 10 ticks and generate visuals/audio locally;
  * damage, ignition and knockback are settled only on the server. */
 public final class ExplosionManager {
-	public static final ResourceLocation START = new ResourceLocation("ssc_addon", "explosion_start");
+	public static final ResourceLocation START = ResourceLocation.fromNamespaceAndPath("ssc_addon", "explosion_start");
 	private static final Map<UUID, Sequence> SEQUENCES = new LinkedHashMap<>();
     private static final github.com.gengyoubo.sscfa.network.SnapshotAudience AUDIENCE =
             new github.com.gengyoubo.sscfa.network.SnapshotAudience();

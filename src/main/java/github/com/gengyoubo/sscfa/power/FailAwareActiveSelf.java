@@ -32,7 +32,7 @@ import net.onixary.shapeShifterCurseForge.power.FormPowerRuntime;
  * {@code <父 ID>_<子键>}（SSC Forge 1.10.0.6 起）；冷却由 {@link SkillCooldowns} 按同一份 JSON 结算。</p>
  */
 public class FailAwareActiveSelf implements SscPowerType {
-	public static final ResourceLocation TYPE = new ResourceLocation("my_addon", "fail_aware_active_self");
+	public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("my_addon", "fail_aware_active_self");
 
 	private static final ThreadLocal<Boolean> PENDING_FAIL = ThreadLocal.withInitial(() -> Boolean.FALSE);
 

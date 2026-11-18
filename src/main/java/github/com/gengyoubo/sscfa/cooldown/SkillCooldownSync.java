@@ -21,7 +21,7 @@ import java.util.UUID;
  * 同时负责玩家进出时的冷却结算：登录恢复暂停的时钟，离线结算进行中的施放并暂停剩余冷却。
  */
 public final class SkillCooldownSync {
-    public static final ResourceLocation ID = new ResourceLocation("my_addon", "skill_cooldowns_v1");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("my_addon", "skill_cooldowns_v1");
     private static final Map<UUID, Snapshot> SENT = new HashMap<>();
 
     private record Stamp(String skill, int phase, long end, int total) {}

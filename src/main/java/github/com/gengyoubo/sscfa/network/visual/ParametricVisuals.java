@@ -23,12 +23,12 @@ import net.minecraftforge.event.server.ServerStoppedEvent;
 
 /** Server-authorized cosmetic scenes. No damage, resources or collision are delegated to clients. */
 public final class ParametricVisuals {
-    public static final ResourceLocation STATE = new ResourceLocation("ssc_addon", "visual_scenes_v1");
-    public static final ResourceLocation DELTA = new ResourceLocation("ssc_addon", "visual_delta_v1");
-    public static final ResourceLocation MOTION = new ResourceLocation("ssc_addon", "visual_motion_v1");
-    public static final ResourceLocation CIRCLE = new ResourceLocation("ssc_addon", "visual_circle_v1");
+    public static final ResourceLocation STATE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "visual_scenes_v1");
+    public static final ResourceLocation DELTA = ResourceLocation.fromNamespaceAndPath("ssc_addon", "visual_delta_v1");
+    public static final ResourceLocation MOTION = ResourceLocation.fromNamespaceAndPath("ssc_addon", "visual_motion_v1");
+    public static final ResourceLocation CIRCLE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "visual_circle_v1");
     /** Receiver registration is the capability; no periodic capability packet is sent. */
-    public static final ResourceLocation MIST_FORM_CAPABILITY = new ResourceLocation("ssc_addon", "mist_form_visuals_v1");
+    public static final ResourceLocation MIST_FORM_CAPABILITY = ResourceLocation.fromNamespaceAndPath("ssc_addon", "mist_form_visuals_v1");
     public static final int PAGE_SIZE = 128, MAX_PAGES = 128, MAX_PARAMETERS = 16;
     public static final int MAX_SCENES = PAGE_SIZE * MAX_PAGES;
     public enum Kind {

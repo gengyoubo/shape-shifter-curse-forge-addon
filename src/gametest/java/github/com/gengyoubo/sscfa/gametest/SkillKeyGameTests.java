@@ -31,7 +31,7 @@ import java.util.UUID;
 @GameTestHolder(SscAddonForge.MOD_ID)
 @PrefixGameTestTemplate(false)
 public final class SkillKeyGameTests {
-    private static final ResourceLocation AXOLOTL_SP = new ResourceLocation("my_addon", "axolotl_sp");
+    private static final ResourceLocation AXOLOTL_SP = ResourceLocation.fromNamespaceAndPath("my_addon", "axolotl_sp");
     private static final String WATER_BALL = "my_addon:form_axolotl_sp_water_ball";
     private static final String PLAY_DEAD = "my_addon:form_axolotl_sp_play_dead_activate";
     private static final String TEMPLATE = "gametest_floor";

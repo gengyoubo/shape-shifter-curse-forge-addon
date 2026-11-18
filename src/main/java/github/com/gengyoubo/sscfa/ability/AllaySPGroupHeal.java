@@ -31,8 +31,8 @@ public class AllaySPGroupHeal {
 
 	public static final String WHITELIST_TAG_PREFIX = "ssc_allay_wl:";
 	private static final ResourceLocation HEAL_EXECUTE_ID = FormIdentifiers.ALLAY_GROUP_HEAL_EXECUTE;
-	private static final ResourceLocation CHARGING_STATE_ID = new ResourceLocation("my_addon", "form_allay_sp_group_heal_charging_state");
-	private static final ResourceLocation CHARGE_TIMER_ID = new ResourceLocation("my_addon", "form_allay_sp_group_heal_charge_timer");
+	private static final ResourceLocation CHARGING_STATE_ID = ResourceLocation.fromNamespaceAndPath("my_addon", "form_allay_sp_group_heal_charging_state");
+	private static final ResourceLocation CHARGE_TIMER_ID = ResourceLocation.fromNamespaceAndPath("my_addon", "form_allay_sp_group_heal_charge_timer");
 	private static final String SKILL_ID = "my_addon:form_allay_sp_group_heal_key_activation";
 	private static final ResourceLocation SOLO_DAMAGE_TIMER_ID = FormIdentifiers.ALLAY_GROUP_HEAL_SOLO_DAMAGE_TIMER;
 	// 群疗参数：默认与注释一致；运行时从 balance 快照读取（abilities.allay_sp_group_heal?

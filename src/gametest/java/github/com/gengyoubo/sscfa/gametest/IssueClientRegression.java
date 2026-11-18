@@ -132,7 +132,7 @@ public final class IssueClientRegression {
         server.execute(() -> {
             var player = server.getPlayerList().getPlayer(uuid);
             player.removeAllEffects();
-            FormManager.setForm(player, new ResourceLocation("my_addon", form));
+            FormManager.setForm(player, ResourceLocation.fromNamespaceAndPath("my_addon", form));
             for (String skill : new String[]{"my_addon:form_axolotl_sp_vortex_charge",
                     "my_addon:form_axolotl_sp_play_dead_activate", "my_addon:form_bat_desmodus_mist_form"}) {
                 github.com.gengyoubo.sscfa.cooldown.SkillCooldowns.force(player, skill, 0);

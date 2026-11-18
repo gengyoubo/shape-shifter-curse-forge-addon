@@ -36,7 +36,7 @@ public class FrostArmorSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.frost_armor");
 
 	public FrostArmorSpell() {
-		super(new ResourceLocation("ssc_addon", "frost_armor"), SpellRarity.BLUE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "frost_armor"), SpellRarity.BLUE);
 	}
 
 	@Override

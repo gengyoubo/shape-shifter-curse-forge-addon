@@ -27,7 +27,7 @@ import net.minecraftforge.event.server.ServerStartedEvent;
 @Mod(SscAddonForge.MOD_ID)
 public final class SscAddonForge {
     public static final String MOD_ID = "ssc_addon";
-
+    @SuppressWarnings("removal")
     public SscAddonForge() {
         var bus = FMLJavaModLoadingContext.get().getModEventBus();
         AddonRegistries.init(bus);

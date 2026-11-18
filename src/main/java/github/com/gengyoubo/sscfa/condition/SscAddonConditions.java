@@ -47,7 +47,7 @@ public final class SscAddonConditions {
 		entity("ssc_addon", "not_universal_formation_charging", (player, data) ->
 				!(player instanceof ServerPlayer sp) || !UniversalFormationManager.isCharging(sp));
 		entity("ssc_addon", "has_reverse_thermometer", (player, data) -> {
-			Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation("shape-shifter-curse", "charm_of_reverse_thermometer"));
+			Item item = ForgeRegistries.ITEMS.getValue(ResourceLocation.fromNamespaceAndPath("shape-shifter-curse", "charm_of_reverse_thermometer"));
 			return item != null && TrinketUtils.isWearing(player, item);
 		});
 		entity("ssc_addon", "has_trinket", (player, data) -> {
@@ -142,7 +142,7 @@ public final class SscAddonConditions {
 	}
 
 	private static void register(String namespace, String path, SscCondition condition) {
-		SscJavaRegistries.registerCondition(new ResourceLocation(namespace, path), condition);
+		SscJavaRegistries.registerCondition(ResourceLocation.fromNamespaceAndPath(namespace, path), condition);
 	}
 
 	/** Apoli comparison strings. */

@@ -76,11 +76,20 @@ public class InfusionAltarBlock extends BaseEntityBlock {
 		if (world.isClientSide) {
 			return InteractionResult.SUCCESS;
 		}
-		MenuProvider factory = state.getMenuProvider(world, pos);
-		if (factory != null) {
-			player.openMenu(factory);
+		BlockEntity blockEntity = world.getBlockEntity(pos);
+		if (!(blockEntity instanceof InfusionAltarBlockEntity)) {
+			// 旧存档中的祭坛曾是没有方块实体的外壳方块，首次交互时补建，保证菜单与库存可用。
+			BlockEntity created = newBlockEntity(pos, state);
+			if (created != null) {
+				world.setBlockEntity(created);
+				blockEntity = created;
+			}
 		}
-		return InteractionResult.CONSUME;
+		if (blockEntity instanceof MenuProvider provider) {
+			player.openMenu(provider);
+			return InteractionResult.CONSUME;
+		}
+		return InteractionResult.PASS;
 	}
 
 	@Nullable

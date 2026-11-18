@@ -36,7 +36,7 @@ public class FlameNovaSpell extends Spell {
 	private static double rarityRadiusMultiplier() { var s = github.com.gengyoubo.sscfa.balance.BalanceIntegration.currentSnapshot(); return s != null ? s.getDouble("spells.flame_nova", "rarity_radius_multiplier") : 1.25; }
 
 	public FlameNovaSpell() {
-		super(new ResourceLocation("ssc_addon", "flame_nova"), SpellRarity.GREEN);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "flame_nova"), SpellRarity.GREEN);
 	}
 
 	@Override

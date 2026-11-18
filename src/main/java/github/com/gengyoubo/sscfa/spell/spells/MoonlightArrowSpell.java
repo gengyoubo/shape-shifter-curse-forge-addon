@@ -21,7 +21,7 @@ public class MoonlightArrowSpell extends Spell {
 	@Override public double getProjectileRange(int level) { return SpellMoonlightArrowEntity.maxDistance(); }
 
 	public MoonlightArrowSpell() {
-		super(new ResourceLocation("ssc_addon", "moonlight_arrow"), SpellRarity.GREEN);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "moonlight_arrow"), SpellRarity.GREEN);
 	}
 
 	@Override

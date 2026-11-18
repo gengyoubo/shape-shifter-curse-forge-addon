@@ -31,7 +31,7 @@ public final class FluorescentTidalManager {
 
     /** 客户端同步状态：0=空闲?=蓄力中，2=球飞行中?*/
     public static final net.minecraft.resources.ResourceLocation TIDAL_STATE =
-            new net.minecraft.resources.ResourceLocation("my_addon", "form_axolotl_fluorescent_tidal_state");
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("my_addon", "form_axolotl_fluorescent_tidal_state");
 
     private static final int CHARGE_TICKS = 25;       // 1.25 绉掕搫鍔?
     // CD? 秒，球消失后起算）已由统一冷却服务 + power JSON 配置管理，原 CD_TICKS 常量已删

@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 两个数值可被 balance 快照（forms.snow_fox_sp）覆盖；快照重载后同姿态也会重挂。</p>
  */
 public final class SnowFoxSpFormSpeedPower implements SscPowerType {
-	public static final ResourceLocation TYPE = new ResourceLocation("ssc_addon", "snow_fox_sp_form_speed");
+	public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "snow_fox_sp_form_speed");
 
 	private static final UUID MELEE_SPEED_UUID = UUID.fromString("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
 	private static final UUID RANGED_SPEED_UUID = UUID.fromString("b2c3d4e5-f6a7-8901-bcde-f12345678901");

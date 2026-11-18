@@ -15,7 +15,7 @@ import net.minecraft.world.item.ItemStack;
 
 /** 冰锥 3D 渲染器：按 CustomModelData 阶段切换材质。 */
 public class FrostThornEntityRenderer extends EntityRenderer<FrostThornEntity> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("textures/atlas/blocks.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.parse("textures/atlas/blocks.png");
     private static final ItemStack[] CACHED_STACKS = new ItemStack[3];
 
     private final ItemRenderer itemRenderer;

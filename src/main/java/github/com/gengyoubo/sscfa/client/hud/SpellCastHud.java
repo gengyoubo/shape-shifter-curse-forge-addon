@@ -33,10 +33,10 @@ import github.com.gengyoubo.sscfa.spell.SpellChannelManager;
 public final class SpellCastHud {
 	/** 面板贴图?4×68 窄条?026-09-19 用户重绘）：?蓄力填充层，?框体层；
 	 * ?右两版镜像贴图，?CD ?TEX_PANEL / TEX_PANEL_RIGHT 双贴图选图显示?*/
-	private static final ResourceLocation TEX_FULL = new ResourceLocation("ssc_addon", "textures/gui/spell_charge_bar_right.png");
-	private static final ResourceLocation TEX_EMPTY = new ResourceLocation("ssc_addon", "textures/gui/spell_charge_bar_right_empty.png");
-	private static final ResourceLocation TEX_FULL_LEFT = new ResourceLocation("ssc_addon", "textures/gui/spell_charge_bar_left.png");
-	private static final ResourceLocation TEX_EMPTY_LEFT = new ResourceLocation("ssc_addon", "textures/gui/spell_charge_bar_left_empty.png");
+	private static final ResourceLocation TEX_FULL = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/spell_charge_bar_right.png");
+	private static final ResourceLocation TEX_EMPTY = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/spell_charge_bar_right_empty.png");
+	private static final ResourceLocation TEX_FULL_LEFT = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/spell_charge_bar_left.png");
+	private static final ResourceLocation TEX_EMPTY_LEFT = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/spell_charge_bar_left_empty.png");
 	private static final int TEX_W = 14, TEX_H = 68;
 	/** 滑入动画时长（tick?.3 ?6t）?*/
 	private static final float SLIDE_IN_TICKS = 6.0F;

@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
 public final class DomainSpell extends Spell {
-	public DomainSpell() { super(new ResourceLocation("ssc_addon", "domain"), SpellRarity.RED); }
+	public DomainSpell() { super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "domain"), SpellRarity.RED); }
 	@Override
 	protected SpellCastingRules.Profile getCustomCastingProfile(ServerPlayer caster, int level, boolean solo) {
 		return new SpellCastingRules.Profile(DomainRules.chargeTicks(), 0, true);

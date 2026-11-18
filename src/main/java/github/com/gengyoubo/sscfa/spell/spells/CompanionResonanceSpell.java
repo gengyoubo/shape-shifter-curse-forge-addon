@@ -45,7 +45,7 @@ public class CompanionResonanceSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.companion_resonance");
 
 	public CompanionResonanceSpell() {
-		super(new ResourceLocation("ssc_addon", "companion_resonance"), SpellRarity.WHITE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "companion_resonance"), SpellRarity.WHITE);
 	}
 
 	@Override

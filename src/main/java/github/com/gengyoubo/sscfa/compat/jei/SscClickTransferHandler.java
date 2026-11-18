@@ -29,7 +29,7 @@ public final class SscClickTransferHandler<T extends AbstractContainerMenu> impl
     @Override public Optional<MenuType<T>> getMenuType() { return Optional.empty(); }
     @Override public RecipeType<Crafting> getRecipeType() { return SSCA_JEIPlugin.SPECIAL_CRAFTING; }
 
-    @Override
+    @Override @SuppressWarnings("removal")
     public IRecipeTransferError transferRecipe(T menu, Crafting recipe, IRecipeSlotsView slots,
                                                Player player, boolean maxTransfer, boolean doTransfer) {
         if (!SscGridClickTransfer.supports(menu, recipe)) return helper.createInternalError();

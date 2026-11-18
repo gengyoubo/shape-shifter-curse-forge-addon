@@ -14,7 +14,7 @@ import github.com.gengyoubo.sscfa.network.AddonNetwork;
 
 /** 进化数据组件访问（Forge 版）：SavedData 持久?+ AddonNetwork 同步?*/
 public final class RegEvolutionComponent {
-    public static final ResourceLocation SYNC = new ResourceLocation("ssc_addon", "evolution_sync");
+    public static final ResourceLocation SYNC = ResourceLocation.fromNamespaceAndPath("ssc_addon", "evolution_sync");
     private static final String KEY = "ssc_addon_evolution";
     public static final Access EVOLUTION = new Access();
 

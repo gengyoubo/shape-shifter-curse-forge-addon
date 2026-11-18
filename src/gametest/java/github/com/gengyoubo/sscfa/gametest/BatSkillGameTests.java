@@ -32,7 +32,7 @@ import java.util.UUID;
 @GameTestHolder(SscAddonForge.MOD_ID)
 @PrefixGameTestTemplate(false)
 public final class BatSkillGameTests {
-    private static final ResourceLocation BAT_DESMODUS = new ResourceLocation("my_addon", "bat_desmodus");
+    private static final ResourceLocation BAT_DESMODUS = ResourceLocation.fromNamespaceAndPath("my_addon", "bat_desmodus");
     private static final String SONIC_WAVE = "my_addon:form_bat_desmodus_sonic_wave";
     private static final String MIST_FORM = "my_addon:form_bat_desmodus_mist_form";
     private static final String TEMPLATE = "gametest_floor";

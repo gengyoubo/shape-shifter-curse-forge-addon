@@ -16,7 +16,7 @@ import org.jetbrains.annotations.Nullable;
  * SSC Forge 实际用旧 ID 也能匹配。
  */
 public class OnTransformAddonForm extends SimpleCriterionTrigger<OnTransformAddonForm.Condition> {
-    public static final ResourceLocation ID = new ResourceLocation("my_addon", "on_transform_addon_form");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("my_addon", "on_transform_addon_form");
 
     @Override
     public ResourceLocation getId() {
@@ -32,7 +32,7 @@ public class OnTransformAddonForm extends SimpleCriterionTrigger<OnTransformAddo
     protected Condition createInstance(JsonObject obj, ContextAwarePredicate playerPredicate, DeserializationContext predicateDeserializer) {
         ResourceLocation formId = null;
         if (obj.has("form_id")) {
-            formId = FormIdMigration.canonical(new ResourceLocation(obj.get("form_id").getAsString()));
+            formId = FormIdMigration.canonical(ResourceLocation.parse(obj.get("form_id").getAsString()));
         }
         return new Condition(formId, playerPredicate);
     }

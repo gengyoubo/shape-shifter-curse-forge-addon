@@ -117,7 +117,7 @@ public final class CourtSpellLink {
         if(server.getTickCount()%5!=0)return;var s=Store.get(server);long global=server.overworld().getGameTime();
         if(server.getTickCount()%20==0&&s.casts.values().removeIf(c->c.members.isEmpty()&&c.expires<global))s.setDirty();
         var it=s.orders.values().iterator();while(it.hasNext()){
-            var o=it.next();var world=server.getLevel(ResourceKey.create(Registries.DIMENSION,new ResourceLocation(o.dimension)));if(world==null)continue;
+            var o=it.next();var world=server.getLevel(ResourceKey.create(Registries.DIMENSION,ResourceLocation.parse(o.dimension)));if(world==null)continue;
             var owner=server.getPlayerList().getPlayer(o.owner);var entity=world.getEntity(o.wolf);if(o.gone){it.remove();s.setDirty();continue;}if(!(entity instanceof AnubisWolfMinionEntity wolf)){if(world.getGameTime()>o.until&&o.life==0){it.remove();s.setDirty();}continue;}
             boolean valid=owner!=null&&owner.isAlive()&&owner.level()==world&&FormUtils.isForm(owner,FormIdentifiers.ANUBIS_WOLF_SP)&&o.owner.equals(wolf.getOwnerUUID());
             if(!wolf.isAlive()||!valid||o.life>0&&world.getGameTime()>=o.life){if(o.life>0)remove(owner,wolf);else {wolf.setTarget(null);wolf.getNavigation().stop();}it.remove();s.setDirty();continue;}

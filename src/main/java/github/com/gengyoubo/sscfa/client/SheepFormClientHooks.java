@@ -19,8 +19,8 @@ import net.minecraft.world.entity.animal.Sheep;
 
 /** 变羊渲染主体：用原版成年羊本体 + 羊毛双层模型绘制。 */
 public final class SheepFormClientHooks {
-    private static final ResourceLocation TEX_BODY = new ResourceLocation("textures/entity/sheep/sheep.png");
-    private static final ResourceLocation TEX_FUR = new ResourceLocation("textures/entity/sheep/sheep_fur.png");
+    private static final ResourceLocation TEX_BODY = ResourceLocation.parse("textures/entity/sheep/sheep.png");
+    private static final ResourceLocation TEX_FUR = ResourceLocation.parse("textures/entity/sheep/sheep_fur.png");
 
     private static BodyModel bodyModel;
     private static FurModel furModel;

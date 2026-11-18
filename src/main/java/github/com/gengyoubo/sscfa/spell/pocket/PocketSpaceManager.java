@@ -40,7 +40,7 @@ import java.util.UUID;
 
 public final class PocketSpaceManager {
 	public static final ResourceKey<Level> WORLD_KEY = ResourceKey.create(Registries.DIMENSION,
-			new ResourceLocation("ssc_addon", "pocket_space"));
+			ResourceLocation.fromNamespaceAndPath("ssc_addon", "pocket_space"));
 	private static final Map<UUID, Channel> CHANNELS = new HashMap<>();
 	private static final Map<Integer, Generation> GENERATIONS = new HashMap<>();
 	private static final Map<UUID, PocketPortalGate> GATES = new HashMap<>();

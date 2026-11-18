@@ -59,7 +59,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 形态切换、离线时由 {@link #onRemoved} 清理。</p>
  */
 public final class ParasiticFruitSeedPower implements SscPowerType {
-    public static final ResourceLocation TYPE = new ResourceLocation("my_addon", "parasitic_fruit_seed");
+    public static final ResourceLocation TYPE = ResourceLocation.fromNamespaceAndPath("my_addon", "parasitic_fruit_seed");
 
     // 以下均为默认值；运行时从 balance 快照读取（abilities.parasitic_seed_power）。
     private static final int MAX_SEEDS = 3;

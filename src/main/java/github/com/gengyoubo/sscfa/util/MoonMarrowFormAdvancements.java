@@ -44,8 +44,8 @@ public final class MoonMarrowFormAdvancements {
 	 * @param advPath  成就?ssc_addon/ 下的文件名（不含 .json?
 	 */
 	public static void register(String formPath, String advPath) {
-		MAP.put(new ResourceLocation("my_addon", formPath),
-				new ResourceLocation("ssc_addon", advPath));
+		MAP.put(ResourceLocation.fromNamespaceAndPath("my_addon", formPath),
+				ResourceLocation.fromNamespaceAndPath("ssc_addon", advPath));
 	}
 
 	/**

@@ -45,7 +45,7 @@ public final class AnomalyTeleportGameTests {
         helper.assertTrue(AnomalyTeleportGuard.isTeleportSpell(new SpaceBlinkSpell()), "blink should be guarded");
         helper.assertTrue(AnomalyTeleportGuard.isTeleportSpell(new SpaceRecallSpell()), "recall should be guarded");
         helper.assertTrue(AnomalyTeleportGuard.isTeleportSpell(new PocketSpaceSpell()), "pocket space should be guarded");
-        Spell otherNamespace = new Spell(new ResourceLocation("other", "space_blink"), SpellRarity.WHITE) {
+        Spell otherNamespace = new Spell(ResourceLocation.fromNamespaceAndPath("other", "space_blink"), SpellRarity.WHITE) {
             @Override public void cast(ServerPlayer caster, float power, boolean solo) {}
         };
         helper.assertTrue(!AnomalyTeleportGuard.isTeleportSpell(otherNamespace), "other namespaces must not be intercepted");

@@ -59,7 +59,7 @@ public class InfusionAltarScreen extends AbstractContainerScreen<InfusionAltarSc
 	}
 
 	private static ResourceLocation texture(String path) {
-		return new ResourceLocation("ssc_addon", "textures/" + path + ".png");
+		return ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/" + path + ".png");
 	}
 
 	private static Component label(String key, Object... args) {

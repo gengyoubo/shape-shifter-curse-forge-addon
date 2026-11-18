@@ -43,7 +43,7 @@ public final class PowerJson {
 		}
 		String path = id.getPath();
 		for (int cut = path.lastIndexOf('_'); cut > 0; cut = path.lastIndexOf('_', cut - 1)) {
-			ResourceLocation parentId = new ResourceLocation(id.getNamespace(), path.substring(0, cut));
+			ResourceLocation parentId = ResourceLocation.fromNamespaceAndPath(id.getNamespace(), path.substring(0, cut));
 			if (player != null && !FormPowerRegistry.has(player, parentId)) continue;
 			FormPowerDefinition parent = FormPowerRegistry.get(parentId);
 			if (parent == null || !MULTIPLE.equals(FormPowerRegistry.typeOf(parent.data()))) continue;

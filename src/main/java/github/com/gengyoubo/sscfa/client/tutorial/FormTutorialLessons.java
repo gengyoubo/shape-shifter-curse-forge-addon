@@ -18,7 +18,7 @@ import java.util.Map;
 
 /** Client-only illustrated lessons. Each entry teaches exactly one named mechanic. */
 public final class FormTutorialLessons {
-    private static final ResourceLocation DATA = new ResourceLocation("my_addon", "tutorial/form_lessons.json");
+    private static final ResourceLocation DATA = ResourceLocation.fromNamespaceAndPath("my_addon", "tutorial/form_lessons.json");
     private static volatile Map<ResourceLocation, List<Lesson>> forms = Map.of();
 
     public enum Kind { ACTIVE, PASSIVE, TRAIT }
@@ -67,7 +67,7 @@ public final class FormTutorialLessons {
             Map<String, Lesson> lessons = new LinkedHashMap<>();
             for (var entry : root.getAsJsonObject("lessons").entrySet()) {
                 var data = entry.getValue().getAsJsonObject();
-                ResourceLocation icon = new ResourceLocation(data.get("icon").getAsString());
+                ResourceLocation icon = ResourceLocation.parse(data.get("icon").getAsString());
                 if (manager.getResource(icon).isEmpty()) {
                     throw new IllegalArgumentException("Missing tutorial illustration: " + icon);
                 }
@@ -80,7 +80,7 @@ public final class FormTutorialLessons {
             }
             Map<ResourceLocation, List<Lesson>> next = new LinkedHashMap<>();
             for (var entry : root.getAsJsonObject("forms").entrySet()) {
-                ResourceLocation id = new ResourceLocation(entry.getKey());
+                ResourceLocation id = ResourceLocation.parse(entry.getKey());
                 if (!FormTutorialCatalog.supports(id)) {
                     throw new IllegalArgumentException("Unsupported lesson form: " + id);
                 }

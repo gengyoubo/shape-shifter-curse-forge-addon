@@ -14,8 +14,8 @@ import net.minecraft.resources.ResourceLocation;
  * 素材由种子条裁剪得到。横纵坐标均复用主模组魔力条布局，支持锚点和 X/Y 偏移?
  */
 public final class NineLivesHudRenderer extends SimpleResourceBarRenderer {
-    private static final ResourceLocation TEX_EMPTY = new ResourceLocation("my_addon", "textures/gui/form_ocelot_nova_nine_lives_empty.png");
-    private static final ResourceLocation TEX_FULL = new ResourceLocation("my_addon", "textures/gui/form_ocelot_nova_nine_lives_full.png");
+    private static final ResourceLocation TEX_EMPTY = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/form_ocelot_nova_nine_lives_empty.png");
+    private static final ResourceLocation TEX_FULL = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/form_ocelot_nova_nine_lives_full.png");
     /** 命数条尺寸：76 像素?× 5 像素高，与实际贴图一致?*/
     private static final int TEX_WIDTH = 76;
 

@@ -76,7 +76,7 @@ public class LunarPhaseSpell extends Spell {
 	}
 
 	public LunarPhaseSpell() {
-		super(new ResourceLocation("ssc_addon", "lunar_phase"), SpellRarity.WHITE); // NORMAL 五级品质走 JSON levels[].rarity（白→橙），基底回退白色
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "lunar_phase"), SpellRarity.WHITE); // NORMAL 五级品质走 JSON levels[].rarity（白→橙），基底回退白色
 	}
 
 	/** 两段交互：松手（锁定目标）后才创建施法会话开始蓄力（同爆裂 requiresTargetBeforeChannel）。 */

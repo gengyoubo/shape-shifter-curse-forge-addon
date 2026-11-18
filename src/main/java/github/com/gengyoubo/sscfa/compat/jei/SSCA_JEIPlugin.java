@@ -43,7 +43,7 @@ public final class SSCA_JEIPlugin implements IModPlugin {
 
     @Override
     public ResourceLocation getPluginUid() {
-        return new ResourceLocation("ssc_addon", "jei_plugin");
+        return ResourceLocation.fromNamespaceAndPath("ssc_addon", "jei_plugin");
     }
 
     @Override
@@ -132,7 +132,7 @@ public final class SSCA_JEIPlugin implements IModPlugin {
 
         @Override public RecipeType<Crafting> getRecipeType() { return SPECIAL_CRAFTING; }
         @Override public Component getTitle() { return Component.translatable("gui.ssc_addon.category.special_crafting"); }
-        @Override public IDrawable getBackground() { return background; }
+        @Override @SuppressWarnings("removal") public IDrawable getBackground() { return background; }
         @Override public IDrawable getIcon() { return icon; }
         @Override public ResourceLocation getRegistryName(Crafting recipe) { return recipe.id(); }
 
@@ -148,7 +148,7 @@ public final class SSCA_JEIPlugin implements IModPlugin {
 
         @Override
         public void draw(Crafting recipe, IRecipeSlotsView slots, GuiGraphics graphics, double x, double y) {
-            graphics.blit(new ResourceLocation("minecraft", "textures/gui/container/crafting_table.png"),
+            graphics.blit(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/gui/container/crafting_table.png"),
                     60, 24, 90, 40, 22, 15, 256, 256);
             description(graphics, recipe.description(), 60, 140);
         }
@@ -165,7 +165,7 @@ public final class SSCA_JEIPlugin implements IModPlugin {
 
         @Override public RecipeType<Process> getRecipeType() { return PROCESSING; }
         @Override public Component getTitle() { return Component.translatable("gui.ssc_addon.category.processing"); }
-        @Override public IDrawable getBackground() { return background; }
+        @Override @SuppressWarnings("removal") public IDrawable getBackground() { return background; }
         @Override public IDrawable getIcon() { return icon; }
         @Override public ResourceLocation getRegistryName(Process recipe) { return recipe.id(); }
 
@@ -178,7 +178,7 @@ public final class SSCA_JEIPlugin implements IModPlugin {
 
         @Override
         public void draw(Process recipe, IRecipeSlotsView slots, GuiGraphics graphics, double x, double y) {
-            graphics.blit(new ResourceLocation("minecraft", "textures/gui/container/crafting_table.png"),
+            graphics.blit(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/gui/container/crafting_table.png"),
                     72, 2, 90, 40, 22, 15, 256, 256);
             description(graphics, recipe.description(), 28, 156);
         }

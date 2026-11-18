@@ -29,7 +29,7 @@ public final class WitchFamiliarSpawnHandler {
 	private static boolean initialized;
 
 	private WitchFamiliarSpawnHandler() {}
-
+	@SuppressWarnings("removal")
 	public static void register() {
 		if (initialized) return;
 		initialized = true;

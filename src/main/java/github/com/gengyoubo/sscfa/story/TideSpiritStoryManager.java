@@ -33,7 +33,7 @@ import java.util.UUID;
  */
 public final class TideSpiritStoryManager {
 	/** 解锁成就：集齐蔚蓝??本??+ 荧光幼灵形态?*/
-	public static final ResourceLocation TIDE_SPIRIT_POWER_ADV = new ResourceLocation("ssc_addon", "tide_spirit_power");
+	public static final ResourceLocation TIDE_SPIRIT_POWER_ADV = ResourceLocation.fromNamespaceAndPath("ssc_addon", "tide_spirit_power");
 	private static final int TIP_CHECK_INTERVAL = 20;
 	private static final int STORY_SLEEP_DURATION = 100;
 

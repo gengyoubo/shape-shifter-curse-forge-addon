@@ -30,7 +30,7 @@ public class FireBoltSpell extends Spell {
 	private static final BalanceReader BAL = new BalanceReader("spells.fire_bolt");
 
 	public FireBoltSpell() {
-		super(new ResourceLocation("ssc_addon", "fire_bolt"), SpellRarity.WHITE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "fire_bolt"), SpellRarity.WHITE);
 	}
 
 	@Override

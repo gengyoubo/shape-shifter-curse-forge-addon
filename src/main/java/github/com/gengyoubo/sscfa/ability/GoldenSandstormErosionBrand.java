@@ -85,13 +85,13 @@ public class GoldenSandstormErosionBrand {
 
 	// ==================== 自定义伤害类???====================
 	/** 被动爆发伤害类型（绕过近战攻击的伤害免疫帧??*/
-	private static final ResourceKey<DamageType> CURSED_BURST_KEY = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("my_addon", "cursed_burst"));
+	private static final ResourceKey<DamageType> CURSED_BURST_KEY = ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("my_addon", "cursed_burst"));
 	/** 引爆伤害类型（绕过被动爆发的伤害免疫帧??*/
-	private static final ResourceKey<DamageType> CURSED_EROSION_KEY = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("my_addon", "cursed_erosion"));
+	private static final ResourceKey<DamageType> CURSED_EROSION_KEY = ResourceKey.create(Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath("my_addon", "cursed_erosion"));
 
 	// ==================== 缂傚啯鍨圭划鍫曞触鐏炵虎鍔?====================
 	/** S2C 包ID：同步烙印颜色数据到客户?*/
-	public static final ResourceLocation PACKET_BRAND_SYNC = new ResourceLocation("ssc_addon", "erosion_brand_sync");
+	public static final ResourceLocation PACKET_BRAND_SYNC = ResourceLocation.fromNamespaceAndPath("ssc_addon", "erosion_brand_sync");
 	/** 需要同步的玩家标记集??*/
 	private static final Set<UUID> DIRTY_PLAYERS = ConcurrentHashMap.newKeySet();
 

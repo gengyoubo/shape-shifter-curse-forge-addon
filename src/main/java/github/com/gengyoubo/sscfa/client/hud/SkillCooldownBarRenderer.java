@@ -34,8 +34,8 @@ import java.util.Map;
 public final class SkillCooldownBarRenderer {
     private static final Minecraft MC = Minecraft.getInstance();
 
-    private static final ResourceLocation TEX_PANEL = new ResourceLocation("my_addon", "textures/gui/skill_cd_panel.png");
-    private static final ResourceLocation TEX_PANEL_RIGHT = new ResourceLocation("my_addon", "textures/gui/skill_cd_panel_right.png");
+    private static final ResourceLocation TEX_PANEL = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/skill_cd_panel.png");
+    private static final ResourceLocation TEX_PANEL_RIGHT = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/skill_cd_panel_right.png");
     private static final ResourceLocation[] PANELS = {
             panelTexture("skill_cd_panel_2"), panelTexture("skill_cd_panel_3"), panelTexture("skill_cd_panel_4")};
     private static final ResourceLocation[] PANELS_RIGHT = {
@@ -61,7 +61,7 @@ public final class SkillCooldownBarRenderer {
     }
 
     private static ResourceLocation panelTexture(String name) {
-        return new ResourceLocation("my_addon", "textures/gui/" + name + ".png");
+        return ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/" + name + ".png");
     }
 
     public static void register() {

@@ -55,7 +55,7 @@ public class ExplosionSpell extends Spell {
 	}
 
 	public ExplosionSpell() {
-		super(new ResourceLocation("ssc_addon", "explosion"), SpellRarity.RED);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "explosion"), SpellRarity.RED);
 	}
 
 	/** 按住选点，最远 128 格；该阶段不创建施法会话。 */

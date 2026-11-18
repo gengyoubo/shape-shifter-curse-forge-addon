@@ -7,7 +7,7 @@ import github.com.gengyoubo.sscfa.block.EnergyConverterBlock;
 import github.com.gengyoubo.sscfa.block.EnergyExtractorBlock;
 import github.com.gengyoubo.sscfa.block.EnergyBottlerBlock;
 import github.com.gengyoubo.sscfa.block.PotionStorageBoxBlock;
-import github.com.gengyoubo.sscfa.block.FacingShellBlock;
+import github.com.gengyoubo.sscfa.block.InfusionAltarBlock;
 import github.com.gengyoubo.sscfa.block.SpellResearchTableBlock;
 import github.com.gengyoubo.sscfa.block.PocketSpaceBlocks;
 import github.com.gengyoubo.sscfa.block.WebMembraneBlock;
@@ -39,10 +39,10 @@ public final class AddonBlocks {
     public static final RegistryObject<Block> TEMP_WEB_BRIDGE = BLOCKS.register("temp_web_bridge", () ->
             new github.com.gengyoubo.sscfa.block.TempWebBridgeBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOL).strength(0.2f)
                     .sound(SoundType.WOOL).noCollission().noOcclusion().noLootTable()));
-    // 注入祭坛仍需客户端界面；研究台使用完整方块实体。
+    // 注入祭坛使用完整方块实体（库存、法术书同步、升级与菜单）。
     public static final RegistryObject<Block> INFUSION_ALTAR = BLOCKS.register("infusion_altar", () ->
-            new FacingShellBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(2.5f)
-                    .sound(SoundType.AMETHYST).requiresCorrectToolForDrops().noOcclusion(), null));
+            new InfusionAltarBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(2.5f)
+                    .sound(SoundType.AMETHYST).requiresCorrectToolForDrops().noOcclusion()));
     public static final RegistryObject<Block> SPELL_RESEARCH_TABLE = BLOCKS.register("spell_research_table", () ->
             new SpellResearchTableBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLUE).strength(2.5f)
                     .sound(SoundType.WOOD).requiresCorrectToolForDrops().noOcclusion()));

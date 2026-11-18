@@ -87,9 +87,9 @@ public final class WitherPotionGameTests {
         var slot = new Slot(player.getInventory(), 0, 0, 0);
         var potion = new ItemStack(AddonItems.WITHER_POTION.get());
         helper.assertTrue(slot.getMaxStackSize(potion) == 1, "ordinary players should have a limit of one");
-        helper.assertTrue(FormManager.setForm(player, new ResourceLocation("my_addon", "anubis_wolf_sp")), "Anubis form must exist");
+        helper.assertTrue(FormManager.setForm(player, ResourceLocation.fromNamespaceAndPath("my_addon", "anubis_wolf_sp")), "Anubis form must exist");
         helper.assertTrue(slot.getMaxStackSize(potion) == 3, "Anubis should have a limit of three");
-        helper.assertTrue(FormManager.setForm(player, new ResourceLocation("my_addon", "familiar_fox_sp")), "familiar form must exist");
+        helper.assertTrue(FormManager.setForm(player, ResourceLocation.fromNamespaceAndPath("my_addon", "familiar_fox_sp")), "familiar form must exist");
         helper.assertTrue(slot.getMaxStackSize(potion) == 8, "familiar fox should have a limit of eight");
         helper.succeed();
     }

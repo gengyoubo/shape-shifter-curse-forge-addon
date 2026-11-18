@@ -409,12 +409,12 @@ public final class SscAddonActions {
 
 	/** Entity action: runs on {@code target} (the actor unless the JSON redirects it). */
 	private static void entity(String namespace, String path, SscAction action) {
-		SscJavaRegistries.registerAction(new ResourceLocation(namespace, path), action);
+		SscJavaRegistries.registerAction(ResourceLocation.fromNamespaceAndPath(namespace, path), action);
 	}
 
 	/** Bi-entity action: {@code actor} is the power holder, {@code target} the other entity. */
 	private static void bi(String namespace, String path, SscAction action) {
-		SscJavaRegistries.registerAction(new ResourceLocation(namespace, path), action);
+		SscJavaRegistries.registerAction(ResourceLocation.fromNamespaceAndPath(namespace, path), action);
 	}
 
 	/** Cooldown lifecycle step for pure-JSON skills: {"type":"my_addon:skill_xxx","power":"<skill id>"}. */
@@ -435,7 +435,7 @@ public final class SscAddonActions {
 
 	private static ResourceKey<DamageType> damageKey(String id) {
 		ResourceLocation location = ResourceLocation.tryParse(id);
-		return ResourceKey.create(Registries.DAMAGE_TYPE, location == null ? new ResourceLocation("minecraft", "generic") : location);
+		return ResourceKey.create(Registries.DAMAGE_TYPE, location == null ? ResourceLocation.fromNamespaceAndPath("minecraft", "generic") : location);
 	}
 
 	private static <T> T get(

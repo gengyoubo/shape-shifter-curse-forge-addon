@@ -24,7 +24,7 @@ import java.util.List;
 /** 诅咒标记头顶 2D 图标渲染器（Billboard，纯客户端）。 */
 public final class CurseMarkIconRenderer {
     private static final ResourceLocation ICON_TEXTURE =
-            new ResourceLocation("ssc_addon", "textures/gui/curse_mark_icon.png");
+            ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/gui/curse_mark_icon.png");
     private static final float SIZE = 0.5f;
     private static final float LIFT = 0.45f;
 

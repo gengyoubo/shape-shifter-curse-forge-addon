@@ -6,9 +6,9 @@ import software.bernie.geckolib.model.GeoModel;
 
 public class AxolotlShifterModel extends GeoModel<AxolotlShifterEntity> {
 
-	private static final ResourceLocation MODEL = new ResourceLocation("ssc_addon", "geo/axolotl_shifter.geo.json");
-	private static final ResourceLocation TEXTURE = new ResourceLocation("ssc_addon", "textures/entity/axolotl_shifter.png");
-	private static final ResourceLocation ANIMATION = new ResourceLocation("ssc_addon", "animations/axolotl_shifter.animation.json");
+	private static final ResourceLocation MODEL = ResourceLocation.fromNamespaceAndPath("ssc_addon", "geo/axolotl_shifter.geo.json");
+	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "textures/entity/axolotl_shifter.png");
+	private static final ResourceLocation ANIMATION = ResourceLocation.fromNamespaceAndPath("ssc_addon", "animations/axolotl_shifter.animation.json");
 
 	@Override
 	public ResourceLocation getModelResource(AxolotlShifterEntity entity) {

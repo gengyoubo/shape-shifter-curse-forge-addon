@@ -52,7 +52,7 @@ public final class SpellRegistry extends SimplePreparableReloadListener<Void> im
     }
 
 	public static final SpellRegistry INSTANCE = new SpellRegistry();
-	private static final ResourceLocation LISTENER_ID = new ResourceLocation("ssc_addon", "spell_configs");
+	private static final ResourceLocation LISTENER_ID = ResourceLocation.fromNamespaceAndPath("ssc_addon", "spell_configs");
 	private static final String DIR = "spells";
 
 	private SpellRegistry() {
@@ -70,7 +70,7 @@ public final class SpellRegistry extends SimplePreparableReloadListener<Void> im
 		if (path == null || path.isEmpty()) {
 			return null;
 		}
-		return SPELLS.get(new ResourceLocation("ssc_addon", path));
+		return SPELLS.get(ResourceLocation.fromNamespaceAndPath("ssc_addon", path));
 	}
 
 	public static Collection<Spell> all() {

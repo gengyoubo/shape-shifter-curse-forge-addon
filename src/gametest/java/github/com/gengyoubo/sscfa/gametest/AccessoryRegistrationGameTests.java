@@ -23,7 +23,7 @@ public final class AccessoryRegistrationGameTests {
     @GameTest(template = "gametest_floor")
     public static void accessoriesEnforceFormAndLoginGrace(GameTestHelper helper) {
         var player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "ssca_accessory_test"));
-        var slot = new AccessoryItem.SlotData(new ResourceLocation("curios", "ring"), 0);
+        var slot = new AccessoryItem.SlotData(ResourceLocation.fromNamespaceAndPath("curios", "ring"), 0);
         List<Item> items = List.of(AddonItems.BLUE_FIRE_AMULET.get(), AddonItems.FROST_AMULET.get(),
                 AddonItems.INVISIBILITY_CLOAK.get(), AddonItems.LIFESAVING_CAT_TAIL.get(),
                 AddonItems.PHANTOM_BELL.get(), AddonItems.BLOOD_GARNET.get(), AddonItems.BLOODLUST_RING.get(),

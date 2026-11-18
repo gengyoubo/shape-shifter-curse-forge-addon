@@ -33,6 +33,6 @@ public final class AddonActionsAndConditions {
 	}
 
 	private static ResourceLocation id(String namespace, String path) {
-		return new ResourceLocation(namespace, path);
+		return ResourceLocation.fromNamespaceAndPath(namespace, path);
 	}
 }

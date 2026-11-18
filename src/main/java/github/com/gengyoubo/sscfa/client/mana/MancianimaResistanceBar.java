@@ -14,8 +14,8 @@ import net.minecraft.util.Tuple;
  *  - 玩家持有抗伤值能力时显示。
  */
 public class MancianimaResistanceBar extends SimpleResourceBarRenderer {
-	private static final ResourceLocation BAR_FULL = new ResourceLocation("my_addon", "textures/gui/mancianima_resistance_full.png");
-	private static final ResourceLocation BAR_EMPTY = new ResourceLocation("my_addon", "textures/gui/mancianima_resistance_empty.png");
+	private static final ResourceLocation BAR_FULL = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/mancianima_resistance_full.png");
+	private static final ResourceLocation BAR_EMPTY = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/mancianima_resistance_empty.png");
 	private static final int MANA_WIDTH = 80;
 	private static final int FULL_WIDTH = 92;
 	private static final int CENTER_OFFSET_X = -(FULL_WIDTH - MANA_WIDTH) / 2; // -6，在 mana 条上居中

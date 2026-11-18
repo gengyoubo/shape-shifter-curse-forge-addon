@@ -27,7 +27,7 @@ import java.util.List;
  */
 public class BloodGarnetItem extends AccessoryItem {
 
-	private static final ResourceLocation MINESHAFT_LOOT = new ResourceLocation("minecraft", "chests/abandoned_mineshaft");
+	private static final ResourceLocation MINESHAFT_LOOT = ResourceLocation.fromNamespaceAndPath("minecraft", "chests/abandoned_mineshaft");
 
 	public BloodGarnetItem(Properties settings) {
 		super(settings);

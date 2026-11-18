@@ -15,8 +15,8 @@ import net.minecraft.resources.ResourceLocation;
  * 该形态无魔力条，位置不与其他能量条冲突?
  */
 public final class SeedEnergyHudRenderer extends SimpleResourceBarRenderer {
-    private static final ResourceLocation TEX_EMPTY = new ResourceLocation("my_addon", "textures/gui/bat_parasitic_fruit_seed_bar_empty.png");
-    private static final ResourceLocation TEX_FULL = new ResourceLocation("my_addon", "textures/gui/bat_parasitic_fruit_seed_bar_full.png");
+    private static final ResourceLocation TEX_EMPTY = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/bat_parasitic_fruit_seed_bar_empty.png");
+    private static final ResourceLocation TEX_FULL = ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/bat_parasitic_fruit_seed_bar_full.png");
     /** 原图尺寸?6 像素?× 5 像素高，10 个圆点等距分布?*/
     private static final int TEX_WIDTH = 86;
 

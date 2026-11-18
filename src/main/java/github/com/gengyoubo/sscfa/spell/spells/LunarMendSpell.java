@@ -21,7 +21,7 @@ import java.util.List;
 public class LunarMendSpell extends Spell {
 
 	public LunarMendSpell() {
-		super(new ResourceLocation("ssc_addon", "lunar_mend"), SpellRarity.WHITE);
+		super(ResourceLocation.fromNamespaceAndPath("ssc_addon", "lunar_mend"), SpellRarity.WHITE);
 	}
 
 	@Override

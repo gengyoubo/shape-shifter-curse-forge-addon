@@ -44,11 +44,11 @@ public final class EvolutionStoneItem extends Item {
             Map.entry(FormIdentifiers.UPGRADE_AXOLOTL, FormIdentifiers.AXOLOTL_FLUORESCENT),
             Map.entry(ssc("ocelot_3"), FormIdentifiers.OCELOT_NOVA),
             Map.entry(ssc("spider_3"), FormIdentifiers.SPIDER_SALTICIDAE));
-    private static final ResourceLocation ADVANCEMENT = new ResourceLocation("ssc_addon", "player_form_shock");
+    private static final ResourceLocation ADVANCEMENT = ResourceLocation.fromNamespaceAndPath("ssc_addon", "player_form_shock");
 
     public EvolutionStoneItem(Properties properties) { super(properties); }
 
-    private static ResourceLocation ssc(String path) { return new ResourceLocation("shape-shifter-curse", path); }
+    private static ResourceLocation ssc(String path) { return ResourceLocation.fromNamespaceAndPath("shape-shifter-curse", path); }
 
     @Nullable
     public static ResourceLocation targetOf(@Nullable ResourceLocation current) {
