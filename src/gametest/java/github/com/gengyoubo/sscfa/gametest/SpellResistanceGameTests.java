@@ -1,7 +1,7 @@
 package github.com.gengyoubo.sscfa.gametest;
 
 import github.com.gengyoubo.sscfa.SscAddonForge;
-import github.com.gengyoubo.sscfa.anomaly.AnomalyEffects;
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.enchantment.RegAddonEnchantments;
 import github.com.gengyoubo.sscfa.spell.SpellDamageSource;
 import net.minecraft.core.BlockPos;
@@ -43,7 +43,7 @@ public final class SpellResistanceGameTests {
         helper.assertTrue(Math.abs(spellTarget.getHealth() - 16.5f) < 0.02f, "six armor levels must cap at 65 percent reduction");
         var reactionTarget = armored(helper, 2, 0);
         var registry = world.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE);
-        var reaction = new DamageSource(registry.getHolderOrThrow(AnomalyEffects.MAGIC_DAMAGE));
+        var reaction = new DamageSource(registry.getHolderOrThrow(AddonAnomalyEffects.MAGIC_DAMAGE));
         helper.assertTrue(reactionTarget.hurt(reaction, 10), "anomaly damage should apply");
         helper.assertTrue(Math.abs(reactionTarget.getHealth() - 12.6f) < 0.02f, "two levels should reduce anomaly damage by 26 percent");
         helper.succeed();

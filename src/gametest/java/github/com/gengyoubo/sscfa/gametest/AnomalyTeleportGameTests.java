@@ -2,7 +2,7 @@ package github.com.gengyoubo.sscfa.gametest;
 
 import com.mojang.authlib.GameProfile;
 import github.com.gengyoubo.sscfa.SscAddonForge;
-import github.com.gengyoubo.sscfa.anomaly.AnomalyEffects;
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.anomaly.AnomalyTeleportGuard;
 import github.com.gengyoubo.sscfa.spell.Spell;
 import github.com.gengyoubo.sscfa.spell.SpellRarity;
@@ -29,13 +29,13 @@ public final class AnomalyTeleportGameTests {
         var blink = new SpaceBlinkSpell();
         try {
             helper.assertTrue(!AnomalyTeleportGuard.reject(player) && blink.canCast(player), "unbound player should be allowed");
-            player.addEffect(new MobEffectInstance(AnomalyEffects.SPACE_BIND.get(), 200));
-            helper.assertTrue(AnomalyEffects.teleportBlocked(player), "space bind should update the cached state");
+            player.addEffect(new MobEffectInstance(AddonAnomalyEffects.SPACE_BIND.get(), 200));
+            helper.assertTrue(AddonAnomalyEffects.teleportBlocked(player), "space bind should update the cached state");
             helper.assertTrue(AnomalyTeleportGuard.reject(player) && !blink.canCast(player), "space bind should block active teleport");
-            player.removeEffect(AnomalyEffects.SPACE_BIND.get());
+            player.removeEffect(AddonAnomalyEffects.SPACE_BIND.get());
             helper.assertTrue(!AnomalyTeleportGuard.reject(player) && blink.canCast(player), "removing space bind should restore teleport");
         } finally {
-            player.removeEffect(AnomalyEffects.SPACE_BIND.get());
+            player.removeEffect(AddonAnomalyEffects.SPACE_BIND.get());
         }
         helper.succeed();
     }

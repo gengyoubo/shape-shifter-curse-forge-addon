@@ -65,6 +65,7 @@ public final class BatSkillGameTests {
         target.setNoAi(true);
         helper.onEachTick(() -> CustomPowerTypeService.tick(bat));
         float formWidth = bat.getBbWidth();
+        float formEyeHeight = bat.getEyeHeight();
         helper.startSequence()
                 .thenExecute(() -> {
                     press(bat, AddonPowerTypes.SP_PRIMARY_KEY);
@@ -85,6 +86,8 @@ public final class BatSkillGameTests {
                     helper.assertTrue(!bat.hasEffect(AddonEffects.MIST_FORM.get()), "the burst should end the mist");
                     helper.assertTrue(Math.abs(bat.getBbWidth() - formWidth) < 1e-4,
                             "hitbox should return to the form's own width " + formWidth + ", was " + bat.getBbWidth());
+                    helper.assertTrue(Math.abs(bat.getEyeHeight() - formEyeHeight) < 1e-4,
+                            "eye height should return to " + formEyeHeight + ", was " + bat.getEyeHeight());
                     helper.assertTrue(target.getHealth() < target.getMaxHealth(), "the burst should damage the nearby zombie");
                     int remaining = SkillCooldowns.remaining(bat, MIST_FORM);
                     helper.assertTrue(remaining > 190 && remaining <= 200, "cooldown should start at 200 when the mist ends, was " + remaining);

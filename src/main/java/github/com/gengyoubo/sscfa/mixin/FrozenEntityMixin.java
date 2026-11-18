@@ -1,6 +1,7 @@
 package github.com.gengyoubo.sscfa.mixin;
 
 import github.com.gengyoubo.sscfa.anomaly.FrozenControl;
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
@@ -39,7 +40,7 @@ public abstract class FrozenEntityMixin {
         if (!cir.getReturnValueZ()) return;
         if (wasFrozen) FrozenControl.breakFromHit(target);
         github.com.gengyoubo.sscfa.anomaly.AnomalyManager.damageObserved(target);
-        github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.afterDamage(target, source, true);
+        AddonAnomalyEffects.afterDamage(target, source, true);
     }
     @ModifyVariable(method = "travel", at = @At("HEAD"), argsOnly = true)
     private Vec3 ssca$freezeInput(Vec3 movementInput) {

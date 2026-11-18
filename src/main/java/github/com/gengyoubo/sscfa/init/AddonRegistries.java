@@ -13,6 +13,7 @@ public final class AddonRegistries {
         AddonBlockEntities.BLOCK_ENTITIES.register(modBus);
         AddonMenus.MENUS.register(modBus);
         AddonEffects.EFFECTS.register(modBus);
+        AddonAnomalyEffects.EFFECTS.register(modBus);
         NeoMagic.init(modBus);
         AddonEffects.POTIONS.register(modBus);
         AddonRecipes.SERIALIZERS.register(modBus);
@@ -32,7 +33,7 @@ public final class AddonRegistries {
             AddonEffects.registerBrewing();
             AddonServerSystems.init();
             AddonCriteria.init();
-            github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.init();
+            AddonAnomalies.init();
         });
     }
 }

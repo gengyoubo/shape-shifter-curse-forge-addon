@@ -1,5 +1,7 @@
 package github.com.gengyoubo.sscfa.anomaly;
 
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -7,10 +9,10 @@ import java.util.Set;
 /** Immutable shared input for target bars, HUDs and network mirrors. */
 public record AnomalySnapshot(double maximum, Map<String, Double> values, int remainingTicks,
                               String lastElement, int linkRemaining,
-                              List<AnomalyEffects.EffectView> effects,
+                              List<AddonAnomalyEffects.EffectView> effects,
                               int fullRemainingTicks, Set<String> fullElements) {
     public AnomalySnapshot(double maximum, Map<String, Double> values, int remainingTicks,
-                           String lastElement, int linkRemaining, List<AnomalyEffects.EffectView> effects) {
+                           String lastElement, int linkRemaining, List<AddonAnomalyEffects.EffectView> effects) {
         this(maximum, values, remainingTicks, lastElement, linkRemaining, effects, 0, Set.of());
     }
 

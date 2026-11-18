@@ -11,6 +11,8 @@ import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.onixary.shapeShifterCurseForge.client.codex.StartBookScreenV2;
+import net.onixary.shapeShifterCurseForge.client.codex.BookOfShapeShifterScreenV2_P1;
+import net.onixary.shapeShifterCurseForge.other.config.SscClientConfig;
 
 @Mod.EventBusSubscriber(modid = SscAddonForge.MOD_ID, value = Dist.CLIENT)
 public final class SscaStartBookHook {
@@ -23,6 +25,16 @@ public final class SscaStartBookHook {
 
     @SubscribeEvent
     public static void addEvolutionButton(ScreenEvent.Init.Post event) {
+        if (event.getScreen() instanceof BookOfShapeShifterScreenV2_P1 book) {
+            if (EvolutionScreen.resolveRoute() == null || !EvolutionScreen.resolveRoute().enabled) return;
+            int scale = SscClientConfig.BIG_CODEX.get() ? 2 : 1;
+            int left = book.width / 2 - 350 * scale / 2;
+            int top = book.height / 2 - 220 * scale / 2;
+            event.addListener(Button.builder(Component.translatable("text.ssc_addon.evolution.book.button"),
+                    button -> Minecraft.getInstance().setScreen(new EvolutionScreen(book)))
+                    .bounds(left + 35 * scale, top + 2 * scale, 70 * scale, 12 * scale).build());
+            return;
+        }
         if (!(event.getScreen() instanceof StartBookScreenV2 book)) return;
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;

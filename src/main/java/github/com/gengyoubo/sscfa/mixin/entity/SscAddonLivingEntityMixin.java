@@ -15,7 +15,7 @@ import github.com.gengyoubo.sscfa.ability.SnowFoxSpMeleeAbility;
 import github.com.gengyoubo.sscfa.ability.SnowFoxSpTeleportAttack;
 import github.com.gengyoubo.sscfa.ability.WindSpiritClawManager;
 import github.com.gengyoubo.sscfa.ability.WitherFrenzyManager;
-import github.com.gengyoubo.sscfa.anomaly.AnomalyEffects;
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.effect.FrostFreezeEffect;
 import github.com.gengyoubo.sscfa.item.BindingAnkletItem;
 import github.com.gengyoubo.sscfa.power.EffectEfficiencyReductionPower;
@@ -112,7 +112,7 @@ public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess 
     @ModifyVariable(method = "hurt", at = @At("HEAD"), argsOnly = true, ordinal = 0)
     private float ssca$npcCombatDamage(float amount, DamageSource source) {
         LivingEntity target = (LivingEntity) (Object) this;
-        return AnomalyEffects.modifyDamage(target, source, NpcCombatEnhancements.modifyDamage(target, source, amount));
+        return AddonAnomalyEffects.modifyDamage(target, source, NpcCombatEnhancements.modifyDamage(target, source, amount));
     }
 
     @Inject(method = "onEffectRemoved", at = @At("TAIL"))
@@ -344,7 +344,7 @@ public abstract class SscAddonLivingEntityMixin implements NpcCombatStateAccess 
         LivingEntity self = (LivingEntity) (Object) this;
         if (self.level().isClientSide || amount <= 0 || source == null
                 || (!source.is(github.com.gengyoubo.sscfa.spell.SpellDamageSource.SPELL_DAMAGE)
-                && !AnomalyEffects.isReaction(source))) return amount;
+                && !AddonAnomalyEffects.isReaction(source))) return amount;
         int level = 0;
         for (net.minecraft.world.entity.EquipmentSlot slot : ssca$armorSlots) {
             level += net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(

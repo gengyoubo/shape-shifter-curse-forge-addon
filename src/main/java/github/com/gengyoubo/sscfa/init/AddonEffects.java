@@ -57,20 +57,6 @@ public final class AddonEffects {
     public static final RegistryObject<MobEffect> SHEEP_FORM = EFFECTS.register("sheep_form", SheepFormEffect::new);
     public static final RegistryObject<MobEffect> SPIDER_WEB_BOUND = EFFECTS.register("spider_web_bound", SpiderWebBoundEffect::new);
 
-    // ===== 异常反应标记（anomaly_*），行为由异常系统驱动 =====
-    public static final RegistryObject<MobEffect> ANOMALY_LUNAR_ECLIPSE = EFFECTS.register("anomaly_lunar_eclipse", () -> new AnomalyMarkerEffect(0xDBD7A7));
-    public static final RegistryObject<MobEffect> ANOMALY_CURSE_WEAKNESS = EFFECTS.register("anomaly_curse_weakness", () -> new AnomalyMarkerEffect(0x8B56AF));
-    public static final RegistryObject<MobEffect> ANOMALY_SUMMON_MARK = EFFECTS.register("anomaly_summon_mark", () -> new AnomalyMarkerEffect(0x79CBA7));
-    public static final RegistryObject<MobEffect> ANOMALY_VOID_EROSION = EFFECTS.register("anomaly_void_erosion", () -> new AnomalyMarkerEffect(0x6961A5));
-    public static final RegistryObject<MobEffect> ANOMALY_SPACE_BIND = EFFECTS.register("anomaly_space_bind", () -> new AnomalyMarkerEffect(0xAFDCEC));
-    public static final RegistryObject<MobEffect> ANOMALY_FROST_SLOW = EFFECTS.register("anomaly_frost_slow", () -> new AnomalyMarkerEffect(0x72BDCF));
-    public static final RegistryObject<MobEffect> ANOMALY_NO_SPRINT = EFFECTS.register("anomaly_no_sprint", () -> new AnomalyMarkerEffect(0xAFDCEC));
-    public static final RegistryObject<MobEffect> ANOMALY_FLAME_SPIRIT = EFFECTS.register("anomaly_flame_spirit", () -> new AnomalyMarkerEffect(0xE5A25B));
-    public static final RegistryObject<MobEffect> ANOMALY_FROST_HUNT = EFFECTS.register("anomaly_frost_hunt", () -> new AnomalyMarkerEffect(0x8FCEE5));
-    public static final RegistryObject<MobEffect> ANOMALY_SPIRIT_MOON = EFFECTS.register("anomaly_spirit_moon", () -> new AnomalyMarkerEffect(0xB4E9D5));
-    public static final RegistryObject<MobEffect> ANOMALY_SUMMON_WEAKNESS = EFFECTS.register("anomaly_summon_weakness", () -> new AnomalyMarkerEffect(0xA48FBC));
-    public static final RegistryObject<MobEffect> ANOMALY_FIRE_ZONE = EFFECTS.register("anomaly_fire_zone", () -> new AnomalyMarkerEffect(0xE57F46));
-
     // ===== 月尘缓解（瞬时，作用于崩解度，待新魔法运行时迁移） =====
     public static final RegistryObject<MobEffect> MOON_DUST_RELIEF = EFFECTS.register("moon_dust_relief",
             () -> github.com.gengyoubo.sscfa.item.MoonDustReliefItem.RELIEF);

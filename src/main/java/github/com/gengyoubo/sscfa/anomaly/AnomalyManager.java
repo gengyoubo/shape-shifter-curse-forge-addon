@@ -1,5 +1,7 @@
 package github.com.gengyoubo.sscfa.anomaly;
 
+import github.com.gengyoubo.sscfa.init.AddonAnomalies;
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -19,7 +21,7 @@ public final class AnomalyManager {
         if (initialized) return;
         initialized = true;
         github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.amountResolver(AnomalyRules::amount);
-        AnomalyEffects.init();
+        AddonAnomalies.init();
         AnomalyNetwork.init();
     }
 
@@ -53,12 +55,12 @@ public final class AnomalyManager {
         long tick = target.level() instanceof ServerLevel world ? now(world.getServer()) : 0;
         if (current == null || current.target != target || current.world != target.level()) {
             return new AnomalySnapshot(AnomalyLedger.MAXIMUM, Map.of(), 0, "", 0,
-                    AnomalyEffects.effectSnapshot(target));
+                    AddonAnomalyEffects.effectSnapshot(target));
         }
         AnomalyLedger.Snapshot values = current.ledger.snapshot(tick);
         int link = current.linkRemaining(tick);
         return new AnomalySnapshot(values.maximum(), values.values(), values.remainingTicks(),
-                current.lastElement, link, AnomalyEffects.effectSnapshot(target),
+                current.lastElement, link, AddonAnomalyEffects.effectSnapshot(target),
                 values.fullRemainingTicks(), values.fullElements());
     }
 }

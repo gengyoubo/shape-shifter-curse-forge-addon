@@ -1,5 +1,6 @@
 package github.com.gengyoubo.sscfa.anomaly;
 
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.network.AddonNetwork;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -11,7 +12,6 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 /** 异常快照的变更驱动同步；倒计时由客户端按服务端时间锚插值。 */
@@ -44,14 +44,14 @@ public final class AnomalyNetwork {
         });
         MinecraftForge.EVENT_BUS.addListener((PlayerEvent.StartTracking event) -> {
             if (event.getTarget() instanceof LivingEntity living
-                    && (AnomalyManager.state(living) != null || AnomalyEffects.hasState(living))
+                    && (AnomalyManager.state(living) != null || AddonAnomalyEffects.hasState(living))
                     && event.getEntity() instanceof ServerPlayer player) {
                 send(living, player, AnomalyManager.snapshot(living));
             }
         });
         MinecraftForge.EVENT_BUS.addListener((PlayerEvent.StopTracking event) -> {
             if (event.getTarget() instanceof LivingEntity living
-                    && (AnomalyManager.state(living) != null || AnomalyEffects.hasState(living))
+                    && (AnomalyManager.state(living) != null || AddonAnomalyEffects.hasState(living))
                     && event.getEntity() instanceof ServerPlayer player) {
                 send(living, player, EMPTY);
             }
@@ -108,7 +108,7 @@ public final class AnomalyNetwork {
         buffer.writeUtf(snapshot.lastElement(), 128);
         buffer.writeVarInt(snapshot.linkRemaining());
         buffer.writeVarInt(snapshot.effects().size());
-        for (AnomalyEffects.EffectView effect : snapshot.effects()) {
+        for (AddonAnomalyEffects.EffectView effect : snapshot.effects()) {
             buffer.writeUtf(effect.id(), 128);
             buffer.writeVarInt(effect.ticks());
             buffer.writeDouble(effect.strength());
@@ -140,7 +140,7 @@ public final class AnomalyNetwork {
         String last = buffer.readUtf(128);
         int link = bounded(buffer.readVarInt(), 0, AnomalyLedger.LINK_TICKS);
         int effectCount = bounded(buffer.readVarInt(), 0, 64);
-        var effects = new java.util.ArrayList<AnomalyEffects.EffectView>(effectCount);
+        var effects = new java.util.ArrayList<AddonAnomalyEffects.EffectView>(effectCount);
         for (int i = 0; i < effectCount; i++) {
             String id = buffer.readUtf(128);
             int ticks = bounded(buffer.readVarInt(), 0, 72000);
@@ -148,7 +148,7 @@ public final class AnomalyNetwork {
             if (id.isBlank() || !Double.isFinite(strength) || strength < 0) {
                 throw new IllegalArgumentException("Invalid anomaly effect");
             }
-            effects.add(new AnomalyEffects.EffectView(id, ticks, strength));
+            effects.add(new AddonAnomalyEffects.EffectView(id, ticks, strength));
         }
         int fullRemaining = 0;
         var fullElements = new java.util.LinkedHashSet<String>();

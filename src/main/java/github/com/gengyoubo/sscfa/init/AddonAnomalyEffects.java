@@ -1,4 +1,4 @@
-package github.com.gengyoubo.sscfa.anomaly;
+package github.com.gengyoubo.sscfa.init;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -11,7 +11,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
-import github.com.gengyoubo.sscfa.init.AddonEffects;
+
+import github.com.gengyoubo.sscfa.SscAddonForge;
+import github.com.gengyoubo.sscfa.anomaly.*;
+import github.com.gengyoubo.sscfa.effect.AnomalyMarkerEffect;
 import github.com.gengyoubo.sscfa.event.PlayerSessionCleanup;
 import github.com.gengyoubo.sscfa.spell.DomainManager;
 import github.com.gengyoubo.sscfa.spell.SpellDamageSource;
@@ -43,22 +46,26 @@ import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
-/** Registered elemental effects, local reactions and bounded summon-hit budgets. */
-public final class AnomalyEffects {
-    public static final RegistryObject<MobEffect> LUNAR_ECLIPSE = AddonEffects.ANOMALY_LUNAR_ECLIPSE;
-    public static final RegistryObject<MobEffect> CURSE_WEAKNESS = AddonEffects.ANOMALY_CURSE_WEAKNESS;
-    public static final RegistryObject<MobEffect> SUMMON_MARK = AddonEffects.ANOMALY_SUMMON_MARK;
-    public static final RegistryObject<MobEffect> VOID_EROSION = AddonEffects.ANOMALY_VOID_EROSION;
-    public static final RegistryObject<MobEffect> SPACE_BIND = AddonEffects.ANOMALY_SPACE_BIND;
-    public static final RegistryObject<MobEffect> FROST_SLOW = AddonEffects.ANOMALY_FROST_SLOW;
-    public static final RegistryObject<MobEffect> NO_SPRINT = AddonEffects.ANOMALY_NO_SPRINT;
-    public static final RegistryObject<MobEffect> FLAME_SPIRIT = AddonEffects.ANOMALY_FLAME_SPIRIT;
-    public static final RegistryObject<MobEffect> FROST_HUNT = AddonEffects.ANOMALY_FROST_HUNT;
-    public static final RegistryObject<MobEffect> SPIRIT_MOON = AddonEffects.ANOMALY_SPIRIT_MOON;
-    public static final RegistryObject<MobEffect> SUMMON_WEAKNESS = AddonEffects.ANOMALY_SUMMON_WEAKNESS;
-    public static final RegistryObject<MobEffect> FIRE_ZONE = AddonEffects.ANOMALY_FIRE_ZONE;
+/** Deferred anomaly effect registration and runtime effect handling. */
+public final class AddonAnomalyEffects {
+    public static final DeferredRegister<MobEffect> EFFECTS = DeferredRegister.create(ForgeRegistries.MOB_EFFECTS, SscAddonForge.MOD_ID);
+
+    public static final RegistryObject<MobEffect> LUNAR_ECLIPSE = EFFECTS.register("anomaly_lunar_eclipse", () -> new AnomalyMarkerEffect(0xDBD7A7));
+    public static final RegistryObject<MobEffect> CURSE_WEAKNESS = EFFECTS.register("anomaly_curse_weakness", () -> new AnomalyMarkerEffect(0x8B56AF));
+    public static final RegistryObject<MobEffect> SUMMON_MARK = EFFECTS.register("anomaly_summon_mark", () -> new AnomalyMarkerEffect(0x79CBA7));
+    public static final RegistryObject<MobEffect> VOID_EROSION = EFFECTS.register("anomaly_void_erosion", () -> new AnomalyMarkerEffect(0x6961A5));
+    public static final RegistryObject<MobEffect> SPACE_BIND = EFFECTS.register("anomaly_space_bind", () -> new AnomalyMarkerEffect(0xAFDCEC));
+    public static final RegistryObject<MobEffect> FROST_SLOW = EFFECTS.register("anomaly_frost_slow", () -> new AnomalyMarkerEffect(0x72BDCF));
+    public static final RegistryObject<MobEffect> NO_SPRINT = EFFECTS.register("anomaly_no_sprint", () -> new AnomalyMarkerEffect(0xAFDCEC));
+    public static final RegistryObject<MobEffect> FLAME_SPIRIT = EFFECTS.register("anomaly_flame_spirit", () -> new AnomalyMarkerEffect(0xE5A25B));
+    public static final RegistryObject<MobEffect> FROST_HUNT = EFFECTS.register("anomaly_frost_hunt", () -> new AnomalyMarkerEffect(0x8FCEE5));
+    public static final RegistryObject<MobEffect> SPIRIT_MOON = EFFECTS.register("anomaly_spirit_moon", () -> new AnomalyMarkerEffect(0xB4E9D5));
+    public static final RegistryObject<MobEffect> SUMMON_WEAKNESS = EFFECTS.register("anomaly_summon_weakness", () -> new AnomalyMarkerEffect(0xA48FBC));
+    public static final RegistryObject<MobEffect> FIRE_ZONE = EFFECTS.register("anomaly_fire_zone", () -> new AnomalyMarkerEffect(0xE57F46));
     public static final ResourceKey<DamageType> FIRE_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
             new ResourceLocation("ssc_addon", "anomaly_fire"));
     public static final ResourceKey<DamageType> MAGIC_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
@@ -68,7 +75,7 @@ public final class AnomalyEffects {
     @FunctionalInterface public interface ReactionExecutor { void apply(LivingEntity target, SpellAnomalyContext context); }
 
     private static final UUID SLOW_MODIFIER = UUID.fromString("362902c5-ebc9-4efe-8096-31bb6f2e3573");
-    private static final Map<String, MobEffect> EFFECTS = new LinkedHashMap<>();
+    private static final Map<String, MobEffect> MANAGED_EFFECTS = new LinkedHashMap<>();
     private static final Map<String, BaseExecutor> BASES = new LinkedHashMap<>();
     private static final Map<String, ReactionExecutor> REACTIONS = new LinkedHashMap<>();
     private static final Map<LivingEntity, ServerLevel> ACTIVE = new IdentityHashMap<>();
@@ -77,68 +84,23 @@ public final class AnomalyEffects {
     private static final ThreadLocal<int[]> REACTION_DEPTH = ThreadLocal.withInitial(() -> new int[1]);
     private static boolean initialized;
 
-    static {
-        registerBase("fire", (target, context) -> reactionDamage(target, context, 8, true));
-        registerBase("ice", (target, context) -> FrozenControl.freeze(target, FrozenControl.DEFAULT_DURATION_TICKS));
-        registerBase("lunar", (target, context) -> apply(target, LUNAR_ECLIPSE.get(), 120, 0));
-        registerBase("curse", (target, context) -> apply(target, CURSE_WEAKNESS.get(), 120, 0));
-        registerBase("summon", (target, context) -> apply(target, SUMMON_MARK.get(), 160, 0));
-        registerBase("void", (target, context) -> apply(target, VOID_EROSION.get(), 120, 0));
-        registerBase("space", (target, context) -> apply(target, SPACE_BIND.get(), 100, 0));
-
-        registerReaction("fire", "ice", (target, context) -> area(target, context, 5, other -> {
-            reactionDamage(other, context, 8, false);
-            if (other.isAlive()) apply(other, FROST_SLOW.get(), 100, 0);
-        }));
-        registerReaction("fire", "lunar", (target, context) -> apply(target, LUNAR_ECLIPSE.get(), 120, 1));
-        registerReaction("fire", "curse", (target, context) -> area(target, context, 3,
-                other -> apply(other, CURSE_WEAKNESS.get(), 100, 0)));
-        registerReaction("fire", "summon", (target, context) -> budget(target, FLAME_SPIRIT.get()));
-        registerReaction("fire", "void", (target, context) -> reactionDamage(target, context, 4, false));
-        registerReaction("fire", "space", AnomalyEffects::fireZone);
-        registerReaction("ice", "lunar", (target, context) -> extend(target, LUNAR_ECLIPSE.get(), 180, 0));
-        registerReaction("ice", "curse", (target, context) -> apply(target, CURSE_WEAKNESS.get(), 120, 2));
-        registerReaction("ice", "summon", (target, context) -> budget(target, FROST_HUNT.get()));
-        registerReaction("ice", "void", (target, context) -> reactionDamage(target, context, 6, false));
-        registerReaction("ice", "space", (target, context) -> apply(target, NO_SPRINT.get(), 100, 0));
-        registerReaction("lunar", "curse", (target, context) -> {
-            extend(target, LUNAR_ECLIPSE.get(), 180, 0); extend(target, CURSE_WEAKNESS.get(), 180, 0);
-        });
-        registerReaction("lunar", "summon", (target, context) -> budget(target, SPIRIT_MOON.get()));
-        registerReaction("lunar", "void", (target, context) -> apply(target, VOID_EROSION.get(), 120, 1));
-        registerReaction("lunar", "space", (target, context) -> area(target, context, 3,
-                other -> apply(other, LUNAR_ECLIPSE.get(), 100, 0)));
-        registerReaction("curse", "summon", (target, context) -> apply(target, SUMMON_WEAKNESS.get(), 120, 0));
-        registerReaction("curse", "void", (target, context) -> {
-            apply(target, CURSE_WEAKNESS.get(), 120, 1); apply(target, VOID_EROSION.get(), 120, 1);
-        });
-        registerReaction("curse", "space", (target, context) -> area(target, context, 3, other -> {
-            apply(other, CURSE_WEAKNESS.get(), 100, 0); apply(other, NO_SPRINT.get(), 100, 0);
-        }));
-        registerReaction("summon", "void", (target, context) -> apply(target, SUMMON_MARK.get(), 160, 1));
-        registerReaction("summon", "space", (target, context) -> area(target, context, 3,
-                other -> apply(other, SUMMON_MARK.get(), 160, 0)));
-        registerReaction("void", "space", (target, context) -> area(target, context, 3,
-                other -> apply(other, VOID_EROSION.get(), 100, 0)));
-    }
-
-    private AnomalyEffects() {}
+    private AddonAnomalyEffects() {}
 
     public static void init() {
         if (initialized) return;
         initialized = true;
-        EFFECTS.put("lunar_eclipse", LUNAR_ECLIPSE.get());
-        EFFECTS.put("curse_weakness", CURSE_WEAKNESS.get());
-        EFFECTS.put("summon_mark", SUMMON_MARK.get());
-        EFFECTS.put("void_erosion", VOID_EROSION.get());
-        EFFECTS.put("space_bind", SPACE_BIND.get());
-        EFFECTS.put("frost_slow", FROST_SLOW.get());
-        EFFECTS.put("no_sprint", NO_SPRINT.get());
-        EFFECTS.put("flame_spirit", FLAME_SPIRIT.get());
-        EFFECTS.put("frost_hunt", FROST_HUNT.get());
-        EFFECTS.put("spirit_moon", SPIRIT_MOON.get());
-        EFFECTS.put("summon_weakness", SUMMON_WEAKNESS.get());
-        EFFECTS.put("fire_zone", FIRE_ZONE.get());
+        MANAGED_EFFECTS.put("lunar_eclipse", LUNAR_ECLIPSE.get());
+        MANAGED_EFFECTS.put("curse_weakness", CURSE_WEAKNESS.get());
+        MANAGED_EFFECTS.put("summon_mark", SUMMON_MARK.get());
+        MANAGED_EFFECTS.put("void_erosion", VOID_EROSION.get());
+        MANAGED_EFFECTS.put("space_bind", SPACE_BIND.get());
+        MANAGED_EFFECTS.put("frost_slow", FROST_SLOW.get());
+        MANAGED_EFFECTS.put("no_sprint", NO_SPRINT.get());
+        MANAGED_EFFECTS.put("flame_spirit", FLAME_SPIRIT.get());
+        MANAGED_EFFECTS.put("frost_hunt", FROST_HUNT.get());
+        MANAGED_EFFECTS.put("spirit_moon", SPIRIT_MOON.get());
+        MANAGED_EFFECTS.put("summon_weakness", SUMMON_WEAKNESS.get());
+        MANAGED_EFFECTS.put("fire_zone", FIRE_ZONE.get());
         MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent event) -> {
             if (event.phase == TickEvent.Phase.END) { drain(); tickZones(); }
         });
@@ -199,7 +161,7 @@ public final class AnomalyEffects {
         }
     }
 
-    static String pair(String first, String second) {
+    public static String pair(String first, String second) {
         return first.compareTo(second) < 0 ? first + "+" + second : second + "+" + first;
     }
 
@@ -226,7 +188,7 @@ public final class AnomalyEffects {
     public static List<EffectView> effectSnapshot(LivingEntity target) {
         if (target == null) return List.of();
         List<EffectView> views = new ArrayList<>();
-        for (Map.Entry<String, MobEffect> entry : EFFECTS.entrySet()) {
+        for (Map.Entry<String, MobEffect> entry : MANAGED_EFFECTS.entrySet()) {
             MobEffectInstance instance = target.getEffect(entry.getValue());
             if (instance != null) {
                 views.add(new EffectView(entry.getKey(), instance.getDuration(), instance.getAmplifier() + 1));
@@ -308,8 +270,8 @@ public final class AnomalyEffects {
         Cache dealt = source.getEntity() instanceof LivingEntity attacker ? cache(attacker) : null;
         if (received == null && dealt == null) return amount;
         boolean summon = isSummonDamage(source);
-        if (dealt != null) amount *= 1 - Math.max(dealt.dealtReduction,
-                isSummoned(target) ? dealt.summonReduction : 0);
+        if (dealt != null) amount *= (float) (1 - Math.max(dealt.dealtReduction,
+                        isSummoned(target) ? dealt.summonReduction : 0));
         if (received != null) {
             double vulnerability = Math.max(summon ? received.summonVulnerability : 0,
                     isSpellDamage(source) ? received.spellVulnerability : 0);
@@ -387,7 +349,7 @@ public final class AnomalyEffects {
         }
     }
 
-    private static void budget(LivingEntity target, MobEffect marker) {
+    public static void budget(LivingEntity target, MobEffect marker) {
         apply(target, marker, 120, 0);
         if (!target.hasEffect(marker)) return;
         Cache state = cache(target);
@@ -396,10 +358,10 @@ public final class AnomalyEffects {
         else if (marker == SPIRIT_MOON.get()) state.healing = new Budget(4);
     }
 
-    private static void apply(LivingEntity target, MobEffect type, int ticks, int amplifier) {
+    public static void apply(LivingEntity target, MobEffect type, int ticks, int amplifier) {
         if (live(target)) target.addEffect(new MobEffectInstance(type, ticks, amplifier, false, false, true));
     }
-    private static void extend(LivingEntity target, MobEffect type, int ticks, int minimumAmplifier) {
+    public static void extend(LivingEntity target, MobEffect type, int ticks, int minimumAmplifier) {
         MobEffectInstance old = target.getEffect(type);
         apply(target, type, Math.max(ticks, old == null ? 0 : old.getDuration()),
                 Math.max(minimumAmplifier, old == null ? 0 : old.getAmplifier()));
@@ -428,7 +390,7 @@ public final class AnomalyEffects {
                 && !target.isRemoved() && !target.isSpectator();
     }
 
-    private static void area(LivingEntity origin, SpellAnomalyContext context, double radius, Consumer<LivingEntity> action) {
+    public static void area(LivingEntity origin, SpellAnomalyContext context, double radius, Consumer<LivingEntity> action) {
         ServerLevel world = (ServerLevel)origin.level();
         localArea(world, origin.position(), context, radius, action);
     }
@@ -473,7 +435,7 @@ public final class AnomalyEffects {
         }
     }
 
-    private static void fireZone(LivingEntity target, SpellAnomalyContext context) {
+    public static void fireZone(LivingEntity target, SpellAnomalyContext context) {
         if (context == null) return;
         apply(target, FIRE_ZONE.get(), 100, 0);
         if (!target.hasEffect(FIRE_ZONE.get())) return;
@@ -525,7 +487,7 @@ public final class AnomalyEffects {
                 if (isManaged(effect.getEffect())) { loadedMarker = true; break; }
             if (!loadedMarker) return;
         }
-        for (MobEffect effect : EFFECTS.values()) target.removeEffect(effect);
+        for (MobEffect effect : MANAGED_EFFECTS.values()) target.removeEffect(effect);
         target.removeEffect(AddonEffects.FROZEN_RECOVERY.get());
         FrozenControl.clear(target);
         ((AnomalyEffectAccess)target).ssca$anomalyEffects(null);

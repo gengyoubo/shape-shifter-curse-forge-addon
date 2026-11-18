@@ -1,4 +1,5 @@
 package github.com.gengyoubo.sscfa.spell.spells;
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.spell.research.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -83,7 +84,7 @@ public class SpaceBlinkSpell extends Spell {
 
 	@Override
 	public boolean canCast(ServerPlayer caster) {
-		return !github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.teleportBlocked(caster);
+		return !AddonAnomalyEffects.teleportBlocked(caster);
 	}
 
     @Override public net.minecraft.network.chat.Component getCastFailureMessage(ServerPlayer caster) {

@@ -1,5 +1,6 @@
 package github.com.gengyoubo.sscfa.spell.spells;
 
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.spell.Spell;
 import github.com.gengyoubo.sscfa.spell.SpellRarity;
 import github.com.gengyoubo.sscfa.spell.pocket.PocketSpaceManager;
@@ -20,7 +21,7 @@ public final class PocketSpaceSpell extends Spell {
 
 	@Override
 	public net.minecraft.network.chat.Component getCastFailureMessage(ServerPlayer caster) {
-		if (github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.teleportBlocked(caster))
+		if (AddonAnomalyEffects.teleportBlocked(caster))
             return net.minecraft.network.chat.Component.translatable("message.ssc_addon.anomaly.teleport_blocked");
 		return net.minecraft.network.chat.Component.translatable("message.ssc_addon.pocket_space.unavailable");
 	}

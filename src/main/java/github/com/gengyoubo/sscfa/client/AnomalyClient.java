@@ -1,6 +1,6 @@
 package github.com.gengyoubo.sscfa.client;
 
-import github.com.gengyoubo.sscfa.anomaly.AnomalyEffects;
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.anomaly.AnomalyNetwork;
 import github.com.gengyoubo.sscfa.anomaly.AnomalySnapshot;
 import github.com.gengyoubo.sscfa.network.AddonNetwork;
@@ -91,7 +91,7 @@ public final class AnomalyClient {
             } else {
                 int duration = Math.max(message.snapshot().remainingTicks(),
                         Math.max(message.snapshot().linkRemaining(), message.snapshot().fullRemainingTicks()));
-                for (AnomalyEffects.EffectView effect : message.snapshot().effects()) {
+                for (AddonAnomalyEffects.EffectView effect : message.snapshot().effects()) {
                     duration = Math.max(duration, effect.ticks());
                 }
                 STATES.put(message.entityUuid(), new View(message.entityId(), message.snapshot(),
@@ -148,7 +148,7 @@ public final class AnomalyClient {
         int link = Math.max(0, state.linkRemaining() - elapsed);
         int full = Math.max(0, state.fullRemainingTicks() - elapsed);
         var effects = state.effects().stream().filter(effect -> effect.ticks() > elapsed)
-                .map(effect -> new AnomalyEffects.EffectView(effect.id(), effect.ticks() - elapsed,
+                .map(effect -> new AddonAnomalyEffects.EffectView(effect.id(), effect.ticks() - elapsed,
                         effect.strength())).toList();
         view.projected = new AnomalySnapshot(state.maximum(), view.values(elapsed), remaining,
                 link == 0 ? "" : state.lastElement(), link, effects, full,

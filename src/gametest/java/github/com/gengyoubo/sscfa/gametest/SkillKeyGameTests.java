@@ -38,6 +38,27 @@ public final class SkillKeyGameTests {
 
     private SkillKeyGameTests() {}
 
+    @GameTest(template = TEMPLATE)
+    public static void axolotlPrimaryVortexStartsAndReleases(GameTestHelper helper) {
+        ServerPlayer player = axolotlOnFloor(helper);
+        BalanceHandshake.complete(player);
+        player.setAirSupply(300);
+        try {
+            github.com.gengyoubo.sscfa.ability.VortexChargeManager.start(player);
+            helper.assertTrue(github.com.gengyoubo.sscfa.ability.VortexChargeManager.isCharging(player), "primary skill should start charging");
+            for (int tick = 0; tick < 20; tick++) {
+                github.com.gengyoubo.sscfa.ability.VortexChargeManager.tick(player);
+            }
+            github.com.gengyoubo.sscfa.ability.VortexChargeManager.release(player);
+            helper.assertTrue(!github.com.gengyoubo.sscfa.ability.VortexChargeManager.isCharging(player), "primary skill should release");
+            helper.assertTrue(player.getAirSupply() == 284, "two charge steps should cost 16 air");
+            helper.succeed();
+        } finally {
+            github.com.gengyoubo.sscfa.ability.VortexChargeManager.cancel(player);
+            CustomPowerTypeService.forget(player);
+        }
+    }
+
     /** 满足条件时按键：技能执行并按 JSON 冷却；冷却中再按不重置。 */
     @GameTest(template = TEMPLATE)
     public static void skillKeyStartsJsonCooldown(GameTestHelper helper) {

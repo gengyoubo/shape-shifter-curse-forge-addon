@@ -6,6 +6,8 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.network.visual.ParametricVisuals;
 import github.com.gengyoubo.sscfa.util.ParticleUtils;
 import net.minecraft.world.entity.LivingEntity;
@@ -124,7 +126,7 @@ public final class AnomalyReactionFeedback {
         ServerLevel world = (ServerLevel) target.level();
         Budget budget = budget(world);
         BlockPos cell = cell(target.position());
-        String pair = AnomalyEffects.pair(first, second);
+        String pair = AddonAnomalyEffects.pair(first, second);
         if (budget.visual(cell)) {
             Vec3 center = target.position().add(0, target.getBbHeight() * .5, 0);
             double spread = Math.max(.3, Math.min(1.2, target.getBbWidth() * .6));

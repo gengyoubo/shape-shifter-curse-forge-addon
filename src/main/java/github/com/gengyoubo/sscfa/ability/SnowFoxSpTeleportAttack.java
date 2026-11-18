@@ -1,5 +1,6 @@
 package github.com.gengyoubo.sscfa.ability;
 
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.power.FailAwareActiveSelfPower;
 import github.com.gengyoubo.sscfa.util.FormIdentifiers;
 import github.com.gengyoubo.sscfa.util.ParticleUtils;
@@ -166,7 +167,7 @@ public class SnowFoxSpTeleportAttack {
 	 * 瞬移到目标身后并攻击
 	 */
 	private static void teleportToTarget(ServerPlayer player, TeleportAttackData data) {
-		if (github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.teleportBlocked(player)) return;
+		if (AddonAnomalyEffects.teleportBlocked(player)) return;
 		if (data.currentTargetIndex >= data.targets.size()) return;
 
 		LivingEntity target = data.targets.get(data.currentTargetIndex);

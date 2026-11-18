@@ -173,7 +173,7 @@ public final class SkillCooldownBarRenderer {
                     && skill.cooldown() != null && "form_axolotl_sp_play_dead_activate".equals(skill.cooldown().getPath())) {
                 var deadEffect = player.getEffect(SscAddon.PLAYING_DEAD);
                 if (deadEffect != null) {
-                    int duration = SkillHudCatalog.balanceInt("abilities.playing_dead", "duration", 60);
+                    int duration = github.com.gengyoubo.sscfa.action.SscAddonActions.PLAY_DEAD_DURATION_TICKS;
                     internalReady = Math.min(1.0, Math.max(1, deadEffect.getDuration()) / (double) Math.max(1, duration));
                     countdown = true;
                 }

@@ -1,5 +1,6 @@
 package github.com.gengyoubo.sscfa.spell.spells;
 
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.spell.Spell;
 import github.com.gengyoubo.sscfa.spell.SpellRarity;
 import net.minecraft.core.BlockPos;
@@ -29,12 +30,12 @@ public class SpaceRecallSpell extends Spell {
 	public boolean canCast(ServerPlayer caster) {
 		// 必须有绑定重生点（床/重生锚）
 		BlockPos spawnPos = caster.getRespawnPosition();
-		return spawnPos != null && !github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.teleportBlocked(caster);
+		return spawnPos != null && !AddonAnomalyEffects.teleportBlocked(caster);
 	}
 
 	@Override
 	public net.minecraft.network.chat.Component getCastFailureMessage(ServerPlayer caster) {
-		if (github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.teleportBlocked(caster))
+		if (AddonAnomalyEffects.teleportBlocked(caster))
             return net.minecraft.network.chat.Component.translatable("message.ssc_addon.anomaly.teleport_blocked");
 		return net.minecraft.network.chat.Component.translatable("message.ssc_addon.spellbook.no_spawn");
 	}

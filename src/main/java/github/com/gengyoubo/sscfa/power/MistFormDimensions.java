@@ -23,8 +23,10 @@ import java.util.WeakHashMap;
 public final class MistFormDimensions {
 	private static final EntityDimensions MIST = EntityDimensions.scalable(0.2f, 0.1f);
 	private static final float MIST_EYE_HEIGHT = 0.08f;
-	/** 每个玩家上一 tick 是否雾化（两端各一份，弱引用不阻止回收）。 */
-	private static final Map<Player, Boolean> LAST = new WeakHashMap<>();
+	// Entity.equals/hashCode use the entity ID, which is shared by the client and integrated-server
+	// copies of a player. Keep their transitions separate or one side can consume the other's exit.
+	private static final Map<Player, Boolean> CLIENT_LAST = new WeakHashMap<>();
+	private static final Map<Player, Boolean> SERVER_LAST = new WeakHashMap<>();
 
 	private MistFormDimensions() {}
 
@@ -46,10 +48,11 @@ public final class MistFormDimensions {
 		if (event.phase != TickEvent.Phase.END) return;
 		Player player = event.player;
 		boolean mist = player.hasEffect(AddonEffects.MIST_FORM.get());
+		Map<Player, Boolean> last = player.level().isClientSide ? CLIENT_LAST : SERVER_LAST;
 		Boolean previous;
-		synchronized (LAST) {
-			previous = LAST.put(player, mist);
+		synchronized (last) {
+			previous = last.put(player, mist);
 		}
-		if (previous != null && previous != mist) player.refreshDimensions();
+		if (previous == null ? mist : previous != mist) player.refreshDimensions();
 	}
 }

@@ -1,5 +1,6 @@
 package github.com.gengyoubo.sscfa.anomaly;
 
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import github.com.gengyoubo.sscfa.spell.Spell;
@@ -8,7 +9,7 @@ import github.com.gengyoubo.sscfa.spell.Spell;
 public final class AnomalyTeleportGuard {
     private AnomalyTeleportGuard() {}
     public static boolean reject(ServerPlayer player) {
-        if (!AnomalyEffects.teleportBlocked(player)) return false;
+        if (!AddonAnomalyEffects.teleportBlocked(player)) return false;
         player.displayClientMessage(Component.translatable("message.ssc_addon.anomaly.teleport_blocked"), true);
         return true;
     }

@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "ssc_addon.refmap.json",
   "mixins": [
+    "FormNightVisionEffectMixin",
     "LivingEntityLoginHealthMixin",
     "DomainEntityBoundaryMixin",
     "DomainPlayerBoundaryMixin",

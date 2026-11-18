@@ -49,6 +49,7 @@ import net.onixary.shapeShifterCurseForge.api.registry.SscAction;
 import net.onixary.shapeShifterCurseForge.api.registry.SscJavaRegistries;
 
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * The addon's custom JSON action types, registered with SSC Forge by their {@code "type"} id.
@@ -437,42 +438,72 @@ public final class SscAddonActions {
 		return ResourceKey.create(Registries.DAMAGE_TYPE, location == null ? new ResourceLocation("minecraft", "generic") : location);
 	}
 
+	private static <T> T get(
+			JsonObject data,
+			String key,
+			T fallback,
+			Function<JsonElement, T> converter
+	) {
+		if (data == null) return fallback;
+
+		JsonElement element = data.get(key);
+		if (element == null || element.isJsonNull()) {
+			return fallback;
+		}
+
+		try {
+			return converter.apply(element);
+		} catch (IllegalStateException | NumberFormatException e) {
+			return fallback;
+		}
+	}
 	static JsonObject objectOf(JsonObject data, String key) {
-		JsonElement e = data.get(key);
-		return e != null && e.isJsonObject() ? e.getAsJsonObject() : null;
+		return get(data, key, null,
+				e -> e.isJsonObject() ? e.getAsJsonObject() : null);
 	}
 
 	static String stringOf(JsonObject data, String key, String fallback) {
-		JsonElement e = data.get(key);
-		return e != null && e.isJsonPrimitive() ? e.getAsString() : fallback;
+		return get(data, key, fallback,
+				e -> e.isJsonPrimitive() ? e.getAsString() : fallback);
 	}
 
 	static int intOf(JsonObject data, String key, int fallback) {
-		JsonElement e = data.get(key);
-		return e != null && e.isJsonPrimitive() ? e.getAsInt() : fallback;
+		return get(data, key, fallback,
+				e -> e.isJsonPrimitive() ? e.getAsInt() : fallback);
 	}
 
 	static float floatOf(JsonObject data, String key, float fallback) {
-		JsonElement e = data.get(key);
-		return e != null && e.isJsonPrimitive() ? e.getAsFloat() : fallback;
+		return get(data, key, fallback,
+				e -> e.isJsonPrimitive() ? e.getAsFloat() : fallback);
 	}
 
 	static double doubleOf(JsonObject data, String key, double fallback) {
-		JsonElement e = data.get(key);
-		return e != null && e.isJsonPrimitive() ? e.getAsDouble() : fallback;
+		return get(data, key, fallback,
+				e -> e.isJsonPrimitive() ? e.getAsDouble() : fallback);
 	}
 
 	static boolean boolOf(JsonObject data, String key, boolean fallback) {
-		JsonElement e = data.get(key);
-		return e != null && e.isJsonPrimitive() ? e.getAsBoolean() : fallback;
+		return get(data, key, fallback,
+				e -> e.isJsonPrimitive() ? e.getAsBoolean() : fallback);
 	}
 
 	/** Item field, either {@code "id"} or Apoli's {@code {"item": "id"}} form. */
 	static Item itemOf(JsonObject data, String key) {
-		JsonElement e = data.get(key);
-		if (e != null && e.isJsonObject()) e = e.getAsJsonObject().get("item");
-		if (e == null || !e.isJsonPrimitive()) return null;
-		ResourceLocation id = ResourceLocation.tryParse(e.getAsString());
-		return id == null || !ForgeRegistries.ITEMS.containsKey(id) ? null : ForgeRegistries.ITEMS.getValue(id);
+		return get(data, key, null, e -> {
+			if (e.isJsonObject()) {
+				e = e.getAsJsonObject().get("item");
+			}
+
+			if (e == null || !e.isJsonPrimitive()) {
+				return null;
+			}
+
+			ResourceLocation id =
+					ResourceLocation.tryParse(e.getAsString());
+
+			return id == null
+					? null
+					: ForgeRegistries.ITEMS.getValue(id);
+		});
 	}
 }

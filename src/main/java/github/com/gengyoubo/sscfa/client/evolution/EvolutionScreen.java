@@ -111,7 +111,7 @@ public class EvolutionScreen extends Screen {
      * 优先级：玩家已选路?{@code comp.getRoute()} ?当前形态对应的起点路线 ?null?
      * 必须是静态方法（?{@code super()} 调用链使用）?
      */
-    private static EvolutionRoute resolveRoute() {
+    static EvolutionRoute resolveRoute() {
         Player p = Minecraft.getInstance().player;
         EvolutionComponent comp = (p == null) ? null : RegEvolutionComponent.EVOLUTION.get(p);
         String rid = (comp == null) ? null : comp.getRoute();

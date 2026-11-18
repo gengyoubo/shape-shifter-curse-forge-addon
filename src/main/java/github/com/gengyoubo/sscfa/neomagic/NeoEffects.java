@@ -1,12 +1,11 @@
 package github.com.gengyoubo.sscfa.neomagic;
 
-import github.com.gengyoubo.sscfa.anomaly.AnomalyEffects;
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import github.com.gengyoubo.sscfa.anomaly.AnomalyTeleportGuard;
 import github.com.gengyoubo.sscfa.anomaly.SpellAnomalyContext;
 import github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits;
 import github.com.gengyoubo.sscfa.spell.FormCastingStyle;
 import github.com.gengyoubo.sscfa.spell.FormSpellStyle;
-import github.com.gengyoubo.sscfa.spell.SpellChannelManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -32,11 +31,9 @@ import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import static github.com.gengyoubo.sscfa.neomagic.INeoModel.Blueprint;
@@ -104,7 +101,7 @@ public final class NeoEffects {
     }
 
     public static boolean preflight(ServerPlayer player, Blueprint blueprint, Anchor anchor) {
-        if (blueprint.output() == Core.SPACE && AnomalyEffects.teleportBlocked(player)) return false;
+        if (blueprint.output() == Core.SPACE && AddonAnomalyEffects.teleportBlocked(player)) return false;
         if (blueprint.carrier() == Carrier.LOCK && anchor.target() == null) return false;
         if (blueprint.carrier() == Carrier.CONTACT && anchor.target() == null) return false;
         if (blueprint.core() == Core.SPACE || blueprint.core() == Core.SUMMON) {

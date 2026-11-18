@@ -1,4 +1,5 @@
 package github.com.gengyoubo.sscfa.spell.pocket;
+import github.com.gengyoubo.sscfa.init.AddonAnomalyEffects;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
@@ -20,7 +21,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -64,7 +64,7 @@ public final class PocketSpaceManager {
 	public static boolean canEnter(ServerPlayer player) {
 		ensureServer(player.getServer());
 		return player.isAlive() && !player.isSpectator() && !player.isPassenger() && !player.isVehicle()
-				&& !github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.teleportBlocked(player)
+				&& !AddonAnomalyEffects.teleportBlocked(player)
 				&& !isPocket(player.level()) && !CHANNELS.containsKey(player.getUUID())
 				&& player.getServer().getLevel(WORLD_KEY) != null;
 	}
@@ -266,7 +266,7 @@ public final class PocketSpaceManager {
 			PocketSpaceStorage.Room room = PocketSpaceStorage.findRoom(server, channel.scrollId);
 			if (player == null || !player.isAlive() || player.isPassenger() || player.isVehicle()
 					|| player.isSpectator()
-					|| github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.teleportBlocked(player)
+					|| AddonAnomalyEffects.teleportBlocked(player)
 					|| !player.level().dimension().equals(channel.dimension)
 					|| room == null) {
 				if (player != null) {
@@ -327,7 +327,7 @@ public final class PocketSpaceManager {
 			boolean onPortal = insidePortal && Math.abs(player.getY()
 					- (PocketSpaceLayout.FLOOR_Y + 1 + PocketSpaceLayout.PORTAL_TOP_HEIGHT)) < 0.08
 					&& player.onGround();
-            if (github.com.gengyoubo.sscfa.anomaly.AnomalyEffects.teleportBlocked(player)) {
+            if (AddonAnomalyEffects.teleportBlocked(player)) {
                 gate.tick(insidePortal, false); // Voluntary exit waits; eviction/safety-return paths above remain available.
                 if (onPortal && player.tickCount % 20 == 0)
                     github.com.gengyoubo.sscfa.anomaly.AnomalyTeleportGuard.reject(player);
