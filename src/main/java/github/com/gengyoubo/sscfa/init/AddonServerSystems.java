@@ -62,6 +62,7 @@ public final class AddonServerSystems {
         github.com.gengyoubo.sscfa.ability.NovaSkillManager.init();
         github.com.gengyoubo.sscfa.ability.CorruptMistManager.init();
         github.com.gengyoubo.sscfa.spell.ExplosionManager.init();
+        github.com.gengyoubo.sscfa.spell.UniversalFormationManager.init();
         github.com.gengyoubo.sscfa.ability.CompanionResonanceManager.init();
         github.com.gengyoubo.sscfa.ability.SeedEnergyEatingHandler.register();
     }

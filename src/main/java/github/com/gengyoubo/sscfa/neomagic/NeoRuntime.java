@@ -5,6 +5,7 @@ import github.com.gengyoubo.sscfa.anomaly.SpellAnomalyContext;
 import github.com.gengyoubo.sscfa.init.AddonEffects;
 import github.com.gengyoubo.sscfa.network.AddonNetwork;
 import github.com.gengyoubo.sscfa.spell.CastRangeGuard;
+import github.com.gengyoubo.sscfa.spell.CollapsePenalties;
 import github.com.gengyoubo.sscfa.spell.FormSpellStyle;
 import github.com.gengyoubo.sscfa.spell.FrostSpellLink;
 import github.com.gengyoubo.sscfa.spell.OcelotSpellLink;
@@ -111,8 +112,10 @@ public final class NeoRuntime {
         String current = form(player);
         if (!current.equals(data.form)) {
             FrostSpellLink.clear(player);
+            OcelotSpellLink.clear(player);
             if (ACTIVE.containsKey(player.getUUID())) cancel(player, "form_changed");
             NeoEffects.clearStored(player.getUUID());
+            CollapsePenalties.clear(player);
             data.burden = 0;
             data.recovery = 0;
             data.form = current;
@@ -278,10 +281,8 @@ public final class NeoRuntime {
     static void grantExperience(ServerPlayer player, Active active) {
         double amount = active.session.quote.normal() * active.session.blueprint.tier() * active.experienceMultiplier;
         int expTen = (int) Math.min(Integer.MAX_VALUE, Math.round(amount));
+        // grant 负责累加玩家熟练度与标脏；此处不得再累加一次。
         PlayerSpellMastery.grant(player, null, expTen);
-        var data = data(player);
-        data.spellbookMasteryExpTen = (int) Math.min(Integer.MAX_VALUE, (long) data.spellbookMasteryExpTen + expTen);
-        dirty(player);
     }
 
     public static void backlash(ServerPlayer player, double actualCost) {
@@ -376,6 +377,7 @@ public final class NeoRuntime {
                     }
                 }
             }
+            CollapsePenalties.tick(player);
             if (now % 5 == 0) NeoNetwork.hud(player);
             if (prior != data.burden || priorRecovery != data.recovery || hadCooldowns) dirty(player);
         }
@@ -391,12 +393,16 @@ public final class NeoRuntime {
         MinecraftForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent event) -> {
             if (!(event.getEntity() instanceof ServerPlayer player)) return;
             cancel(player, "disconnected");
+            CollapsePenalties.clear(player);
             NeoEffects.clearStored(player.getUUID());
             dirty(player);
             NeoNetwork.close(player);
         });
         MinecraftForge.EVENT_BUS.addListener((PlayerEvent.Clone event) -> {
-            if (event.getOriginal() instanceof ServerPlayer old) cancel(old, "death");
+            if (event.getOriginal() instanceof ServerPlayer old) {
+                cancel(old, "death");
+                CollapsePenalties.clear(old);
+            }
             if (event.getEntity() instanceof ServerPlayer player) {
                 var data = data(player);
                 data.burden = 0;
@@ -407,7 +413,11 @@ public final class NeoRuntime {
         });
         MinecraftForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> {
             var server = event.getServer();
-            for (ServerPlayer player : server.getPlayerList().getPlayers()) cancel(player, "server_stopped");
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                cancel(player, "server_stopped");
+                CollapsePenalties.clear(player);
+            }
+            CollapsePenalties.clearAll();
             NeoEffects.clear();
             for (ServerPlayer player : server.getPlayerList().getPlayers()) dirty(player);
             NeoNetwork.clear();

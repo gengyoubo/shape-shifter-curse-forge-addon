@@ -11,8 +11,6 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.alchemy.Potion;
-import net.minecraft.world.item.crafting.RecipeSerializer;
 
 import java.util.Map;
 import java.util.UUID;
@@ -159,20 +157,4 @@ public final class SscAddon {
 
     public static final MenuType<?> POTION_BAG_SCREEN_HANDLER = AddonMenus.POTION_BAG_SCREEN_HANDLER.get();
     public static final MenuType<?> SPELLBOOK_SCREEN_HANDLER = AddonMenus.SPELLBOOK_SCREEN_HANDLER.get();
-    public static final Potion UNIVERSAL_ENERGY_POTION_TYPE = null;
-    public static final RecipeSerializer<?> REFILL_MOISTURIZER_SERIALIZER = null;
-    public static final RecipeSerializer<?> UPGRADE_MOISTURIZER_SERIALIZER = null;
-    public static final RecipeSerializer<?> RELOAD_SNOWBALL_LAUNCHER_SERIALIZER = null;
-    public static final RecipeSerializer<?> BLIZZARD_TANK_RECHARGE_SERIALIZER = null;
-    public static final RecipeSerializer<?> SP_UPGRADE_SERIALIZER = null;
-    public static final RecipeSerializer<?> INFINITE_ENERGY_POTION_SERIALIZER = null;
-    public static final RecipeSerializer<?> VENOM_GLAND_SERIALIZER = null;
-    public static final Object ON_TRANSFORM_ADDON_FORM = null;
-
-    public static void onInitialize() {}
-    public static void registerApoliSystems() {}
-    public static void registerEntitySpawnHandlers() {}
-    public static void registerForms() {}
-    public static void registerMancianimaEvents() {}
-    public static void registerPlayerEventHandlers() {}
 }

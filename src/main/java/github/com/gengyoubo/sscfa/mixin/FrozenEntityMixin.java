@@ -39,7 +39,6 @@ public abstract class FrozenEntityMixin {
         boolean wasFrozen = ssca$frozenHits != null && !ssca$frozenHits.isEmpty() && ssca$frozenHits.pop();
         if (!cir.getReturnValueZ()) return;
         if (wasFrozen) FrozenControl.breakFromHit(target);
-        github.com.gengyoubo.sscfa.anomaly.AnomalyManager.damageObserved(target);
         AddonAnomalyEffects.afterDamage(target, source, true);
     }
     @ModifyVariable(method = "travel", at = @At("HEAD"), argsOnly = true)

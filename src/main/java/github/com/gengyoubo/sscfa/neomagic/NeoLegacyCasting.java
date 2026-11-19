@@ -8,6 +8,8 @@ import github.com.gengyoubo.sscfa.spell.FormCastingStyle;
 import github.com.gengyoubo.sscfa.spell.FormationData;
 import github.com.gengyoubo.sscfa.spell.FormationElement;
 import github.com.gengyoubo.sscfa.spell.FrostSpellLink;
+import github.com.gengyoubo.sscfa.spell.FormSpellStyle;
+import github.com.gengyoubo.sscfa.spell.PlayerSpellMastery;
 import github.com.gengyoubo.sscfa.spell.Spell;
 import github.com.gengyoubo.sscfa.spell.SpellCastManager;
 import net.minecraft.resources.ResourceLocation;
@@ -94,9 +96,11 @@ public final class NeoLegacyCasting {
         return profile(player, SpellCastManager.getEquippedBook(player));
     }
 
+    /** 身体档案（临时羊形态继承原身体容量）+ 玩家熟练度安全值 + 增能法阵安全值。 */
     public static Profile profile(ServerPlayer player, ItemStack book) {
-        Profile base = NeoRules.current().profile(NeoRuntime.form(player));
-        double bonus = safetyBonus(book);
+        Profile base = NeoRuntime.bodyProfile(player);
+        PlayerSpellMastery.migrate(player, book);
+        double bonus = PlayerSpellMastery.bonus(NeoRuntime.data(player)) + safetyBonus(book);
         return bonus <= 0 ? base
                 : new Profile(base.safety() + bonus, base.failure(), base.offset(),
                 base.merge(), base.split(), base.reference());
@@ -127,24 +131,71 @@ public final class NeoLegacyCasting {
     }
 
     public static Quote blueprintQuote(ServerPlayer player, Blueprint blueprint) {
-        return NeoRules.current().quote(blueprint, NeoRuntime.data(player).mastery(blueprint));
+        return blueprintQuote(player, blueprint, SpellCastManager.getEquippedBook(player));
     }
 
+    /**
+     * 服务端结算与 HUD 预览共用的报价：书内法阵按输入核心折算费用，潮汐与形态崩解倍率随后叠乘。
+     * 无书时只保留形态崩解倍率。
+     */
     public static Quote blueprintQuote(ServerPlayer player, Blueprint blueprint, ItemStack book) {
-        return blueprintQuote(player, blueprint);
+        Quote quote = NeoRules.current().quote(blueprint, NeoRuntime.data(player).mastery(blueprint));
+        boolean hasBook = book != null && !book.isEmpty();
+        double multiplier = blueprintCostMultiplier(player, blueprint.core(), book)
+                * (hasBook ? FormCastingStyle.tidalCostMultiplier(player) : 1)
+                * FormSpellStyle.collapseMultiplier(player, blueprint.carrier() == Carrier.PROJECTILE,
+                blueprint.output() == Core.FROST,
+                blueprint.output() == Core.FROST || blueprint.output() == Core.CURSE);
+        return new Quote(quote.normal() * multiplier, quote.actual() * multiplier, quote.floor(), quote.plan());
     }
 
+    public static double blueprintCostMultiplier(ServerPlayer player, Core core) {
+        return blueprintCostMultiplier(player, core, SpellCastManager.getEquippedBook(player));
+    }
+
+    private static double blueprintCostMultiplier(ServerPlayer player, Core core, ItemStack book) {
+        return book == null || book.isEmpty() ? 1
+                : FormationData.sumManaCostMultiplier(book, element(core)) * FormAffinity.manaCostMultiplier(player);
+    }
+
+    /** 冷却按输入核心的法阵、输出核心的形态亲和折算；最低为基础冷却的 20%（且不少于 10 tick）。 */
     public static int blueprintCooldown(ServerPlayer player, Blueprint blueprint) {
-        return NeoRules.current().cooldown(blueprint);
+        int base = NeoRules.current().cooldown(blueprint);
+        ItemStack book = SpellCastManager.getEquippedBook(player);
+        if (book == null || book.isEmpty()) return base;
+        return Math.max(Math.max(10, (int) Math.ceil(base * .2)),
+                Math.round(base * FormationData.sumCooldownMultiplier(book, element(blueprint.core()))
+                        * FormAffinity.cooldownMultiplier(player, element(blueprint.output()))));
     }
 
-    public static double blueprintPower(ServerPlayer player, Blueprint blueprint) { return 1; }
+    /** 威力跟随最终输出核心：书内伤害法阵 × 形态亲和；无书为 1。 */
+    public static double blueprintPower(ServerPlayer player, Blueprint blueprint) {
+        return blueprintPower(player, blueprint.output());
+    }
 
+    public static double blueprintPower(ServerPlayer player, Core core) {
+        ItemStack book = SpellCastManager.getEquippedBook(player);
+        if (book == null || book.isEmpty()) return 1;
+        return FormationData.sumDamageMultiplier(book, element(core)) * FormAffinity.damageMultiplier(player, element(core));
+    }
+
+    /** 空间法阵射程倍率；形态弹体射程由 {@link FormSpellStyle#projectileRange} 在运行时另行叠乘。 */
     public static double blueprintRangeMultiplier(ServerPlayer player, Blueprint blueprint) {
-        return Math.max(0.1, github.com.gengyoubo.sscfa.spell.FormSpellStyle.projectileRangeMultiplier(player));
+        ItemStack book = SpellCastManager.getEquippedBook(player);
+        return book == null || book.isEmpty() ? 1
+                : Math.max(0.1, FormationData.sumSpaceRangeMultiplier(book, element(blueprint.output())));
     }
 
-    public static double blueprintExperienceMultiplier(ServerPlayer player) { return 1; }
+    /**
+     * 经验法阵倍率（只取书内最高等级）。全局获取倍率由 {@link PlayerSpellMastery#grant} 统一施加，
+     * 此处不得再乘一次。
+     */
+    public static double blueprintExperienceMultiplier(ServerPlayer player) {
+        ItemStack book = SpellCastManager.getEquippedBook(player);
+        int level = book == null || book.isEmpty() ? 0
+                : FormationData.getBestUniversalVariantLevel(book, FormationData.VARIANT_EXP);
+        return level == 0 ? 1 : FormationData.universalExpMultiplier(level);
+    }
 
     public static FormationElement element(Core core) {
         return switch (core) {

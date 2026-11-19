@@ -12,9 +12,8 @@ import net.minecraft.world.entity.player.Player;
  * Golden Sandstorm's versions of the shared wolf perks. Each rank is an addon power; a rank
  * counts only while the player is in this form and holds that power.
  *
- * <p>The Fabric version also remapped SSC's wolf perk purchases to these powers
- * ({@code loadMapped}). SSC Forge applies perk powers per perk tree, and no addon tree is
- * registered for this form yet, so until then the ranks read 0 and the base values apply.</p>
+ * <p>The powers come from the golden_sandstorm_sp perk tree that {@link AddonPerkTrees} mirrors
+ * from SSC's wolf tree (the Fabric version remapped the original purchases in {@code loadMapped}).</p>
  */
 public final class GoldenSandstormPerks {
     public static final ResourceLocation RESPONSE_1 = addon("perk_golden_sandstorm_response_1");

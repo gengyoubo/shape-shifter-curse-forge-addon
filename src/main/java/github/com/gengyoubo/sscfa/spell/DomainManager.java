@@ -23,7 +23,8 @@ import java.util.UUID;
 
 /**
  * 领域壳的权威几何与生命周期。Forge 版把 Fabric 的 tick/连接/交互回调映射到 Forge 事件，
- * 网络下发走 {@link AddonNetwork}。异常脉冲（anomaly pressure）依赖异常系统，待其移植后补回。
+ * 网络下发走 {@link AddonNetwork}。完全展开时对内圈合法目标施加一次空间异常压力，之后每
+ * {@code AnomalyRules.domainPulseTicks()} tick 脉冲一次（只做内圈局部查询，不扫描整个世界）。
  */
 public final class DomainManager {
 	public static final ResourceLocation STATE = ResourceLocation.fromNamespaceAndPath("ssc_addon", "domain_state");
@@ -48,6 +49,8 @@ public final class DomainManager {
 	}
 
 	private static final Map<UUID, Vec3> CHARGE_ANCHORS = new LinkedHashMap<>();
+	private record Pressure(github.com.gengyoubo.sscfa.anomaly.SpellAnomalyContext pulse, int intervalTicks) {}
+	private static final Map<UUID, Pressure> PRESSURES = new LinkedHashMap<>();
 
 	public static void init() {
 		MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent event) -> {
@@ -60,6 +63,7 @@ public final class DomainManager {
 		MinecraftForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> {
 			FIELDS.clear();
 			CHARGE_ANCHORS.clear();
+			PRESSURES.clear();
 			AUDIENCE.clear();
 		});
 		MinecraftForge.EVENT_BUS.addListener((PlayerInteractEvent.RightClickBlock event) -> {
@@ -147,10 +151,23 @@ public final class DomainManager {
 				player.getServer().getTickCount(), true,
 				field.innerRadius, field.outerRadius, field.chargeTicks, field.durationTicks,
 				field.expandStartTick, field.expandDurationTicks, field.maxCastDisplacement));
+		var origin = github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.current();
+		UUID cast = origin == null ? UUID.randomUUID() : origin.castUUID();
+		int level = origin == null ? 1 : origin.level();
+		var initial = new github.com.gengyoubo.sscfa.anomaly.SpellAnomalyContext(
+				net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("ssc_addon", "domain"), "space", level,
+				github.com.gengyoubo.sscfa.anomaly.AnomalyRules.domainInitial(), player.getUUID(), cast);
+		var pulse = new github.com.gengyoubo.sscfa.anomaly.SpellAnomalyContext(
+				initial.spellId(), initial.element(), initial.level(),
+				github.com.gengyoubo.sscfa.anomaly.AnomalyRules.domainPulse(), initial.casterUUID(), cast);
+		PRESSURES.put(player.getUUID(), new Pressure(pulse,
+				Math.max(1, github.com.gengyoubo.sscfa.anomaly.AnomalyRules.domainPulseTicks())));
+		pressure(FIELDS.get(player.getUUID()), initial);
 		broadcast(field, SoundEvents.WITHER_SPAWN, 0.55f, 0.5f);
 		sync(player.getServer());
 	}
 	public static void remove(ServerPlayer player) {
+		PRESSURES.remove(player.getUUID());
 		CHARGE_ANCHORS.remove(player.getUUID());
 		Field field = FIELDS.remove(player.getUUID());
 		if (field == null) return;
@@ -201,11 +218,29 @@ public final class DomainManager {
 			}
 		}
 		for (Field field : FIELDS.values()) {
-			if (field.active || !SpellCastingRules.playsChargeSound(field.chargeTicks) || field.elapsed() <= 0 || field.elapsed() % 40 != 0) continue;
+			if (field.active) {
+				Pressure pressure = PRESSURES.get(field.owner.getUUID());
+				if (pressure != null && field.elapsed() > 0 && field.elapsed() % pressure.intervalTicks() == 0)
+					pressure(field, pressure.pulse());
+				continue;
+			}
+			if (!SpellCastingRules.playsChargeSound(field.chargeTicks) || field.elapsed() <= 0 || field.elapsed() % 40 != 0) continue;
 			float pitch = 0.65f + Math.min(1f, (float) field.elapsed() / field.chargeTicks) * 0.25f;
 			broadcast(field, SoundEvents.CONDUIT_AMBIENT_SHORT, pitch, 1.0f);
 		}
 		if (!FIELDS.isEmpty() && server.getTickCount() % 10 == 0) sync(server);
+	}
+	/** 内圈合法目标（白名单/同盟/领域屏障由 legalTarget 排除，创造模式玩家除外）各记一次异常命中。 */
+	private static void pressure(Field field, github.com.gengyoubo.sscfa.anomaly.SpellAnomalyContext context) {
+		if (field == null || context == null || context.amount() <= 0) return;
+		double squared = field.innerRadius * field.innerRadius;
+		var bounds = new net.minecraft.world.phys.AABB(field.center, field.center).inflate(field.innerRadius);
+		for (LivingEntity target : field.world.getEntitiesOfClass(LivingEntity.class, bounds,
+				candidate -> FormSpellStyle.legalTarget(field.owner, candidate)
+						&& (!(candidate instanceof net.minecraft.world.entity.player.Player p) || !p.isCreative()))) {
+			if (target.distanceToSqr(field.center) <= squared)
+				github.com.gengyoubo.sscfa.anomaly.SpellAnomalyHits.hit(context, target);
+		}
 	}
 	private static void sync(MinecraftServer server) {
 		if (server == null) return;

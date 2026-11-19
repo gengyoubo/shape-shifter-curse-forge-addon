@@ -136,6 +136,7 @@ public final class SpellCastHud {
 					? client.player.getUUID() : null);
 		});
 		MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
+			github.com.gengyoubo.sscfa.client.sound.SpellChargeSoundInstance.stopAll();
 			clear();
 			slideInAt = null;
 			endAt = null;
@@ -333,6 +334,16 @@ public final class SpellCastHud {
 		int x = col == 0 ? 0 : col == 1 ? screenW / 2 : screenW;
 		int y = row == 0 ? 0 : row == 1 ? screenH / 2 : screenH;
 		return new int[]{x, y};
+	}
+
+	/** 就位时的蓄力条包围盒（与 drawPanel 同式，不含滑入/退场位移），供 HUD 缩放使用。 */
+	public static github.com.gengyoubo.sscfa.client.hud.HudScaleGeometry.Box scaleBounds(int screenW, int screenH) {
+		SSCAddonClientConfig config = SSCAddonConfig.client();
+		int[] anchor = anchorPosition(config.chargeBarPosType, screenW, screenH);
+		int x = clampPosition(anchor[0] + config.chargeBarPosOffsetX, screenW, TEX_W);
+		if (config.chargeMirrorRight) x = Math.max(0, screenW - x - TEX_W);
+		int y = clampPosition(anchor[1] + config.chargeBarPosOffsetY, screenH, TEX_H);
+		return new github.com.gengyoubo.sscfa.client.hud.HudScaleGeometry.Box(x, y, TEX_W, TEX_H);
 	}
 
 	private static int clampPosition(int position, int screenSize, int size) {

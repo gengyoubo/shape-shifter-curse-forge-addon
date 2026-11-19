@@ -1,6 +1,6 @@
 package github.com.gengyoubo.sscfa.config;
 
-/** 客户端配置（Forge 简化版）：保留 HUD 布局/开关字段，后续可接入 Forge Config。 */
+/** 客户端配置：HUD 布局/开关/缩放与本地偏好，由 {@link SSCAddonConfig} 以 JSON 持久化。 */
 public class SSCAddonClientConfig {
     public github.com.gengyoubo.sscfa.client.particle.ParticleAvoidance.Strength firstPersonParticleAvoidance =
             github.com.gengyoubo.sscfa.client.particle.ParticleAvoidance.Strength.OFF;
@@ -41,6 +41,18 @@ public class SSCAddonClientConfig {
 
     /** 已观看过颜色编辑器教程的存档/服务器标识。 */
     public java.util.List<String> colorTutorialSeenSaves = new java.util.ArrayList<>();
+
+    /** Gson 不经构造器还原缺失字段，这里补回集合与枚举的默认值并钳制缩放百分比。 */
+    public void sanitize() {
+        if (firstPersonParticleAvoidance == null) {
+            firstPersonParticleAvoidance = github.com.gengyoubo.sscfa.client.particle.ParticleAvoidance.Strength.OFF;
+        }
+        if (hudScalePercent == null) hudScalePercent = new java.util.HashMap<>();
+        hudScalePercent.values().removeIf(java.util.Objects::isNull);
+        hudScalePercent.replaceAll((key, value) -> github.com.gengyoubo.sscfa.client.hud.HudScaleGeometry.percent(value));
+        if (colorTutorialSeenSaves == null) colorTutorialSeenSaves = new java.util.ArrayList<>();
+        colorTutorialSeenSaves.removeIf(java.util.Objects::isNull);
+    }
 
     public void migrateSkillHudLayout() {
         // Forge 简化版：不再执行旧版布局迁移。

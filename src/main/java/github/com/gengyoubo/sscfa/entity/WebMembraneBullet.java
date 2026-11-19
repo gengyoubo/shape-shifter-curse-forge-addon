@@ -126,8 +126,8 @@ public class WebMembraneBullet extends WebBulletBase {
 	private boolean isExtraHandVenomSpindleEquipped(net.minecraft.world.entity.player.Player player,
 													net.minecraft.world.item.Item item) {
 		return github.com.gengyoubo.sscfa.compat.TrinketsConditionAction.CheckEquipped(
-				player, "auto", "hand", "extra_hand", 0,
-				stack -> stack.is(item),
+				player, "auto", "hand", "extra_hand", -1,
+				stack -> item != null && stack.is(item),
 				false
 		);
 	}

@@ -47,9 +47,6 @@ public final class AnomalyManager {
         return target instanceof AnomalyTargetAccess access ? access.ssca$anomalyState() : null;
     }
 
-    public static void damageObserved(LivingEntity target) {
-    }
-
     public static AnomalySnapshot snapshot(LivingEntity target) {
         AnomalyTargetState current = state(target);
         long tick = target.level() instanceof ServerLevel world ? now(world.getServer()) : 0;

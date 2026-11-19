@@ -11,8 +11,8 @@ import net.minecraft.world.entity.player.Player;
  * Moon weaver's versions of the spider perks: faster web-bridge and attack charging, and the
  * perceptual web. Each is an addon power and counts while the player is in this form and holds it.
  *
- * <p>The Fabric version remapped SSC's spider perk purchases to these powers ({@code loadMapped});
- * SSC Forge applies perk powers per perk tree and no addon tree is registered for this form yet.</p>
+ * <p>The powers come from the spider_moon_weaver perk tree that {@link AddonPerkTrees} mirrors
+ * from SSC's spider tree.</p>
  */
 public final class SpiderMoonWeaverPerks {
     public static final ResourceLocation BRIDGE_WEAVER = addon("perk_spider_moon_weaver_bridge_weaver");

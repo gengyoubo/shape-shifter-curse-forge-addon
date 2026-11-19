@@ -78,11 +78,14 @@ public final class NpcCombatEnhancements {
                 && !DomainManager.blocksEffect(target, caster);
     }
     public static MobEffectInstance enhanceFruitDebuff(LivingEntity target, MobEffectInstance effect, Entity source) {
+        // 扩散传递的效果已包含原施法的 NPC 加成，不再叠加。
+        if (github.com.gengyoubo.sscfa.spell.BatSpellLink.transmitting()) return effect;
         if (!isEnemyNpc(source, target) || !FormUtils.isForm((LivingEntity) source, FormIdentifiers.BAT_PARASITIC_FRUIT)
                 || effect.getEffect().getCategory() != MobEffectCategory.HARMFUL) return effect;
-        // Fabric also took the bonus from the active bat spell cast; BatSpellLink is not ported yet.
+        // 施法联动开启时取该次施法快照中的 NPC 加成，否则用默认加成。
+        var cast = github.com.gengyoubo.sscfa.spell.BatSpellLink.current();
         return new MobEffectInstance(effect.getEffect(), effect.getDuration(),
-                effect.getAmplifier() + fruitDebuffLevelBonus(), effect.isAmbient(),
+                effect.getAmplifier() + (cast == null ? fruitDebuffLevelBonus() : cast.npcBonus), effect.isAmbient(),
                 effect.isVisible(), effect.showIcon(), null, effect.getFactorData());
     }
 

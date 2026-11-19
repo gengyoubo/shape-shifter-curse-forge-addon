@@ -24,7 +24,7 @@ final class SpellbookExperience {
         int maximum=(Integer.MAX_VALUE-before)/10;
         long after=before+amount*10L;
         if(after>Integer.MAX_VALUE)return new Result(false,before,maximum);
-        // Forge PlayerSpellMastery has no legacy-book migration step.
+        github.com.gengyoubo.sscfa.spell.PlayerSpellMastery.migrate(player,book);
         data.spellbookMasteryExpTen=(int)after;github.com.gengyoubo.sscfa.neomagic.NeoRuntime.dirty(player);
         return new Result(true,(int)after,maximum);
     }

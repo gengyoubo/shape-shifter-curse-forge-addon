@@ -46,7 +46,9 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * SSCA 实体注册（对?Fabric ??SscAddon / RegAddonEntities）。尺寸与追踪参数照搬原版?? * 追踪范围由方块换算为区块（向上取整）??ghost_cat 外均为空壳，?{@link ShellProjectile} / {@link ShellMob}?? */
+ * SSCA 实体注册（对应 Fabric 版 SscAddon / RegAddonEntities）。尺寸与追踪参数照搬原版，
+ * 追踪范围由方块换算为区块（向上取整）。各实体均注册为真实实体类。
+ */
 public final class AddonEntities {
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, SscAddonForge.MOD_ID);
     private static final List<RegistryObject<EntityType<ShellProjectile>>> SHELL_PROJECTILES = new ArrayList<>();

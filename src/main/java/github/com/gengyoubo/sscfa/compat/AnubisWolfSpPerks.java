@@ -22,9 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * extra slot, and the soul-recall skill.
  *
  * <p>Each perk rank is an addon power and counts while the player is in this form and holds it.
- * The Fabric version remapped SSC's wolf perk purchases to these powers; SSC Forge applies perk
- * powers per perk tree and no addon tree is registered for this form yet, so until then the
- * rank-0 values apply.</p>
+ * The powers come from the anubis_wolf_sp perk tree that {@link AddonPerkTrees} mirrors from SSC's
+ * wolf tree.</p>
  */
 public final class AnubisWolfSpPerks {
     public static final ResourceLocation SUMMONING_1 = addon("perk_anubis_wolf_sp_summoning_1");

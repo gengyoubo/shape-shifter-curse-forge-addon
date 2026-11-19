@@ -32,6 +32,7 @@ public final class SscAddonForge {
         var bus = FMLJavaModLoadingContext.get().getModEventBus();
         AddonRegistries.init(bus);
         AddonForms.init();
+        github.com.gengyoubo.sscfa.compat.AddonPerkTrees.init();
         AddonNetwork.init();
         github.com.gengyoubo.sscfa.util.InstinctAnchors.init();
         github.com.gengyoubo.sscfa.ability.LunarSpiritTargetLink.init();

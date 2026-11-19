@@ -11,9 +11,8 @@ import net.minecraft.world.entity.player.Player;
  * Upgraded axolotl's versions of the axolotl perks. Each perk is an addon power and counts while
  * the player is in this form and holds it.
  *
- * <p>The Fabric version also remapped SSC's axolotl perk purchases to these powers
- * ({@code loadMapped}). SSC Forge applies perk powers per perk tree, and no addon tree is
- * registered for this form yet, so until then the base costs apply.</p>
+ * <p>The powers come from the upgrade_axolotl perk tree that {@link AddonPerkTrees} mirrors from
+ * SSC's axolotl tree (the Fabric version remapped the original purchases in {@code loadMapped}).</p>
  */
 public final class UpgradeAxolotlPerks {
     public static final ResourceLocation VEGETATION = addon("perk_upgrade_axolotl_vegetation");

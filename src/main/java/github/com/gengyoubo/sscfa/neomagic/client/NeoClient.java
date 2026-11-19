@@ -22,12 +22,16 @@ public final class NeoClient {
         AddonNetwork.registerClientReceiver(NeoNetwork.HUD, buffer -> update(buffer.readNbt()));
         AddonNetwork.registerClientReceiver(NeoNetwork.HUD_V2, buffer -> update(buffer.readNbt()));
         MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingIn event) -> requestResync());
-        MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> clear());
+        MinecraftForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
+            clear();
+            github.com.gengyoubo.sscfa.spell.PlayerSpellMastery.acceptClientExperience(0);
+        });
     }
 
     private static void update(CompoundTag state) {
         clear();
         if (state != null) hud.merge(state);
+        github.com.gengyoubo.sscfa.spell.PlayerSpellMastery.acceptClientExperience(hud.getInt("MasteryExpTen"));
     }
 
     private static void clear() {

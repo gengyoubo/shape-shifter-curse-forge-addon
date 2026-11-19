@@ -37,9 +37,8 @@ public final class SpiderSalticidaePerks {
     private SpiderSalticidaePerks() { }
 
     /**
-     * Jumping spider form. The Fabric version also remapped SSC's spider perk purchases to the
-     * addon's perk powers ({@code loadMapped}); SSC Forge applies perk powers per perk tree and no
-     * addon tree is registered for this form yet, so until then only the base values apply.
+     * Jumping spider form. Its perk powers come from the spider_salticidae perk tree that
+     * {@link AddonPerkTrees} mirrors from SSC's spider tree.
      */
     private static boolean isSupported(Player player) {
         return player != null && FormUtils.isForm(player, FormIdentifiers.SPIDER_SALTICIDAE);

@@ -204,6 +204,7 @@ public class AdvancedColorScreen extends Screen {
         Runnable markSeen = () -> {
             if (!cfg.colorTutorialSeenSaves.contains(saveId)) {
                 cfg.colorTutorialSeenSaves.add(saveId);
+                github.com.gengyoubo.sscfa.config.SSCAddonConfig.saveClient();
             }
         };
 

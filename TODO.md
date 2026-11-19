@@ -14,44 +14,66 @@
   - 代码接线已完成（2026-11-19）：`AddonBlocks.INFUSION_ALTAR` 改用 `InfusionAltarBlock`；对旧存档中无方块实体的祭坛，首次右键时补建 `InfusionAltarBlockEntity`。待实机验证放置、打开菜单、tick 与重载后库存保留。
 
 - [ ] **实现增强符文方案与卷轴拓印。** `spell/research/RuneScheme.java:12–27` 的查询固定返回 `false` / `true` / `null` / `RuneModifiers.NONE`，`create` 只生成空 NBT，两个 `imprint` 都返回 `0`，归一化方法为空。`SlottedFormationTransaction.completeEnhanced` 已消耗材料并调用 `SpellFormationItem.createEnhanced`，因此不能只补 UI。补齐世界权威方案存储、归属和版本校验、修饰参数、拓印及旧数据迁移。验收：增强研究产物有可验证的方案；祭坛拓印成功且只扣一次材料；增强影响实际施法、预览和冷却；错误世界或损坏方案被拒绝；存档重载保持一致。
+  - 代码已完成（2026-11-19）：按上游移植 `RuneScheme`——世界 ID + 方案 ID 双重授权、镜像与登记内容逐字段比对、法术/等级校验、修饰参数（服务端只信世界登记）、拓印（全部校验先于修改，仅扣一张法阵）、旧「仅基础」方案剥除。`PlaceholderPortGameTests.runeSchemeRequiresWorldAuthority` 覆盖授权/篡改/他世界。待实机验证：增强研究产物、祭坛拓印、增强对施法/预览/冷却的影响、存档重载。
 
 - [ ] **统一玩家法术熟练度和书本经验。** `spell/PlayerSpellMastery.java:30–33` 的 `clientExpTen` 恒为 `0`，`grant` 为空；旧法术和 `SpellExpGrant` 的经验入口因此失效。注意 `neomagic/NeoRuntime.java:278–284` 已单独累加 `spellbookMasteryExpTen`，补实现时必须去重，不能再累加两次。接回持久化、书本经验、倍率、等级阈值、加成及客户端快照，核对 `thresholdTen` 当前忽略等级参数是否符合规则。验收：旧法术、蓝图施法及命中经验按各自规则发放一次，祭坛和物品提示显示同一数值，重登保留。
+  - 代码已完成（2026-11-19）：`PlayerSpellMastery` 接回 `grant`（未满级书加书内经验，玩家熟练度按 `boostedExpTen` 累加一次）、满级旧书经验迁移 `migrate`、客户端快照（HUD 同步写入、退出清零）；删除 `NeoRuntime.grantExperience` 中的重复累加。`thresholdTen` 与上游一致固定 6000（等级参数仅保留接口形状）。`NeoLegacyCasting.profile` 改为身体档案 + 熟练度安全值 + 增能法阵安全值，与上游一致。待实机验证：三类经验来源各发一次、祭坛/物品提示一致、重登保留。
 
 - [ ] **接通崩解的服务端阶段惩罚。** `spell/CollapsePenalties.java:17–30` 只有分档、减速数值与身体转向辅助；`NeoRuntime.tick` 没有按负荷应用/撤销对应惩罚，`backlash` 当前只发消息和标脏。`neomagic/CollapseEffect.java` 虽已实现减速和周期扣血，尚未找到按崩解阶段施加这些效果的链路；其减速 UUID 也与身体转向辅助读取的 UUID 不同。验收：超过安全值后各档实际生效，恢复、变形、死亡和退出后正确清理，阶段 HUD 与服务端效果一致，失败结算不重复扣血。
+  - 代码已完成（2026-11-19）：`CollapsePenalties.tick` 由 `NeoRuntime` 每 tick 驱动：5 档减速修饰符（UUID 与身体转向辅助一致）、3 档起每 20/10 tick 直接扣 1/2 点生命（跳过护甲/吸收，保留图腾与九命复活）；变形、死亡、退出、关服时清理；首次接管时移除旧版崩解药水效果。`backlash` 仍只提示，连续惩罚统一按 tick 结算，不重复扣血。`collapsePenaltyFollowsBurdenAndClears` 覆盖分档与撤销。待实机验证：HUD 阶段与服务端一致、多人。
 
 ### P2：已进入调用链的占位与部分实现
 
 - [ ] **补天赋映射和仍返回默认值的加成。** `compat/AxolotlSpPerks.java:9–14` 不应用水魔法效率及湿润度折扣；`FluorescentAxolotlPerks.java:8–13` 的伤害、蓄力、飞行速度及命中回调均未实现；`FamiliarFoxSpPerks.java:11–16` 不保留效果时长或转换等级；`NovaPerks.hungerDiscount`、`WindSpiritPerks.hungerDiscount` 恒为 `0`。这些入口已有漩涡、激光、潮汐、效果 mixin 或饥饿 mixin 调用。另为已实现 power 查询的冥狼、金沙岚、跳蛛、月织蛛、升级美西螈接通可购买的 perk 树/映射。验收：购买、洗点、切换形态和多人同步都能改变相应行为。**保留 `SscPerkIds` 中按既有要求停用的远距扑袭及其强化，不自动恢复 `hasLongPounce`。**
+  - 代码已完成（2026-11-19）：新增 `compat/AddonPerkTrees`，在 SSC 内置树注册后为 17 个附属形态镜像对应原版树（节点/连线/花费/图标原样，节点 ID `my_addon:<形态>/<原版 perk>`，增减能力按上游 `loadMapped` 规则映射；金沙岚只加载附属能力）；语言键从 SSC 原文生成。接回美西螈 SP 水魔法效率与漩涡空气折扣、荧光幼灵伤害/蓄力/飞行速度/命中回湿（每秒一次）、使魔渗透场保留时长并降为 I 级、新星/风灵代谢饥饿折扣。远距扑袭节点即使出现也标记未实现，`hasLongPounce` 仍恒为 false。`addonPerkTreesMirrorSscTrees` 校验树形与能力 ID。
+  - 与 Fabric 的差异：附属形态各有独立形态组，购买记录按附属形态独立保存，不与原版形态的购买共享；旧 Fabric 存档中原版树的购买不会自动迁移到附属树。阿澪（`axolotl_aling`）未注册为形态，未建树。
+  - 待实机验证：形态调谐器中显示/购买、洗点、切换形态、多人同步。
 
 - [ ] **补旧法术命中的联动与经验结算。** `spell/SpellHitHelper.java:25–48` 只处理白名单、伤害和异常命中，忽略 `element`、`refundCastId`、`expBounty`。火弹、冰刺、月光箭、AOE 和死亡终曲仍调用它；核对并接回形态命中联动、退款标识和命中经验，同时避免与弹体/AOE 调用方已有结算重复。验收：有效命中触发对应联动并只发一次经验，保护/免疫目标不结算。
+  - 代码已完成（2026-11-19）：`SpellHitHelper` 按上游补回：弹体解析到主人（此前弹体命中跳过白名单且无攻击者）、王庭伤害联动、命中经验 `SpellExpGrant`（仅 HIT 时发放，调用方随后清零）、悦灵伤害联动、`projectileHit` 的形态流派钩子（FIRE 聚合钩子仍由调用方在循环外调用，已核对无重复）。待实机验证。
 
 - [ ] **补寄生果实的施法中减益加成。** `ability/NpcCombatEnhancements.java:80–86` 的 `enhanceFruitDebuff` 只加固定 NPC 奖励；注释仍称 `BatSpellLink` 未移植，但该类现已存在。接回当前蝙蝠施法快照中应参与的加成，校正过时注释。验收：同一减益在施法联动开启/关闭、NPC/非 NPC 目标下按规则结算一次。
+  - 代码已完成（2026-11-19）：扩散传递中的效果不再叠加；否则取 `BatSpellLink.current()` 快照的 `npcBonus`，无施法快照时用默认加成；过时注释已更正。待实机验证。
 
 - [ ] **实现通用法阵充能状态。** `spell/UniversalFormationManager.java:9–10` 的 `isCharging` 恒为 `false`；`condition/SscAddonConditions.java:48` 和 `ability/MancianimaMarkManager.java:359` 已依赖它判定施法/充能互斥。补实际状态、生命周期和所需法力回复桥接。验收：开始、取消、结束、死亡及切换形态时查询准确，互斥条件有效。
+  - 代码已完成（2026-11-19）：移植上游每秒结算（书内回能法阵、负荷高于阈值、形态有能量条时消耗形态能量降低负荷），本秒转化即标记充能，至下次结算；退出、死亡、变形、关服清理。附属形态的回能 power 已用 `not_universal_formation_charging` 条件暂停回复；SSC Forge 自身 mana 无回复修饰 API，充能期间不会暂停其回复。待实机验证。
 
 - [ ] **接通蛛网弹的毒纺锤饰品判定。** `compat/TrinketsConditionAction.java:11–13` 恒为 `false`，`compat/RegCustomItem.java:13–14` 的 `VENOM_SPINDLE` / `VENOM_SPINDLE_PLUS` 都为 `null`；`entity/WebMembraneBullet.java:90–132` 的额外伤害、减益及升级版缠身因此不可达。对接 SSC Forge 实际物品和饰品槽查询。验收：基础/升级饰品分别产生预期加成，卸下或未安装可选饰品模组时正确回退。
+  - 代码已完成（2026-11-19）：`TrinketsConditionAction` 通过 SSC Forge `AccessoryUtils.getEntitySlot` 查询（index < 0 查全部槽位，与 SSC 自身蛛网弹一致），饰品模组缺失时按未佩戴处理；`VENOM_SPINDLE` 取 SSC 注册物品，`VENOM_SPINDLE_PLUS` 按 ID 查找（缺失为 null）。待实机验证。
 
 - [ ] **实现饰品客户端冷却查询。** `item/LifesavingCatTailClient.java:6–11` 固定返回 `0` / `false`，救命猫尾与幻影铃都在调用。接回客户端实际冷却与剩余 tick，处理无玩家/退出世界。验收：触发、倒计时、到期和重新同步时的提示与服务端一致。
+  - 代码已完成（2026-11-19）：读取本地玩家物品冷却（服务端冷却经原版包同步），无玩家时为 0/false。待实机验证。
 
 - [ ] **补技能 HUD 的两个状态来源。** `client/ClientTickCache.java:27,45` 的 `frostForgeProgress` 恒为 `-1f`，`tidalTetherFraction` 恒为 `-1.0`；`SkillCooldownBarRenderer.java:122,184` 因此无法显示凝棘进度和潮汐牵引倒计时。接已有实体/客户端快照并清理失效状态。验收：技能开始、推进、结束及换维度时正确显示和消失。
+  - 代码已完成（2026-11-19）：`ClientTickCache` 每客户端 tick 扫描一次寒棘法阵进度与潮汐球拴人剩余，切换世界/维度或退出时清空。待实机验证。
 
 - [ ] **实现蓄力音效及超距打断反馈。** `client/sound/SpellChargeSoundInstance.java:8–9` 的开始/停止方法为空；`client/ExplosionEffects.java:8` 与 `client/renderer/ExplosionRenderer.java:9` 也为空。`SpellCastHud` 和 `CastingVisualState` 已调用这些入口。验收：蓄力音效按施法者管理，取消/完成/退出时停止；超距失败产生反馈并中止对应爆裂表现，其他玩家的表现不受误清理。
+  - 代码已完成（2026-11-19）：蓄力循环音（≥3 秒才播放、跟随施法者、音调随进度上升，按施法者停止，退出世界全部停止）与超距取消提示音。
+  - 新发现：爆裂魔法的客户端表现（光柱/法阵几何、主题音频、`ssc_addon:explosion_start` 接收器，上游 `ExplosionRenderer` 456 行 + `ExplosionEffects`）整体未移植；客户端未注册该通道，服务端因此不会下发序列，`ExplosionRenderer.interruptForRange` 暂无可中止的表现。需作为独立功能移植。
 
 - [ ] **补新魔法蓝图的书本/法阵倍率桥接。** `neomagic/NeoLegacyCasting.java:133–147` 的带书本 `blueprintQuote` 忽略书本，`blueprintPower` 和 `blueprintExperienceMultiplier` 恒为 `1`；`NeoRuntime` 已读取后两者。对照现有设计确认各项适用范围并接回，特别核对 `FormationData.universalExpMultiplier`，避免和熟练度修复重复乘算。验收：有/无法阵时成本、威力和经验的服务端结算与预览一致。
+  - 代码已完成（2026-11-19）：按上游接回带书报价（书内法阵按输入核心折算费用 × 潮汐 × 形态崩解倍率）、威力（伤害法阵 × 形态亲和）、冷却（最低 20% 且 ≥10 tick）、空间射程、经验法阵倍率。经验法阵倍率与 `boostedExpTen` 是两个独立倍率（与旧法术一致），不重复。射程不再额外乘形态弹体倍率（运行时已乘 `style.projectileRange`）。HUD 预览与服务端共用 `blueprintQuote`。待实机验证。
 
 - [ ] **补法力类型查询与旧档恢复匹配。** `compat/ManaUtils.java:36–37` 的 `getPlayerManaTypeID` 恒为空串，`event/LoginResourceRestoreHandler.java:64` 却用它与旧档 `ManaTypeID` 比较。实现 Forge 类型映射或明确迁移规则。验收：旧档非空且类型匹配的法力可恢复，类型不匹配时不会错误套用；资源诊断命令显示真实类型。
+  - 代码已完成（2026-11-19）：按 SSC Forge 规则取激活的 `mana_type_power` 的 `mana_type`，否则为 `shape-shifter-curse:generic_mana`；与 Fabric 版 ID 相同，可直接比较旧档 `ManaTypeID`。待实机验证旧档恢复。
 
 - [ ] **实现 CTP 药水形态识别。** `compat/CTPUtils.java:10` 恒为 `null`，使 `item/PotionTubeDose.java:31` 的“形态药水不可分装”检查失效。确认 Forge 的 NBT 格式并实现识别。验收：普通药水可正常分装，带形态数据的药水被拒绝，空/损坏 NBT 安全处理。
+  - 代码已完成（2026-11-19）：读取 SSC Forge 写入的字符串 `targetForm`；缺失、类型不符或无法解析时为 null（SSC 同样不会据此变形）。`ctpAndManaTypeLookups` 覆盖。待实机验证分装。
 
 - [ ] **接回客户端配置保存和 HUD 缩放。** `config/SSCAddonConfig.java` 只创建内存配置对象，`SSCAddonClientConfig.java` 没有加载/保存链路；`client/hud/HudScaling.java:8` 忽略 `scaleId`，仅执行绘制，`hudScalePercent` 未被读取。接配置读写、变更通知与各 HUD 的缩放/锚点。验收：不同 HUD 可独立缩放，位置正确，重启后保留设置，教程已读记录不丢失。
+  - 代码已完成（2026-11-19）：客户端配置以 JSON 保存在 `config/ssc_addon-client.json`（首次访问加载、缺省补全、损坏备份为 `.broken`）（`saveClient` 不触发 `ConfigChangeManager`，其监听者是服务端的故事书配置）；颜色教程已读记录写入后立即保存。`HudScaling` 对附属绘制的 mana/cooldown/spellbook/charge 四块按各自 `hudScalePercent` 缩放（50–200%，左上或右缘锚定并钳制在屏幕内）。
+  - 仍缺：Forge 端没有 HUD 布局/缩放的游戏内编辑界面，目前只能改 JSON；SSC 自身 HUD（本能、魔法、物品栏、稳定度）不由附属绘制，不受缩放。
 
 ### P3：遗留接口、注释与待核对功能
 
-- [ ] **清理无调用的占位桥接，避免误认为已接通。** 包括 `util/CustomEdibleUtils.ReloadPlayerCustomEdible`、`compat/CarryOnCompat.isInCarryingAnimation`、`entity/RegAddonEntities` 的三个 `null` 类型、`SscAddon` 中空注册方法/`null` 常量、`RegFormationKnowledgeComponent.Holder.sync`。先确认保留兼容 API 的必要性，再删除或转发真实入口；自定义饮食和 Carry On 若仍需支持，应从真实事件入口接回，而非只填方法体。
+- [x] **清理无调用的占位桥接，避免误认为已接通。** 包括 `util/CustomEdibleUtils.ReloadPlayerCustomEdible`、`compat/CarryOnCompat.isInCarryingAnimation`、`entity/RegAddonEntities` 的三个 `null` 类型、`SscAddon` 中空注册方法/`null` 常量、`RegFormationKnowledgeComponent.Holder.sync`。先确认保留兼容 API 的必要性，再删除或转发真实入口；自定义饮食和 Carry On 若仍需支持，应从真实事件入口接回，而非只填方法体。
+  - 已完成（2026-11-19）：删除 `CustomEdibleUtils`、`CarryOnCompat`、`RegAddonEntities`、`RegFormationKnowledgeComponent`，以及 `SscAddon` 中 `null` 常量与空注册方法（编译源中均无调用，只剩 `src/pending` 的 Fabric 引用；`ON_TRANSFORM_ADDON_FORM` 实际入口为 `AddonCriteria`）；更正 `AddonEntities` 的「空壳」注释。自定义饮食与 Carry On 若需支持，应从真实事件入口另行接回。
 
-- [ ] **核对领域异常脉冲并修正文档。** `spell/DomainManager.java:26` 明确写着异常压力脉冲待接回，目前 tick 只处理边界、时限、音效和同步。对照当前玩法决定补接还是确认移除；不能因领域本体可用就认为此联动已完成。若保留，验证脉冲频率、白名单和多人负载。
+- [x] **核对领域异常脉冲并修正文档。** `spell/DomainManager.java:26` 明确写着异常压力脉冲待接回，目前 tick 只处理边界、时限、音效和同步。对照当前玩法决定补接还是确认移除；不能因领域本体可用就认为此联动已完成。若保留，验证脉冲频率、白名单和多人负载。
+  - 已完成（2026-11-19）：按上游补接——完全展开时对内圈合法目标施加一次空间异常压力，之后每 `domainPulseTicks` 脉冲一次（只查内圈），移除/关服清理。待实机验证频率、白名单与多人负载。
 
-- [ ] **核对并清理异常伤害观察钩子。** `anomaly/AnomalyManager.java:50` 的 `damageObserved` 为空，`mixin/FrozenEntityMixin.java:42` 每次有效伤害仍调用它。确认是否有独立观察职责；碎冰已由 `FrozenControl.breakFromHit`、伤后效果已由 `AddonAnomalyEffects.afterDamage` 处理，避免重复实现这些逻辑。
+- [x] **核对并清理异常伤害观察钩子。** `anomaly/AnomalyManager.java:50` 的 `damageObserved` 为空，`mixin/FrozenEntityMixin.java:42` 每次有效伤害仍调用它。确认是否有独立观察职责；碎冰已由 `FrozenControl.breakFromHit`、伤后效果已由 `AddonAnomalyEffects.afterDamage` 处理，避免重复实现这些逻辑。
+  - 已完成（2026-11-19）：上游 `damageObserved` 只用于在延迟异常队列中保持「碎冰先于同 tick 后续命中」的顺序；Forge 端异常命中同步分发、没有该队列，碎冰与伤后效果已在 `FrozenEntityMixin` 内直接处理，故删除该空方法及其调用。
 
 **本次排除的正常空实现：** 工具类私有构造器、`Spell` 的可选生命周期默认方法、`AddonCriteria.init`（触发静态注册）、`PocketSpaceSpell` 的三参 `cast`（实际五参重载会进入空间）、已改客户端本地粒子的 `FoxFireballEntity.spawnTrail` / `TidalOrbEntity.spawnHoverParticles`、已明确移除观测靶的 `NeoEffects.measureBlock`、Forge 不接入 AsyncParticles 的 `prepare`，以及由 mixin 覆盖的粒子标记默认方法。`ShellMob` / `ShellProjectile` 和 `AddonEntities` 的旧“全为空壳”注释也不能代表当前实体注册情况，当前注册已使用真实实体类。
 
@@ -81,7 +103,7 @@
 - [ ] 对照上游检查寄生果实选择、稳定度 HUD、教程和进化界面，补齐所需文本及素材。
 - [ ] 核对 JEI、其他可选模组兼容及平台差异。
 - [ ] 完成单机、独立服务端、多人同步、存档重载和客户端视觉测试。
-- [ ] 补 `temp_web_bridge` 方块状态 JSON 缺少的 `facing` 变体模型（客户端加载时报 4 条警告）。
+- [x] 补 `temp_web_bridge` 方块状态 JSON 缺少的 `facing` 变体模型（客户端加载时报 4 条警告）。2026-11-19：新增 `assets/ssc_addon/blockstates/temp_web_bridge.json`，四个朝向复用 SSC 的 `web_bridge_0` 模型。
 
 ## 已完成的基础工作
 
