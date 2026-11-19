@@ -61,6 +61,7 @@ public final class SscAddonForge {
         AddonNetwork.clientbound(SscAddonNetworking.PACKET_ANIM_DEBUG_TOGGLE);
         AddonNetwork.clientbound(DomainManager.STATE);
         AddonNetwork.clientbound(DomainManager.SOUND);
+        AddonNetwork.clientbound(github.com.gengyoubo.sscfa.spell.ExplosionManager.START);
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.DecorationParticles.ID);
         github.com.gengyoubo.sscfa.network.SustainedVisuals.init();
         AddonNetwork.clientbound(github.com.gengyoubo.sscfa.network.SustainedVisuals.STATE);

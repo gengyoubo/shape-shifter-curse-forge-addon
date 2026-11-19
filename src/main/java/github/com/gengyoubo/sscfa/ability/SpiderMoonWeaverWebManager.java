@@ -44,6 +44,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class SpiderMoonWeaverWebManager {
 
 	private static final int MODE_BRIDGE = SpiderMoonWeaverStateComponent.MODE_BRIDGE;
+	/** 织网模式同步给本人客户端（技能栏模式图标）。 */
+	public static final net.minecraft.resources.ResourceLocation MODE_STATE =
+			net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("ssc_addon", "moon_weaver_mode");
 	private static final int MODE_ATTACK = SpiderMoonWeaverStateComponent.MODE_ATTACK;
 
 	// 以下已登记常量均为默认值；运行时???balance 快照读取（abilities.moon_weaver_web??
@@ -112,6 +115,13 @@ public final class SpiderMoonWeaverWebManager {
 		return github.com.gengyoubo.sscfa.compat.ManaUtils.getManaComponent(player);
 	}
 
+	public static void syncMode(ServerPlayer player) {
+		if (!github.com.gengyoubo.sscfa.network.AddonNetwork.canSend(player, MODE_STATE)) return;
+		var buf = github.com.gengyoubo.sscfa.network.AddonNetwork.buffer();
+		buf.writeVarInt(getMode(player));
+		github.com.gengyoubo.sscfa.network.AddonNetwork.sendToPlayer(player, MODE_STATE, buf);
+	}
+
 	/** 读取玩家当前模式??=搭??/ 1=攻击）??*/
 	private static int getMode(ServerPlayer player) {
 		return RegSpiderMoonWeaverStateComponent.SPIDER_MOON_WEAVER_STATE.get(player).getMode();
@@ -123,6 +133,7 @@ public final class SpiderMoonWeaverWebManager {
 		if (CHARGING.containsKey(player.getUUID())) return;
 		int next = (getMode(player) == MODE_ATTACK) ? MODE_BRIDGE : MODE_ATTACK;
 		RegSpiderMoonWeaverStateComponent.SPIDER_MOON_WEAVER_STATE.get(player).setMode(next);
+		syncMode(player);
 		ServerLevel sw = (ServerLevel) player.level();
 		sw.playSound(null, player.getX(), player.getY(), player.getZ(),
 				SoundEvents.WOOL_PLACE, SoundSource.PLAYERS, 0.8f, next == MODE_ATTACK ? 1.4f : 0.9f);

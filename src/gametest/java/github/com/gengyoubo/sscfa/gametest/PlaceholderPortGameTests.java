@@ -144,4 +144,79 @@ public final class PlaceholderPortGameTests {
         helper.assertTrue(type != null && !type.isEmpty(), "mana type id is never empty");
         helper.succeed();
     }
+
+    @GameTest(template = "gametest_floor")
+    public static void conditionalManaAttributeRaisesMaximum(GameTestHelper helper) {
+        var player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), "ssca_max_mana_test"));
+        helper.assertTrue(net.onixary.shapeShifterCurseForge.form.FormManager.setForm(player,
+                github.com.gengyoubo.sscfa.util.FormIdentifiers.UPGRADE_FAMILIAR_FOX), "form change");
+        helper.assertTrue(net.onixary.shapeShifterCurseForge.api.SscManaApi.hasManaPool(player),
+                "upgrade familiar fox must have an SSC mana pool");
+        float base = net.onixary.shapeShifterCurseForge.api.SscManaApi.maximumMana(player);
+        github.com.gengyoubo.sscfa.evolution.RegEvolutionComponent.EVOLUTION.get(player).unlock("spark");
+        float boosted = net.onixary.shapeShifterCurseForge.api.SscManaApi.maximumMana(player);
+        helper.assertTrue(Math.abs(boosted - base - 10f) < 1e-3f,
+                "spark talent adds 10 maximum mana: " + base + " -> " + boosted);
+        helper.succeed();
+    }
+
+    private static net.minecraftforge.common.util.FakePlayer formPlayer(GameTestHelper helper, String name,
+                                                                        ResourceLocation form) {
+        var player = FakePlayerFactory.get(helper.getLevel(), new GameProfile(UUID.randomUUID(), name));
+        helper.assertTrue(net.onixary.shapeShifterCurseForge.form.FormManager.setForm(player, form), "form change to " + form);
+        return player;
+    }
+
+    private static void unlockPerk(net.minecraft.server.level.ServerPlayer player, String form, String perk) {
+        net.onixary.shapeShifterCurseForge.api.SscApi.currentForm(player).orElseThrow()
+                .unlockPerk(AddonPerkTrees.perkId(form, new ResourceLocation("shape-shifter-curse", perk)));
+    }
+
+    @GameTest(template = "gametest_floor")
+    public static void elusivePawsScalesBlockReach(GameTestHelper helper) {
+        var player = formPlayer(helper, "ssca_reach_test", github.com.gengyoubo.sscfa.util.FormIdentifiers.SNOW_FOX_SP);
+        var reach = player.getAttribute(net.minecraftforge.common.ForgeMod.BLOCK_REACH.get());
+        double base = reach.getValue();
+        github.com.gengyoubo.sscfa.compat.SnowFoxSpPerks.updateReach(player);
+        helper.assertTrue(Math.abs(reach.getValue() - base) < 1e-9, "no perk, no reach bonus");
+        unlockPerk(player, "snow_fox_sp", "snow_fox_elusive_paws");
+        github.com.gengyoubo.sscfa.compat.SnowFoxSpPerks.updateReach(player);
+        helper.assertTrue(Math.abs(reach.getValue() - base * 1.5) < 1e-9, "elusive paws: " + base + " -> " + reach.getValue());
+        net.onixary.shapeShifterCurseForge.form.FormManager.setForm(player, new ResourceLocation("shape-shifter-curse", "original_shifter"));
+        github.com.gengyoubo.sscfa.compat.SnowFoxSpPerks.updateReach(player);
+        helper.assertTrue(Math.abs(reach.getValue() - base) < 1e-9, "leaving the form removes the bonus");
+        helper.succeed();
+    }
+
+    @GameTest(template = "gametest_floor")
+    public static void addonFamiliarCanUsePotionCharm(GameTestHelper helper) {
+        var player = formPlayer(helper, "ssca_charm_test", github.com.gengyoubo.sscfa.util.FormIdentifiers.FAMILIAR_FOX_SP);
+        var charm = new net.minecraft.world.item.ItemStack(net.onixary.shapeShifterCurseForge.registry.ModItems.POISON_CHARM.get(), 2);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, charm);
+        var result = charm.getItem().use(helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND);
+        helper.assertTrue(result.getResult() != net.minecraft.world.InteractionResult.PASS,
+                "SP familiar may throw a potion charm, got " + result.getResult());
+        helper.assertTrue(charm.getCount() == 1, "throwing consumes one charm");
+        var other = formPlayer(helper, "ssca_charm_denied", github.com.gengyoubo.sscfa.util.FormIdentifiers.SNOW_FOX_SP);
+        var stack = new net.minecraft.world.item.ItemStack(net.onixary.shapeShifterCurseForge.registry.ModItems.POISON_CHARM.get());
+        other.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, stack);
+        helper.assertTrue(stack.getItem().use(helper.getLevel(), other, net.minecraft.world.InteractionHand.MAIN_HAND).getResult()
+                == net.minecraft.world.InteractionResult.PASS, "other forms still cannot use charms");
+        helper.succeed();
+    }
+
+    @GameTest(template = "gametest_floor")
+    public static void siphonRestoresManaOnHealthDamage(GameTestHelper helper) {
+        var player = formPlayer(helper, "ssca_siphon_test", github.com.gengyoubo.sscfa.util.FormIdentifiers.FAMILIAR_FOX_SP);
+        helper.assertTrue(net.onixary.shapeShifterCurseForge.api.SscManaApi.hasManaPool(player), "SP familiar has a mana pool");
+        unlockPerk(player, "familiar_fox_sp", "familiar_fox_siphon_1");
+        unlockPerk(player, "familiar_fox_sp", "familiar_fox_siphon_2");
+        helper.assertTrue(github.com.gengyoubo.sscfa.compat.FamiliarFoxSpPerks.siphonAmount(player) == 4, "rank II siphon");
+        net.onixary.shapeShifterCurseForge.api.SscManaApi.setMana(player, 0);
+        var zombie = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 1, 2, 1);
+        zombie.hurt(helper.getLevel().damageSources().playerAttack(player), 3);
+        float mana = net.onixary.shapeShifterCurseForge.api.SscManaApi.mana(player);
+        helper.assertTrue(Math.abs(mana - 4) < 1e-3f, "hitting a monster restores 4 mana, got " + mana);
+        helper.succeed();
+    }
 }

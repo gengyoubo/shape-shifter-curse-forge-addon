@@ -118,6 +118,10 @@ public final class SkillCooldownBarRenderer {
             }
 
             double internalReady = readInternalReady(player, skill);
+            if (skill.primary() && FormUtils.isForm(player, github.com.gengyoubo.sscfa.util.FormIdentifiers.BAT_PARASITIC_FRUIT)) {
+                // 灵果寄生蓄力进度（服务端校准，未蓄力为 -1 不显示）
+                internalReady = github.com.gengyoubo.sscfa.client.ParasiticFruitClient.chargeFraction();
+            }
             if (FormIdentifiers.SNOW_FOX_FROSTSPINE.equals(formId) && !skill.primary()) {
                 internalReady = ClientTickCache.frostForgeProgress();
             }

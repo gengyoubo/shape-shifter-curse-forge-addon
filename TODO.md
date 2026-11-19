@@ -36,7 +36,7 @@
   - 代码已完成（2026-11-19）：扩散传递中的效果不再叠加；否则取 `BatSpellLink.current()` 快照的 `npcBonus`，无施法快照时用默认加成；过时注释已更正。待实机验证。
 
 - [ ] **实现通用法阵充能状态。** `spell/UniversalFormationManager.java:9–10` 的 `isCharging` 恒为 `false`；`condition/SscAddonConditions.java:48` 和 `ability/MancianimaMarkManager.java:359` 已依赖它判定施法/充能互斥。补实际状态、生命周期和所需法力回复桥接。验收：开始、取消、结束、死亡及切换形态时查询准确，互斥条件有效。
-  - 代码已完成（2026-11-19）：移植上游每秒结算（书内回能法阵、负荷高于阈值、形态有能量条时消耗形态能量降低负荷），本秒转化即标记充能，至下次结算；退出、死亡、变形、关服清理。附属形态的回能 power 已用 `not_universal_formation_charging` 条件暂停回复；SSC Forge 自身 mana 无回复修饰 API，充能期间不会暂停其回复。待实机验证。
+  - 代码已完成（2026-11-19）：移植上游每秒结算（书内回能法阵、负荷高于阈值、形态有能量条时消耗形态能量降低负荷），本秒转化即标记充能，至下次结算；退出、死亡、变形、关服清理。附属形态的回能 power 已用 `not_universal_formation_charging` 条件暂停回复；SSC 法力池（1.10.0.11 起）通过取消 `SscManaRecoveryEvent` 暂停回复，扣除、直接设值与补满不受影响。附属的法力写入（`ManaUtils`、`ResourceBars`）改走 `SscManaApi`：回复经事件，恢复旧档/补满/命令设值用 `setMana` 绕过事件，上限读取含加成的 `maximumMana`。待实机验证。
 
 - [ ] **接通蛛网弹的毒纺锤饰品判定。** `compat/TrinketsConditionAction.java:11–13` 恒为 `false`，`compat/RegCustomItem.java:13–14` 的 `VENOM_SPINDLE` / `VENOM_SPINDLE_PLUS` 都为 `null`；`entity/WebMembraneBullet.java:90–132` 的额外伤害、减益及升级版缠身因此不可达。对接 SSC Forge 实际物品和饰品槽查询。验收：基础/升级饰品分别产生预期加成，卸下或未安装可选饰品模组时正确回退。
   - 代码已完成（2026-11-19）：`TrinketsConditionAction` 通过 SSC Forge `AccessoryUtils.getEntitySlot` 查询（index < 0 查全部槽位，与 SSC 自身蛛网弹一致），饰品模组缺失时按未佩戴处理；`VENOM_SPINDLE` 取 SSC 注册物品，`VENOM_SPINDLE_PLUS` 按 ID 查找（缺失为 null）。待实机验证。
@@ -49,7 +49,7 @@
 
 - [ ] **实现蓄力音效及超距打断反馈。** `client/sound/SpellChargeSoundInstance.java:8–9` 的开始/停止方法为空；`client/ExplosionEffects.java:8` 与 `client/renderer/ExplosionRenderer.java:9` 也为空。`SpellCastHud` 和 `CastingVisualState` 已调用这些入口。验收：蓄力音效按施法者管理，取消/完成/退出时停止；超距失败产生反馈并中止对应爆裂表现，其他玩家的表现不受误清理。
   - 代码已完成（2026-11-19）：蓄力循环音（≥3 秒才播放、跟随施法者、音调随进度上升，按施法者停止，退出世界全部停止）与超距取消提示音。
-  - 新发现：爆裂魔法的客户端表现（光柱/法阵几何、主题音频、`ssc_addon:explosion_start` 接收器，上游 `ExplosionRenderer` 456 行 + `ExplosionEffects`）整体未移植；客户端未注册该通道，服务端因此不会下发序列，`ExplosionRenderer.interruptForRange` 暂无可中止的表现。需作为独立功能移植。
+  - 爆裂客户端表现已移植（2026-11-19）：`ExplosionRenderer` 接收 `ssc_addon:explosion_start`（公共代码声明通道，独立服务端也会下发），绘制落点/脚下法阵、光柱、七层空中法阵、红白球、冲击波与终章，以及目标定位指针；`ExplosionEffects` 负责警示圈/爆炸粒子（分帧）、光影预热与距离衰减的主题音频。超距中止只停对应序列。待实机验证画面与音频。
 
 - [ ] **补新魔法蓝图的书本/法阵倍率桥接。** `neomagic/NeoLegacyCasting.java:133–147` 的带书本 `blueprintQuote` 忽略书本，`blueprintPower` 和 `blueprintExperienceMultiplier` 恒为 `1`；`NeoRuntime` 已读取后两者。对照现有设计确认各项适用范围并接回，特别核对 `FormationData.universalExpMultiplier`，避免和熟练度修复重复乘算。验收：有/无法阵时成本、威力和经验的服务端结算与预览一致。
   - 代码已完成（2026-11-19）：按上游接回带书报价（书内法阵按输入核心折算费用 × 潮汐 × 形态崩解倍率）、威力（伤害法阵 × 形态亲和）、冷却（最低 20% 且 ≥10 tick）、空间射程、经验法阵倍率。经验法阵倍率与 `boostedExpTen` 是两个独立倍率（与旧法术一致），不重复。射程不再额外乘形态弹体倍率（运行时已乘 `style.projectileRange`）。HUD 预览与服务端共用 `blueprintQuote`。待实机验证。
@@ -63,6 +63,8 @@
 - [ ] **接回客户端配置保存和 HUD 缩放。** `config/SSCAddonConfig.java` 只创建内存配置对象，`SSCAddonClientConfig.java` 没有加载/保存链路；`client/hud/HudScaling.java:8` 忽略 `scaleId`，仅执行绘制，`hudScalePercent` 未被读取。接配置读写、变更通知与各 HUD 的缩放/锚点。验收：不同 HUD 可独立缩放，位置正确，重启后保留设置，教程已读记录不丢失。
   - 代码已完成（2026-11-19）：客户端配置以 JSON 保存在 `config/ssc_addon-client.json`（首次访问加载、缺省补全、损坏备份为 `.broken`）（`saveClient` 不触发 `ConfigChangeManager`，其监听者是服务端的故事书配置）；颜色教程已读记录写入后立即保存。`HudScaling` 对附属绘制的 mana/cooldown/spellbook/charge 四块按各自 `hudScalePercent` 缩放（50–200%，左上或右缘锚定并钳制在屏幕内）。
   - 仍缺：Forge 端没有 HUD 布局/缩放的游戏内编辑界面，目前只能改 JSON；SSC 自身 HUD（本能、魔法、物品栏、稳定度）不由附属绘制，不受缩放。
+
+- [x] **移植 `ssc_addon:conditional_mana_attribute`。** 2026-11-19：SSC Forge 1.10.0.12 提供 `SscManaMaximumEvent` 后，新增 `power/ConditionalManaAttributePower`（注册为 power 类型并监听上限事件），每次计算上限时对条件成立的该类能力按 Fabric 顺序计算（全部 add → 全部 multiply → 全部 add_total），无持久状态；获得/失去能力时调用 `SscManaApi.synchronizeMana`。从 `JsonTypeRegistrationGameTests` 的待移植名单移除；`conditionalManaAttributeRaisesMaximum` 验证升级使魔解锁 spark 天赋后上限 +10。`regen_mana_modifier` 未支持（附属 JSON 未使用）。待实机验证 HUD 上限与天赋/perk 切换。
 
 ### P3：遗留接口、注释与待核对功能
 
@@ -86,7 +88,8 @@
 - [ ] 实机验证阿努比斯死亡领域：展开、方块还原（掉线、重载、关服）、领域内冥狼增益。
 - [ ] 核对红狐其他玩法：诅咒之月自动变形、形态物品、客户端演出，以及重生和跨维度时限处理。
 - [ ] 实机验证各形态技能：技能 JSON 动作/条件与每 tick 驱动已全部接通，需逐形态按键试用并核对冷却。
-- [ ] 完成上述 perk 映射和占位加成后，再对照上游核对尚无同名实现的 `BatDesmodusPerks`、`BatParasiticFruitPerks`、`SnowFoxSpPerks`、`UpgradeFamiliarFoxPerks`：确认功能是否已被其他服务实现，补齐实际缺失项；继续保留既有远距扑袭停用决定。
+- [x] 完成上述 perk 映射和占位加成后，再对照上游核对尚无同名实现的 `BatDesmodusPerks`、`BatParasiticFruitPerks`、`SnowFoxSpPerks`、`UpgradeFamiliarFoxPerks`：确认功能是否已被其他服务实现，补齐实际缺失项；继续保留既有远距扑袭停用决定。
+  - 2026-11-19 核对：两个蝙蝠类与升级使魔的上游内容只有 `loadMapped`（已由 `AddonPerkTrees` 覆盖）。缺的是三个上游 mixin 的行为，已补：使魔虹吸（`LivingDamageEvent` 吸收后实际扣血 >0.1 且目标为 SSC `enemy` 时回 2/4 点法力，升级使魔用其独立 perk）、药水符放行附属使魔形态（升级使魔需炼金天赋；`FamiliarFoxSpPotionCharmMixin` 以 `@Redirect` 改 SSC `PotionCharmItem.use` 的形态判断，同时列出 `use`/`m_7203_`）、雪狐轻踏方块触及 ×1.5（`forge:block_reach` 修饰符，每 tick 对账）。`elusivePawsScalesBlockReach`、`addonFamiliarCanUsePotionCharm`、`siphonRestoresManaOnHealthDamage` 覆盖。SSC Forge 原版轻踏引用的 `reach-entity-attributes:reach` 在 Forge 上不存在，原版雪狐的该 perk 不生效（属 SSC Forge 问题）。
 - [ ] 完成上述通用法阵、崩解、旧法术命中、蝙蝠减益及蓝图倍率的联动待办，再做跨形态回归。
 
 ## 物品、效果与方块
@@ -101,6 +104,9 @@
 
 - [ ] 实机核对异常反应的粒子、音效和提示，以及束界传送限制。
 - [ ] 对照上游检查寄生果实选择、稳定度 HUD、教程和进化界面，补齐所需文本及素材。
+  - 2026-11-19：补齐上游有而本地缺的 35 张贴图（进化界面图标/皮肤、寄生果实与月织蛛模式技能图标、升级美西螈水冲刺图标、`ssc_addon:textures/gui/slot/spellbook.png` 饰品槽图标）和 323 条语言键（其中 290 条为教程课程文本，本地教程界面按同一键名读取）。
+  - 寄生果实选择已移植（2026-11-19）：`ability/fruit/`（`FruitSelection`、`FruitLayerLedger`、`ParasiticFruitLayers`、`FruitStatusOverlay`、`ParasiticFruitAbility`）、重写的 `ParasiticFruitSeedPower`、`ParasiticFruitStatusMixin`、投掷物与种子圈携带所选果实、`client/ParasiticFruitClient`。手势改由服务端识别：SSC 会把技能键按下/松开分派给 `SscPowerType`，按住 ≥0.5 秒松开投掷（蓄力决定速度，满 1.5 秒），两次短按切换果实；所选果实存于玩家持久数据（跨死亡/重登保留），换形态重置为自动。技能栏第三槽显示所选果实，主技能条显示蓄力，达到最小/满蓄力各一声提示；月织蛛织网模式改为服务端同步后显示模式图标（此前客户端只在单人时碰巧读到）；升级美西螈水冲刺换用专用图标。能力 JSON 描述同步上游。`ParasiticFruitGameTests` 覆盖账本、双击切换、换形态重置、种植结果与叠加层撤销。待实机验证手感（服务端计时受网络延迟影响）、多人共享层与描边。
+  - 仍缺：上游进化界面使用的 `EvolutionArtwork`/`EvolutionInk` 皮肤未移植（贴图已就位）。
 - [ ] 核对 JEI、其他可选模组兼容及平台差异。
 - [ ] 完成单机、独立服务端、多人同步、存档重载和客户端视觉测试。
 - [x] 补 `temp_web_bridge` 方块状态 JSON 缺少的 `facing` 变体模型（客户端加载时报 4 条警告）。2026-11-19：新增 `assets/ssc_addon/blockstates/temp_web_bridge.json`，四个朝向复用 SSC 的 `web_bridge_0` 模型。

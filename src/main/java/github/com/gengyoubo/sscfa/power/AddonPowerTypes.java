@@ -27,6 +27,8 @@ public final class AddonPowerTypes {
 		SscJavaRegistries.registerPowerType(SnowFoxSpFormSpeedPower.TYPE, new SnowFoxSpFormSpeedPower());
 		SscJavaRegistries.registerPowerType(BlueFireRingVisualPower.TYPE, new BlueFireRingVisualPower());
 		SscJavaRegistries.registerPowerType(EffectEfficiencyReductionPower.TYPE, new EffectEfficiencyReductionPower());
+		SscJavaRegistries.registerPowerType(ConditionalManaAttributePower.TYPE, new ConditionalManaAttributePower());
+		ConditionalManaAttributePower.registerEvents();
 		AddonActionsAndConditions.init();
 	}
 }

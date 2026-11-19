@@ -175,6 +175,8 @@ public final class AddonClientEvents {
             github.com.gengyoubo.sscfa.client.hud.SkillCooldownBarRenderer.register();
             github.com.gengyoubo.sscfa.client.renderer.CurseMarkIconRenderer.register();
             github.com.gengyoubo.sscfa.client.renderer.DomainRenderer.register();
+            github.com.gengyoubo.sscfa.client.renderer.ExplosionRenderer.register();
+            github.com.gengyoubo.sscfa.client.ParasiticFruitClient.register();
             github.com.gengyoubo.sscfa.client.particle.FirstPersonParticles.init();
             github.com.gengyoubo.sscfa.client.SustainedVisualClient.init();
             github.com.gengyoubo.sscfa.client.ParametricVisualClient.init();

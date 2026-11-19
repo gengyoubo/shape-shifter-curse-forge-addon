@@ -27,11 +27,8 @@ import java.util.TreeSet;
 @PrefixGameTestTemplate(false)
 public final class JsonTypeRegistrationGameTests {
     private static final Set<String> NAMESPACES = Set.of("my_addon", "ssc_addon");
-    /**
-     * Known gaps, each with its reason. Remove an entry when its type is ported.
-     * conditional_mana_attribute: SSC Forge has no max-mana / regeneration modifier API.
-     */
-    private static final Set<String> PENDING = Set.of("ssc_addon:conditional_mana_attribute");
+    /** Known gaps, each with its reason. Remove an entry when its type is ported. */
+    private static final Set<String> PENDING = Set.of();
 
     private JsonTypeRegistrationGameTests() {}
 

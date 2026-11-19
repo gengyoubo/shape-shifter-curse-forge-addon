@@ -28,9 +28,9 @@ import net.minecraftforge.event.server.ServerStoppedEvent;
  * <p>魔法书内装有<b>回能变体</b>通用法阵（regen）时生效：当前形态持有能量条且负荷高于阈值，
  * 每秒消耗形态能量以降低崩解负荷。阈值取书内等级最高的回能法阵（多张不叠加）。</p>
  *
- * <p>本秒发生转化的玩家标记为「充能中」，直到下一次结算。附属形态的能量回复 power 通过
- * {@code ssc_addon:not_universal_formation_charging} 条件在充能期间暂停回复；
- * SSC Forge 自身的 mana 没有回复修饰 API，因此不受此暂停影响。</p>
+ * <p>本秒发生转化的玩家标记为「充能中」，直到下一次结算。充能期间：附属形态的能量回复 power 通过
+ * {@code ssc_addon:not_universal_formation_charging} 条件暂停；SSC 法力池的回复通过取消
+ * {@code SscManaRecoveryEvent} 暂停（扣除、直接设值与补满不受影响）。</p>
  */
 public final class UniversalFormationManager {
     private static final Set<UUID> CHARGING_PLAYERS = ConcurrentHashMap.newKeySet();
@@ -55,6 +55,10 @@ public final class UniversalFormationManager {
         });
         MinecraftForge.EVENT_BUS.addListener((FormChangedEvent event) -> clearCharging(event.getEntity()));
         MinecraftForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> CHARGING_PLAYERS.clear());
+        // 充能期间暂停 SSC 法力池的一切回复（gain_mana 动作、月夜回复、蛛丝自然回复、储能体等）。
+        MinecraftForge.EVENT_BUS.addListener((net.onixary.shapeShifterCurseForge.api.SscManaRecoveryEvent event) -> {
+            if (isCharging(event.getEntity())) event.setCanceled(true);
+        });
     }
 
     public static boolean isCharging(Player player) {

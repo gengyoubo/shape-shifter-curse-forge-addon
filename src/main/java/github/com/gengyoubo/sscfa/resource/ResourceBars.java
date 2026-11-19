@@ -45,7 +45,8 @@ public final class ResourceBars {
 	/** 回复 n 点（clamp 到 max），返回实际值。 */
 	public static int gain(ServerPlayer player, ResourceBarDef bar, int n) {
 		if (bar == BarKeys.VANILLA_MANA) {
-			FormActivePowerService.gainMana(player, n);
+			if (n > 0) net.onixary.shapeShifterCurseForge.api.SscManaApi.gainMana(player, n);
+			else if (n < 0) net.onixary.shapeShifterCurseForge.api.SscManaApi.setMana(player, FormActivePowerService.mana(player) + n);
 			return (int) FormActivePowerService.mana(player);
 		}
 		int oldV = get(player, bar);
@@ -57,9 +58,7 @@ public final class ResourceBars {
 	/** 消耗 n 点：不足返回 false 且不扣；足够则扣并返回 true。 */
 	public static boolean consume(ServerPlayer player, ResourceBarDef bar, int n) {
 		if (bar == BarKeys.VANILLA_MANA) {
-			if (!FormActivePowerService.hasMana(player, n)) return false;
-			FormActivePowerService.consumeMana(player, n);
-			return true;
+			return n <= 0 || net.onixary.shapeShifterCurseForge.api.SscManaApi.consumeMana(player, n);
 		}
 		int oldV = get(player, bar);
 		if (oldV < n) return false;
@@ -70,7 +69,8 @@ public final class ResourceBars {
 	/** 直接设值（clamp），触发回调。 */
 	public static void set(ServerPlayer player, ResourceBarDef bar, int value) {
 		if (bar == BarKeys.VANILLA_MANA) {
-			FormActivePowerService.gainMana(player, value - FormActivePowerService.mana(player));
+			// 直接设值不属于回复，绕过 SscManaRecoveryEvent。
+			net.onixary.shapeShifterCurseForge.api.SscManaApi.setMana(player, value);
 			return;
 		}
 		int oldV = get(player, bar);
@@ -92,11 +92,11 @@ public final class ResourceBars {
 		return PowerUtils.getResourceValue(player, bar.id);
 	}
 
-	/** 上限：资源以 JSON 的 max 为准（缺失回退 {@link ResourceBarDef#maxDefault}）；SSC 法力由当前值与百分比推算。 */
+	/** 上限：资源以 JSON 的 max 为准（缺失回退 {@link ResourceBarDef#maxDefault}）；SSC 法力取其含加成的上限。 */
 	public static int maxOf(Player player, ResourceBarDef bar) {
 		if (bar == BarKeys.VANILLA_MANA) {
-			float percent = FormActivePowerService.manaPercent(player);
-			return percent > 0 ? Math.round(FormActivePowerService.mana(player) / percent) : bar.maxDefault;
+			return FormActivePowerService.hasActiveManaType(player)
+					? Math.round(FormActivePowerService.maximumMana(player)) : bar.maxDefault;
 		}
 		int max = PowerUtils.getResourceMax(bar.id);
 		return max > 0 ? max : bar.maxDefault;

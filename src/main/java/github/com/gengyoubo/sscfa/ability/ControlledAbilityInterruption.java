@@ -32,6 +32,7 @@ public final class ControlledAbilityInterruption {
                 // This instant skill applies the control effect before completing its own cast.
                 && !SscAddonActions.PLAY_DEAD_SKILL_ID.equals(c.skillId)).toList();
         SpellChannelManager.onFullyControlled(player);
+        github.com.gengyoubo.sscfa.ability.fruit.ParasiticFruitAbility.cancel(player);
         VortexChargeManager.cancel(player);
         SpiderMoonWeaverWebManager.cancel(player);
         SpiderMoonWeaverSwingManager.interruptControl(player);

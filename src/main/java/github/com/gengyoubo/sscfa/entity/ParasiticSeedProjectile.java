@@ -39,6 +39,29 @@ public class ParasiticSeedProjectile extends ThrowableItemProjectile {
     /** 鏄惁瑁呭鍙岀敓绉嶈嵎锛堝懡涓?钀藉湴鏃跺惎鐢ㄦ墿鏁ｏ細棰濆瀵勭敓 1 浜猴紝鏃犱汉鍒欏彔 2 灞傦級銆?*/
     private boolean twinPod = false;
 
+    private github.com.gengyoubo.sscfa.ability.fruit.FruitSelection selection =
+            github.com.gengyoubo.sscfa.ability.fruit.FruitSelection.AUTO;
+
+    public void setSelection(github.com.gengyoubo.sscfa.ability.fruit.FruitSelection value) {
+        selection = value == null ? github.com.gengyoubo.sscfa.ability.fruit.FruitSelection.AUTO : value;
+    }
+
+    public github.com.gengyoubo.sscfa.ability.fruit.FruitSelection getSelection() { return selection; }
+
+    @Override
+    public void addAdditionalSaveData(net.minecraft.nbt.CompoundTag nbt) {
+        super.addAdditionalSaveData(nbt);
+        nbt.putInt("FruitSelection", selection.ordinal());
+        nbt.putBoolean("TwinPod", twinPod);
+    }
+
+    @Override
+    public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag nbt) {
+        super.readAdditionalSaveData(nbt);
+        selection = github.com.gengyoubo.sscfa.ability.fruit.FruitSelection.fromId(nbt.getInt("FruitSelection"));
+        twinPod = nbt.getBoolean("TwinPod");
+    }
+
     public void setTwinPod(boolean twinPod) {
         this.twinPod = twinPod;
     }
@@ -80,12 +103,12 @@ public class ParasiticSeedProjectile extends ThrowableItemProjectile {
                 && ehr.getEntity() instanceof LivingEntity host
                 && host.isAlive() && caster != null) {
             // 鍛戒腑鐢熺墿锛氬湪瀹夸富韬笂绉嶄笅鐏垫灉绉嶅瓙锛堝弻鐢熺鑽锋椂鎵╂暎棰濆 1 浜?鏃犱汉鍙?2 灞傦級
-            ParasiticFruitSeedPower.plantSeedSpread(caster, host, twinPod);
+            ParasiticFruitSeedPower.plantSeedSpread(caster, host, twinPod, selection);
         } else if (hitResult.getType() == HitResult.Type.BLOCK
                 && this.level() instanceof ServerLevel sw && caster != null) {
             // 钀藉湴锛氱敓鎴愮伒鏋滅瀛愬湀锛堢豢鑹叉不鐤楃幆 + 鏍稿績鍥炬爣锛岃繘鍦堢敓鐗╄Е鍙戯紱鍙岀敓绉嶈嵎鏃舵牳蹇冧负鍙岀敓绉嶈嵎锛?
             github.com.gengyoubo.sscfa.ability.ParasiticSeedFieldManager
-                    .spawnField(caster, sw, hitResult.getLocation().add(0, 0.05, 0), BAL.i("default_field_life", DEFAULT_FIELD_LIFE), twinPod);
+                    .spawnField(caster, sw, hitResult.getLocation().add(0, 0.05, 0), BAL.i("default_field_life", DEFAULT_FIELD_LIFE), twinPod, selection);
         }
         this.discard();
     }

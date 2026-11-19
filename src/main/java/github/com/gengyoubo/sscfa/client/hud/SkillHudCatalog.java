@@ -45,6 +45,11 @@ public final class SkillHudCatalog {
     private static final ResourceLocation ICON_WEAKNESS =
             ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/skill_icons/weakness_spot.png");
 
+    private static final ResourceLocation ICON_WEB_BRIDGE =
+            ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/skill_icons/moon_web_mode_bridge.png");
+    private static final ResourceLocation ICON_WEB_ATTACK =
+            ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/skill_icons/moon_web_mode_attack.png");
+
     private static final Map<String, List<Skill>> FORMS = new HashMap<>();
 
     static int balanceInt(String scope, String parameter, int fallback) {
@@ -109,9 +114,15 @@ public final class SkillHudCatalog {
                         "form_mancianima_link_cd", MancianimaTeleport.RED_LINK_CD_TICKS, null, false,
                         p -> hasMana(p, balanceInt("abilities.mancianima_teleport", "mana_cost",
                                 MancianimaTeleport.MANA_COST)))));
-        pair("spider_moon_weaver", "moon_web", "form_spider_moon_weaver_web",
-                "web_swing", "form_spider_moon_weaver_swing",
-                p -> hasMana(p, SpiderMoonWeaverWebManager.startManaForHud()), p -> hasMana(p, 1.0));
+        // 月织蛛：第三槽只显示服务端同步的织网模式，不挂冷却或魔力门槛。
+        FORMS.put("spider_moon_weaver", List.of(
+                skill("moon_web", "form_spider_moon_weaver_web", true,
+                        p -> hasMana(p, SpiderMoonWeaverWebManager.startManaForHud())),
+                skill("web_swing", "form_spider_moon_weaver_swing", false, p -> hasMana(p, 1.0)),
+                new Skill(ICON_WEB_BRIDGE, null, null, 0, null, false, null,
+                        p -> github.com.gengyoubo.sscfa.client.ParasiticFruitClient.moonWeaverMode()
+                                == github.com.gengyoubo.sscfa.state.SpiderMoonWeaverStateComponent.MODE_ATTACK
+                                ? ICON_WEB_ATTACK : ICON_WEB_BRIDGE)));
         FORMS.put("axolotl_fluorescent", List.of(
                 skill("fluorescent_laser", "form_axolotl_fluorescent_laser",
                         "form_axolotl_fluorescent_shot_cd", FluorescentLaserManager.shotTicksForHud(), null, true),
@@ -123,8 +134,14 @@ public final class SkillHudCatalog {
                 skill("summon_wolves", "form_anubis_wolf_sp_summon_wolves", false)));
         pair("bat_desmodus", "blood_mist", "form_bat_desmodus_mist_form",
                 "sonic_wave", "form_bat_desmodus_sonic_wave");
-        pair("bat_parasitic_fruit", "parasitic_seed", "form_bat_parasitic_fruit_parasitic_seed",
-                "spore_bomb", "form_bat_parasitic_fruit_spore_bomb");
+        // 寄生果蝠：第三槽显示当前所选果实（双击主键切换）。
+        FORMS.put("bat_parasitic_fruit", List.of(
+                skill("parasitic_seed", "form_bat_parasitic_fruit_parasitic_seed", true),
+                skill("spore_bomb", "form_bat_parasitic_fruit_spore_bomb", false),
+                new Skill(ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/skill_icons/fruit_auto.png"),
+                        null, null, 0, null, false, null,
+                        p -> ResourceLocation.fromNamespaceAndPath("my_addon", "textures/gui/skill_icons/fruit_"
+                                + github.com.gengyoubo.sscfa.client.ParasiticFruitClient.selection().key() + ".png"))));
         pair("golden_sandstorm_sp", "wither_sand", "form_golden_sandstorm_sp_wither_sand",
                 "brand_detonation", "form_golden_sandstorm_sp_erosion_brand");
         pair("ocelot_nova", "nova_explosion", "form_ocelot_nova_charge",
@@ -162,7 +179,7 @@ public final class SkillHudCatalog {
                 skill("water_spear", "form_upgrade_axolotl_water_spear", null, 0, AxolotlTree.NODE_WATER_SPEAR, true,
                         p -> p.getAirSupply() >= WaterSpearLeapManager.airCostForHud(p)),
                 skill("vortex_guide", "form_upgrade_axolotl_vortex_guide", null, 0, AxolotlTree.NODE_VORTEX_GUIDE, false),
-                skill("water_dash", "form_upgrade_axolotl_dash_hud_water", null, 0, AxolotlTree.NODE_WATER_SPURT, false),
+                skill("water_dash_upgrade_axolotl", "form_upgrade_axolotl_dash_hud_water", null, 0, AxolotlTree.NODE_WATER_SPURT, false),
                 skill("land_dash", "form_upgrade_axolotl_dash_hud_land", null, 0, AxolotlTree.NODE_WATER_SPURT, false,
                         p -> p.getAirSupply() >= AxolotlWaterSpurtHandler.landAirCostForHud(p)),
                 skill("water_jump", "form_upgrade_axolotl_jump_out_water", null, 0, "aquatic_adapt", false)));
@@ -252,6 +269,7 @@ public final class SkillHudCatalog {
     private static boolean extraEligible(Skill skill) {
         String icon = skill.icon().getPath();
         return !icon.endsWith("/water_spear_craft.png") && !icon.endsWith("/water_jump.png")
-                && !icon.endsWith("/water_dash.png") && !icon.endsWith("/land_dash.png");
+                && !icon.endsWith("/water_dash.png") && !icon.endsWith("/water_dash_upgrade_axolotl.png")
+                && !icon.endsWith("/land_dash.png");
     }
 }

@@ -55,6 +55,8 @@ public final class AddonServerSystems {
         github.com.gengyoubo.sscfa.ability.BeepSheepFormManager.init();
         github.com.gengyoubo.sscfa.ability.InfectionSporeManager.init();
         github.com.gengyoubo.sscfa.ability.ParasiticSeedFieldManager.init();
+        github.com.gengyoubo.sscfa.ability.fruit.ParasiticFruitAbility.init();
+        github.com.gengyoubo.sscfa.ability.fruit.ParasiticFruitLayers.init();
         github.com.gengyoubo.sscfa.ability.ParasiticCombatTracker.init();
         github.com.gengyoubo.sscfa.ability.ParasiticAbsorptionManager.init();
         github.com.gengyoubo.sscfa.ability.ParasiticSeedEnergyRegen.init();
@@ -63,6 +65,8 @@ public final class AddonServerSystems {
         github.com.gengyoubo.sscfa.ability.CorruptMistManager.init();
         github.com.gengyoubo.sscfa.spell.ExplosionManager.init();
         github.com.gengyoubo.sscfa.spell.UniversalFormationManager.init();
+        github.com.gengyoubo.sscfa.compat.FamiliarFoxSpPerks.registerEvents();
+        github.com.gengyoubo.sscfa.compat.SnowFoxSpPerks.registerEvents();
         github.com.gengyoubo.sscfa.ability.CompanionResonanceManager.init();
         github.com.gengyoubo.sscfa.ability.SeedEnergyEatingHandler.register();
     }
